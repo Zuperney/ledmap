@@ -1,5 +1,5 @@
 import { groups, gname } from "./core.js";
-import { sinalState, setSinal, setMaxPortas, resumoScreens, limiteTxt, onSinal } from "./cabeamento.js";
+import { sinalState, setSinal, setMaxPortas, resumoScreens, limiteTxt, onSinal, autoState, setAuto, distribuirAuto, kmsg, twoStep } from "./cabeamento.js";
 import { capSugerida, limitePx, limpaSinal } from "./sinal.js";
 import { nf } from "./core.js";
 
@@ -7,6 +7,17 @@ let escopo = "";
 const $ = function (id) { return document.getElementById(id); };
 
 function cfgEscopo() { var st = sinalState(); return escopo ? (st.sinalScreens[escopo] || st.sinal) : st.sinal; }
+
+function preencherAuto() {
+    var sel = $("ka-escopo"), v = sel.value || "*";
+    sel.textContent = "";
+    [["*", "Todas as telas"]].concat(groups.map(function (g) { return [g.id, gname(g)]; })).concat([["_", "Telas sem Screen"]]).forEach(function (a) {
+      var o = document.createElement("option"); o.value = a[0]; o.textContent = a[1]; sel.appendChild(o);
+    });
+    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === v; }) ? v : "*";
+    $("ka-canto").value = autoState().corner;
+    $("ka-sentido").value = autoState().routing;
+  }
 
 function preencherEscopo() {
     var sel = $("ks-escopo"), v = escopo;
@@ -19,6 +30,7 @@ function preencherEscopo() {
 
 export function atualizarSinal() {
     preencherEscopo();
+    preencherAuto();
     var st = sinalState(), c = cfgEscopo(), tem = !!(escopo && st.sinalScreens[escopo]);
     if (document.activeElement !== $("ks-bits")) $("ks-bits").value = c.bits;
     if (document.activeElement !== $("ks-hz")) $("ks-hz").value = c.hz;
@@ -49,6 +61,11 @@ export function init() {
   ["ks-bits", "ks-hz", "ks-cap"].forEach(function (id) { $(id).addEventListener("change", aplicar); });
   $("ks-max").addEventListener("change", function (e) { setMaxPortas(e.target.value); });
   $("ks-padrao").addEventListener("click", function () { setSinal(escopo, null); });
+  ["ka-canto", "ka-sentido"].forEach(function (id) { $(id).addEventListener("change", function () { setAuto({ corner: $("ka-canto").value, routing: $("ka-sentido").value }); }); });
+  twoStep($("ka-go"), "Distribuir", "Confirmar: substitui as rotas", function () {
+      var r = distribuirAuto($("ka-escopo").value);
+      kmsg(r.aviso && !r.portas ? r.aviso : r.portas + " portas criadas para " + r.gabinetes + " gabinetes." + (r.aviso ? " " + r.aviso : ""));
+    });
   onSinal(atualizarSinal);
   atualizarSinal();
 }

@@ -1,13 +1,14 @@
 import { res, tiles, groups, nf, bbox, el, text } from "./core.js";
-import { cabNome } from "./gabinetes.js";
+import { cabNome, cabDe } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
+import { balancedChunks, snakePorTela, ordenaPortas } from "./auto-cabos.js";
 import { SINAL_PADRAO, MAX_PORTAS_PADRAO, limpaSinal, limitePx, limpaMax } from "./sinal.js";
 
-let sinal, sinalScreens, maxPortas, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
+let sinal, sinalScreens, maxPortas, autoCfg, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
 
-function kmsg(t) { document.getElementById("k-msg").textContent = t || ""; }
+export function kmsg(t) { document.getElementById("k-msg").textContent = t || ""; }
 
 export function cfgDe(t) { return (t.grp && sinalScreens[t.grp]) || sinal; }
 
@@ -51,6 +52,58 @@ export function setSinal(grp, cfg) {
 
 export function setMaxPortas(n) { maxPortas = limpaMax(n); renderCabling(); ksave(); }
 
+export function autoState() { return autoCfg; }
+export function setAuto(c) {
+    c = c || {};
+    autoCfg = { corner: ["bl", "br", "tl", "tr"].indexOf(c.corner) >= 0 ? c.corner : "bl", routing: c.routing === "zigzag" ? "zigzag" : "updown" };
+    ksave();
+  }
+
+// Distribui os gabinetes das telas do escopo ("*" = todas, "_" = sem Screen, ou id da Screen) em portas automáticas.
+export function distribuirAuto(escopo) {
+    var alvo = {}, cels = [];
+    tiles.forEach(function (t) { if (escopo === "*" || (escopo === "_" ? !t.grp : t.grp === escopo)) alvo[t.id] = 1; });
+    Object.keys(cellEl).forEach(function (k) {
+      var c = cellEl[k], q = res(c.t);
+      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: c.t.cx + c.c * q.cw, y: c.t.cy + c.r * q.ch });
+    });
+    if (!cels.length) return { portas: 0, gabinetes: 0, aviso: "Não há gabinetes nesse escopo." };
+    var grupos = {}, ordem = [];
+    cels.forEach(function (c) {
+      var k = (c.t.grp || "") + "|" + cabDe(c.t).id;
+      if (!grupos[k]) { grupos[k] = []; ordem.push(k); }
+      grupos[k].push(c);
+    });
+    var novas = [];
+    ordem.forEach(function (k) {
+      var g = grupos[k], px = cabPx(g[0].t), lim = limiteTela(g[0].t);
+      var budget = Math.max(1, oc ? Math.ceil(lim / px) : Math.floor(lim / px));
+      balancedChunks(snakePorTela(g, autoCfg.routing, autoCfg.corner), budget).forEach(function (ch) { novas.push({ cells: ch, grp: g[0].t.grp || "" }); });
+    });
+    var gi = {};
+    groups.forEach(function (g, i) { gi[g.id] = i; });
+    novas.sort(function (a, b) { return (a.grp in gi ? gi[a.grp] : 1e9) - (b.grp in gi ? gi[b.grp] : 1e9); });
+    var porScreen = {}, final = [];
+    novas.forEach(function (p) { (porScreen[p.grp] = porScreen[p.grp] || []).push(p.cells); });
+    Object.keys(porScreen).sort(function (a, b) { return (a in gi ? gi[a] : 1e9) - (b in gi ? gi[b] : 1e9); }).forEach(function (g) {
+      ordenaPortas(porScreen[g], autoCfg.routing, autoCfg.corner).forEach(function (cs) { final.push({ grp: g, cells: cs }); });
+    });
+    // tira os gabinetes do escopo das rotas atuais e descarta portas que ficaram vazias
+    ports.forEach(function (p) { routes[p.id] = (routes[p.id] || []).filter(function (k) { return !alvo[cellEl[k] && cellEl[k].t.id]; }); });
+    ports = ports.filter(function (p) { if (routes[p.id].length) return true; delete routes[p.id]; return false; });
+    if (!ports.length) nextP = 1;
+    final.forEach(function (f) {
+      var p = { id: "p" + nextP, n: nextP, name: "" };
+      nextP++;
+      ports.push(p);
+      routes[p.id] = f.cells.map(function (c) { return c.key; });
+    });
+    setActivePort(final.length ? "p" + (nextP - final.length) : (ports.length ? ports[0].id : null));
+    ksave();
+    var estouro = resumoScreens(groups).filter(function (x) { return x.usadas > maxPortas; });
+    return { portas: final.length, gabinetes: cels.length, aviso: estouro.length ? "Passou de " + maxPortas + " portas em: " + estouro.map(function (x) { return x.nome + " (" + x.usadas + ")"; }).join(", ") + "." : "" };
+  }
+
 export function sinalState() { return { sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas }; }
 
 export function loadSinal(sn, ss, mp) {
@@ -64,7 +117,7 @@ function cabPx(t) { var q = res(t); return q.cw * q.ch; }
 
 export function ksave() {
     histTick();
-    try { localStorage.setItem(CSTORE, JSON.stringify({ ports: ports, routes: routes, nextP: nextP, oc: oc, sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas })); } catch (e) {}
+    try { localStorage.setItem(CSTORE, JSON.stringify({ ports: ports, routes: routes, nextP: nextP, oc: oc, sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas, auto: autoCfg })); } catch (e) {}
   }
 
 export function portById(id) { for (var i = 0; i < ports.length; i++) if (ports[i].id === id) return ports[i]; return null; }
@@ -231,6 +284,7 @@ export function init() {
   sinal = Object.assign({}, SINAL_PADRAO);
   sinalScreens = {};
   maxPortas = MAX_PORTAS_PADRAO;
+  autoCfg = { corner: "bl", routing: "updown" };
   CSTORE = chave("cabos");
   svgK = document.getElementById("svg-k");
   ports = [];
@@ -250,6 +304,7 @@ export function init() {
         nextP = Number(sk.nextP) || ports.length + 1;
         oc = !!sk.oc;
         loadSinal(sk.sinal, sk.sinalScreens, sk.maxPortas);
+        autoCfg = Object.assign({}, autoCfg, sk.auto || {});
         routes = (sk.routes && typeof sk.routes === "object") ? sk.routes : {};
       }
     } catch (e) {}

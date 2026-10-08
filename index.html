@@ -286,6 +286,18 @@
           <div id="ks-lista"></div>
         </div>
       </details>
+      <details class="sinal" id="k-auto">
+        <summary>Distribuição automática</summary>
+        <div class="sinal-box">
+          <label class="fld">Escopo <select id="ka-escopo"></select></label>
+          <div class="two">
+            <label class="fld">Começa em <select id="ka-canto"><option value="bl">Embaixo à esquerda</option><option value="br">Embaixo à direita</option><option value="tl">Em cima à esquerda</option><option value="tr">Em cima à direita</option></select></label>
+            <label class="fld">Varre <select id="ka-sentido"><option value="updown">Coluna por coluna</option><option value="zigzag">Linha por linha</option></select></label>
+          </div>
+          <p class="hint">Serpentina tela a tela, cortada em blocos iguais que respeitam o limite de px por porta (e o overclock, se ligado). Substitui as rotas do escopo escolhido.</p>
+          <button class="btn" id="ka-go">Distribuir</button>
+        </div>
+      </details>
       <p class="empty" id="k-caps"></p>
       <div class="ports" id="ports"></div>
       <div class="detail" id="k-detail">
