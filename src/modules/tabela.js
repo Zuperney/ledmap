@@ -1,4 +1,5 @@
-import { tiles, rowsEl, groups, gname, save, selected, gM, gC, res, esc, fmt, PITCH, nf, set_selected } from "./core.js";
+import { cabNome } from "./gabinetes.js";
+import { tiles, rowsEl, groups, gname, save, selected, gM, gC, res, esc, fmt, nf, set_selected } from "./core.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
 import { syncInsp } from "./gaveta.js";
 import { syncMPanel } from "./rig-edicao.js";
@@ -51,7 +52,7 @@ export function init() {
       tr.setAttribute("data-id", s.id);
       tr.innerHTML = '<td><span class="n">' + s.id + '</span></td><td>' + esc(s.name) + (s.extra ? ' <button class="xdel" type="button">Excluir</button>' : '') +
         '</td><td class="gsel"></td><td class="r">' + fmt(s.w) + ' × ' + fmt(s.h) + '</td><td class="r">' + q.cols + ' × ' + q.rows +
-        '</td><td>' + PITCH[s.kind].name + '</td><td class="r">' + q.w + ' × ' + q.h +
+        '</td><td>' + cabNome(s) + '</td><td class="r">' + q.w + ' × ' + q.h +
         '</td><td class="r">' + nf(q.total) + '</td><td class="r mpos">' + fmt(s.mx) + ' , ' + fmt(s.my) +
         '</td><td class="r cpos"></td>';
       tr.addEventListener("click", function () { select(selected === s.id ? null : s.id); });

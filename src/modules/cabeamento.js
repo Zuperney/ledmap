@@ -1,4 +1,5 @@
-import { res, tiles, PITCH, nf, bbox, el, text } from "./core.js";
+import { res, tiles, nf, bbox, el, text } from "./core.js";
+import { cabNome } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
@@ -7,7 +8,7 @@ let LIMIT, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn,
 
 function kmsg(t) { document.getElementById("k-msg").textContent = t || ""; }
 
-function cabPx(t) { var q = res(t); return q.px * q.px; }
+function cabPx(t) { var q = res(t); return q.cw * q.ch; }
 
 export function ksave() {
     histTick();
@@ -39,13 +40,13 @@ export function portState(route) {
 
 function center(k) {
     var c = cellEl[k], q = res(c.t);
-    return [c.t.cx + (c.c + 0.5) * q.px, c.t.cy + (c.r + 0.5) * q.px];
+    return [c.t.cx + (c.c + 0.5) * q.cw, c.t.cy + (c.r + 0.5) * q.ch];
   }
 
 function capsText() {
     var seenP = {}, out = [];
     tiles.forEach(function (t) {
-      var name = PITCH[t.kind].name;
+      var name = cabNome(t);
       if (seenP[name]) return;
       seenP[name] = 1;
       var px = cabPx(t), f = Math.floor(LIMIT / px), cc = Math.ceil(LIMIT / px);
@@ -82,12 +83,12 @@ export function renderCabling() {
       var col = pcolor(p), act = p.id === activePort;
       el("polyline", { "class": "kline" + (act ? " act" : ""), points: pts.map(function (a) { return a[0] + "," + a[1]; }).join(" "), stroke: col }, linesK);
       var q0 = res(cellEl[route[0]].t);
-      el("circle", { "class": "kdot", cx: pts[0][0], cy: pts[0][1], r: q0.px * 0.22, fill: col }, linesK);
+      el("circle", { "class": "kdot", cx: pts[0][0], cy: pts[0][1], r: q0.u * 0.22, fill: col }, linesK);
       if (route.length > 1) {
         var ql = res(cellEl[route[route.length - 1]].t), last = pts[pts.length - 1];
-        el("circle", { "class": "kend", cx: last[0], cy: last[1], r: ql.px * 0.2, stroke: col }, linesK);
+        el("circle", { "class": "kend", cx: last[0], cy: last[1], r: ql.u * 0.2, stroke: col }, linesK);
       }
-      var tg = el("text", { "class": "ktag", x: pts[0][0] + q0.px * 0.3, y: pts[0][1] - q0.px * 0.3, "font-size": q0.px * 0.5, "stroke-width": q0.px * 0.15 }, linesK);
+      var tg = el("text", { "class": "ktag", x: pts[0][0] + q0.u * 0.3, y: pts[0][1] - q0.u * 0.3, "font-size": q0.u * 0.5, "stroke-width": q0.u * 0.15 }, linesK);
       tg.textContent = pname(p).slice(0, 8);
     });
     var totalCab = Object.keys(cellEl).length;
@@ -204,8 +205,8 @@ export function init() {
       for (var r = 0; r < q.rows; r++) {
         for (var c = 0; c < q.cols; c++) {
           var key = t.id + ":" + c + ":" + r;
-          var rect = el("rect", { "class": "cell", x: c * q.px, y: r * q.px, width: q.px, height: q.px, "data-key": key }, g);
-          var num = text(g, "cnum", (c + 0.5) * q.px, (r + 0.5) * q.px, q.px * 0.34, "");
+          var rect = el("rect", { "class": "cell", x: c * q.cw, y: r * q.ch, width: q.cw, height: q.ch, "data-key": key }, g);
+          var num = text(g, "cnum", (c + 0.5) * q.cw, (r + 0.5) * q.ch, q.u * 0.34, "");
           cellEl[key] = { rect: rect, num: num, t: t, c: c, r: r };
         }
       }

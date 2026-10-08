@@ -51,7 +51,7 @@ export function duplicateSel() {
     var fm = freeM(t.w, t.h) || { x: t.mx + t.w, y: t.my };
     var tmp = { w: t.w, h: t.h, kind: t.kind, mx: fm.x, my: fm.y };
     var fc = freeC(tmp);
-    var c = cleanExtra({ id: id, name: (t.name + " cópia").slice(0, 30), kind: t.kind, w: t.w, h: t.h, mx: fm.x, my: fm.y, cx: fc.x, cy: fc.y, grp: t.grp || "" });
+    var c = cleanExtra({ id: id, name: (t.name + " cópia").slice(0, 30), kind: t.kind, cab: t.cab, w: t.w, h: t.h, mx: fm.x, my: fm.y, cx: fc.x, cy: fc.y, grp: t.grp || "" });
     if (!c) { pmsg("Não foi possível duplicar."); return; }
     EXTRAS.push(c);
     if (!commitAndReload(curTab + ":" + id)) { EXTRAS.pop(); pmsg("Não consegui salvar neste navegador."); }

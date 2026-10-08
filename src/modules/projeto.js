@@ -18,7 +18,7 @@ export function buildProject() {
       exportadoEm: new Date().toISOString(),
       projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "" }; })(),
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", mx: t.mx, my: t.my }; }),
-      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy }; }),
+      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy }; }),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
       cabeamento: {
@@ -66,9 +66,9 @@ export function applyProject(o) {
     if (!o || typeof o !== "object" || o.tipo !== "ledmap") throw new Error("Este arquivo não é um projeto do Led Map.");
     if (Array.isArray(o.extras)) {
       var ne = cleanExtras(o.extras.map(function (x) {
-        return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "" } : null;
+        return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "" } : null;
       }));
-      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.w, e.h, e.mx, e.my, e.cx, e.cy]; })); };
+      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy]; })); };
       if (sig(ne) !== sig(EXTRAS)) {
         var prevEx = EXTRAS;
         set_EXTRAS(ne);

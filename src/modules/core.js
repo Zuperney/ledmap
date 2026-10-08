@@ -1,5 +1,6 @@
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
+import { GAB, CAB_PADRAO, cabDe } from "./gabinetes.js";
 
 let NS, FLOOR, CW, CH, STORE, PITCH, EXTRA_MAX, EXTRAS, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
 
@@ -8,6 +9,15 @@ function half(v, lo, hi) {
     if (!isFinite(v)) return null;
     v = Math.round(v * 2) / 2;
     return v < lo || v > hi ? null : v;
+  }
+
+// Arredonda uma medida (m) para um número inteiro de gabinetes de lado m (0,5 a 30 m).
+export function snapDim(v, m) {
+    v = Number(v);
+    if (!isFinite(v) || v <= 0) return null;
+    var n = Math.max(1, Math.round(v / m));
+    var r = Math.round(n * m * 1000) / 1000;
+    return r > 30 ? null : r;
   }
 
 export function mnum(v) {
@@ -21,12 +31,14 @@ export function cleanExtra(x) {
     if (!/^\d{1,3}$/.test(id)) return null;
     var kind = x.kind;
     if (!Object.prototype.hasOwnProperty.call(PITCH, kind)) return null;
-    var w = half(x.w, 0.5, 30), h = half(x.h, 0.5, 30), mx = half(x.mx, -30, 60), my = half(x.my, -10, 30);
+    var cab = GAB[String(x.cab)] ? String(x.cab) : CAB_PADRAO[kind];
+    var g = GAB[cab], mx = half(x.mx, -30, 60), my = half(x.my, -10, 30);
+    var w = snapDim(x.w, g.mw), h = snapDim(x.h, g.mh);
     if (w === null || h === null || mx === null || my === null) return null;
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Tela " + id), kind: kind, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", extra: true };
+    return { id: id, name: nm || ("Tela " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", extra: true };
   }
 
 export function cleanExtras(list) {
@@ -49,10 +61,10 @@ export function freeSpot(w, h, list) {
   }
 
 export function scaledPos(t) {
-    var q = res(t), k = q.px * 2, minX = Infinity, maxTop = -Infinity;
+    var q = res(t), kx = q.cw / q.mw, ky = q.ch / q.mh, minX = Infinity, maxTop = -Infinity;
     tiles.concat([t]).forEach(function (o) { minX = Math.min(minX, o.mx); maxTop = Math.max(maxTop, o.my + o.h); });
-    var x = Math.round(((t.mx - minX) * k) / 8) * 8;
-    var y = Math.round(((maxTop - (t.my + t.h)) * k) / 8) * 8;
+    var x = Math.round(((t.mx - minX) * kx) / 8) * 8;
+    var y = Math.round(((maxTop - (t.my + t.h)) * ky) / 8) * 8;
     return { x: Math.min(Math.max(x, 0), CW - q.w), y: Math.min(Math.max(y, 0), CH - q.h) };
   }
 
@@ -66,8 +78,9 @@ export function save() {
   }
 
 export function res(s) {
-    var cols = Math.round(s.w / 0.5), rows = Math.round(s.h / 0.5), px = PITCH[s.kind].px;
-    return { cols: cols, rows: rows, px: px, w: cols * px, h: rows * px, total: cols * px * rows * px };
+    var g = cabDe(s), cols = Math.max(1, Math.round(s.w / g.mw)), rows = Math.max(1, Math.round(s.h / g.mh));
+    var w = cols * g.rx, h = rows * g.ry;
+    return { cols: cols, rows: rows, cw: g.rx, ch: g.ry, mw: g.mw, mh: g.mh, u: Math.min(g.rx, g.ry), w: w, h: h, total: w * h };
   }
 
 export function esc(v) { return String(v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; }); }

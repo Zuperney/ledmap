@@ -25,14 +25,15 @@
     <label class="fld">Nome <input type="text" id="a-name" maxlength="40" autocomplete="off"></label>
     <label class="fld">Tipo
       <select id="a-kind">
-        <option value="imag">IMAG · P5.9 (84 px)</option>
-        <option value="up">Upstage · P5.9 (84 px)</option>
-        <option value="c">C · P3.9 (128 px)</option>
+        <option value="imag">IMAG</option>
+        <option value="up">Upstage</option>
+        <option value="c">C</option>
       </select>
     </label>
+    <label class="fld">Gabinete <select id="a-cab"></select></label>
     <div class="two">
-      <label class="fld">Largura (m) <input type="number" id="a-w" value="2" min="0.5" max="30" step="0.5" inputmode="decimal"></label>
-      <label class="fld">Altura (m) <input type="number" id="a-h" value="2" min="0.5" max="30" step="0.5" inputmode="decimal"></label>
+      <label class="fld">Largura (m) <input type="number" id="a-w" value="2" min="0.1" max="30" step="0.1" inputmode="decimal"></label>
+      <label class="fld">Altura (m) <input type="number" id="a-h" value="2" min="0.1" max="30" step="0.1" inputmode="decimal"></label>
     </div>
     <label class="fld">Screen <select id="a-grp"></select></label>
     <div class="two">
@@ -290,7 +291,7 @@
     <span><i style="background:var(--imag)"></i>IMAG · P5.9 · 84 × 84 px</span>
     <span><i style="background:var(--up)"></i>Upstage · P5.9 · 84 × 84 px</span>
     <span><i style="background:var(--cpiece)"></i>Peças do C · P3.9 · 128 × 128 px</span>
-    <span>Linhas finas = gabinetes de 50 × 50 cm</span>
+    <span>Linhas finas = gabinetes</span>
   </div>
 
   <p class="hint" id="hint"></p>

@@ -1,4 +1,5 @@
-import { save, STORE, EXTRAS, BASE, res, nf, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS } from "./core.js";
+import { GABINETES, GAB, CAB_PADRAO } from "./gabinetes.js";
+import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS } from "./core.js";
 import { ksave, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
@@ -24,12 +25,14 @@ export function nextExtraId() {
     return String(m + 1);
   }
 
-function mult(v) { v = Number(v); return isFinite(v) && v > 0 && Math.abs(v * 2 - Math.round(v * 2)) < 1e-9; }
+function mult(v) { v = Number(v); return isFinite(v) && v > 0 && v <= 30; }
+
+let aCab;
 
 function updatePrev() {
-    if (!mult(aW.value) || !mult(aH.value)) { aPrev.textContent = "Use múltiplos de 0,5 m (gabinete de 50 × 50 cm)."; return; }
-    var q = res({ w: Number(aW.value), h: Number(aH.value), kind: aKind.value });
-    aPrev.textContent = q.cols + " × " + q.rows + " gabinetes (" + (q.cols * q.rows) + ") · " + q.w + " × " + q.h + " px · " + nf(q.total) + " px no total";
+    if (!mult(aW.value) || !mult(aH.value)) { aPrev.textContent = "Informe largura e altura entre 0,1 e 30 m."; return; }
+    var g = GAB[aCab.value], q = res({ w: Number(aW.value), h: Number(aH.value), kind: aKind.value, cab: aCab.value });
+    aPrev.textContent = "Gabinete " + fmt(g.mw * 100) + " × " + fmt(g.mh * 100) + " cm · tela final " + fmt(q.cols * g.mw) + " × " + fmt(q.rows * g.mh) + " m · " + q.cols + " × " + q.rows + " gabinetes (" + (q.cols * q.rows) + ") · " + q.w + " × " + q.h + " px · " + nf(q.total) + " px no total";
   }
 
 export function freeM(w, h) {
@@ -82,7 +85,14 @@ export function init() {
   aMy = document.getElementById("a-my");
   aPrev = document.getElementById("a-prev");
   aErr = document.getElementById("a-err");
-  [aKind, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
+  aCab = document.getElementById("a-cab");
+  GABINETES.forEach(function (g) {
+      var o = document.createElement("option"); o.value = g.id;
+      o.textContent = g.nome + " · " + g.rx + "×" + g.ry + " px · " + Math.round(g.mw * 1000) / 10 + "×" + Math.round(g.mh * 1000) / 10 + " cm";
+      aCab.appendChild(o);
+    });
+  aKind.addEventListener("change", function () { aCab.value = CAB_PADRAO[aKind.value]; });
+  [aKind, aCab, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
   document.getElementById("add-open").addEventListener("click", openAdd);
   document.getElementById("add-open2").addEventListener("click", openAdd);
   document.getElementById("a-cancel").addEventListener("click", closeAdd);
@@ -95,7 +105,7 @@ export function init() {
   document.getElementById("a-ok").addEventListener("click", function () {
       aErr.textContent = "";
       if (EXTRAS.length >= EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " telas."; return; }
-      if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Largura e altura precisam ser múltiplos de 0,5 m."; return; }
+      if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Informe largura e altura válidas (até 30 m)."; return; }
       var id = nextExtraId();
       if (Number(id) > 999) { aErr.textContent = "Numeração esgotada."; return; }
       var w = Number(aW.value), h = Number(aH.value), mx, my;
@@ -106,8 +116,8 @@ export function init() {
       } else {
         mx = Number(aMx.value === "" ? 0 : aMx.value); my = Number(aMy.value === "" ? 0 : aMy.value);
       }
-      var fc = freeC({ w: w, h: h, kind: aKind.value, mx: mx, my: my });
-      var c = cleanExtra({ id: id, name: aName.value, kind: aKind.value, w: w, h: h, mx: mx, my: my, cx: fc.x, cy: fc.y, grp: aGrp.value });
+      var fc = freeC({ w: w, h: h, kind: aKind.value, cab: aCab.value, mx: mx, my: my });
+      var c = cleanExtra({ id: id, name: aName.value, kind: aKind.value, cab: aCab.value, w: w, h: h, mx: mx, my: my, cx: fc.x, cy: fc.y, grp: aGrp.value });
       if (!c) { aErr.textContent = "Dimensões ou posição fora do limite (até 30 m de largura e altura)."; return; }
       EXTRAS.push(c);
       if (!commitAndReload("c:" + id)) {

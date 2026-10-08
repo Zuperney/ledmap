@@ -16,7 +16,7 @@ export function init() {
       var g = el("g", { "class": "scr edit " + s.kind }, layerC);
       var rs = res(s);
       el("rect", { "class": "body", x: 0, y: 0, width: rs.w, height: rs.h }, g);
-      el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.px, rs.px) }, g);
+      el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.cw, rs.ch) }, g);
       var gab = rs.cols + " × " + rs.rows + " gab.";
       if (rs.h >= 600 && rs.w >= 600) {
         el("circle", { "class": "badge", cx: rs.w / 2, cy: rs.h / 2 - 170, r: 125 }, g);

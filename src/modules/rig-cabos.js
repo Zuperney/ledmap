@@ -1,12 +1,12 @@
 import { cellEl, ports, routes, pcolor, pname } from "./cabeamento.js";
-import { FLOOR, el, text, svgM } from "./core.js";
+import { FLOOR, el, text, svgM, res } from "./core.js";
 import { makeViewer } from "./visor.js";
 
 let viewM, cabOn, ovlM, btnCab;
 
 function cellM(k) {
-    var c = cellEl[k], t = c.t;
-    return { x: t.mx + c.c * 0.5, y: FLOOR - t.my - t.h + c.r * 0.5 };
+    var c = cellEl[k], t = c.t, q = res(t);
+    return { x: t.mx + c.c * q.mw, y: FLOOR - t.my - t.h + c.r * q.mh, w: q.mw, h: q.mh };
   }
 
 export function renderCabM() {
@@ -23,10 +23,10 @@ export function renderCabM() {
       chip.appendChild(document.createTextNode(pname(p) + " · " + route.length + (route.length === 1 ? " gabinete" : " gabinetes")));
       box.appendChild(chip);
       if (!route.length) return;
-      var pts = route.map(function (k) { var c = cellM(k); return [c.x + 0.25, c.y + 0.25]; });
+      var pts = route.map(function (k) { var c = cellM(k); return [c.x + c.w / 2, c.y + c.h / 2]; });
       route.forEach(function (k) {
         var c = cellM(k);
-        el("rect", { "class": "ovc", x: c.x, y: c.y, width: 0.5, height: 0.5, fill: col }, ovlM);
+        el("rect", { "class": "ovc", x: c.x, y: c.y, width: c.w, height: c.h, fill: col }, ovlM);
       });
       el("polyline", { "class": "kline act", points: pts.map(function (a) { return a[0] + "," + a[1]; }).join(" "), stroke: col }, ovlM);
       el("circle", { "class": "kdot", cx: pts[0][0], cy: pts[0][1], r: 0.12, fill: col }, ovlM);

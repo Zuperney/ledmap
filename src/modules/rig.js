@@ -57,7 +57,7 @@ export function init() {
       var g = el("g", { "class": "scr " + s.kind, transform: "translate(" + s.mx + " " + (FLOOR - s.my - s.h) + ")" }, layerM);
       var rs = res(s), tall = s.h >= 3;
       el("rect", { "class": "body", x: 0, y: 0, width: s.w, height: s.h }, g);
-      el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, 0.5, 0.5) }, g);
+      el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.mw, rs.mh) }, g);
       var r = tall ? 0.6 : (s.w < 2 ? 0.45 : 0.38);
       var fs = tall ? 0.85 : (s.w < 2 ? 0.6 : 0.5);
       var bx = s.w / 2, by = s.h / 2;

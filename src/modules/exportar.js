@@ -1,4 +1,5 @@
-import { tiles, CH, CW, BASE, res, scaledPos, PITCH, groups, members, gname, bbox, nf, fmt, FLOOR } from "./core.js";
+import { cabNome } from "./gabinetes.js";
+import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR } from "./core.js";
 import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, LIMIT, oc } from "./cabeamento.js";
 import { boundsM } from "./rig.js";
 
@@ -85,10 +86,10 @@ function assembledItems() {
       var mv = t.mx !== d.mx || t.my !== d.my, p;
       if (!mv) p = { x: d.cx, y: d.cy };
       else {
-        var k = q.px * 2;
+        var kx = q.cw / q.mw, ky = q.ch / q.mh;
         p = {
-          x: Math.min(Math.max(Math.round((d.cx + (t.mx - d.mx) * k) / 8) * 8, 0), CW - q.w),
-          y: Math.min(Math.max(Math.round((d.cy - (t.my - d.my) * k) / 8) * 8, 0), CH - q.h)
+          x: Math.min(Math.max(Math.round((d.cx + (t.mx - d.mx) * kx) / 8) * 8, 0), CW - q.w),
+          y: Math.min(Math.max(Math.round((d.cy - (t.my - d.my) * ky) / 8) * 8, 0), CH - q.h)
         };
       }
       return { t: t, x: p.x, y: p.y, w: q.w, h: q.h, mv: mv };
@@ -110,7 +111,7 @@ function screensCsv() {
       "gabinetes_colunas", "gabinetes_linhas", "largura_px", "altura_px", "x_canvas_px", "y_canvas_px", "x_na_screen_px", "y_na_screen_px"]];
     function tileRow(label, bb, t) {
       var q = res(t);
-      return [label, bb ? bb.x : "", bb ? bb.y : "", bb ? bb.w : "", bb ? bb.h : "", t.id, t.name, PITCH[t.kind].name,
+      return [label, bb ? bb.x : "", bb ? bb.y : "", bb ? bb.w : "", bb ? bb.h : "", t.id, t.name, cabNome(t),
         q.cols, q.rows, q.w, q.h, t.cx, t.cy, bb ? t.cx - bb.x : "", bb ? t.cy - bb.y : ""];
     }
     groups.forEach(function (g) {
@@ -129,10 +130,10 @@ function cablingCsv() {
     ports.forEach(function (pt) {
       var route = routes[pt.id], acc = 0, st = portState(route).txt;
       route.forEach(function (k, i) {
-        var c = cellEl[k], q = res(c.t), px = q.px * q.px;
+        var c = cellEl[k], q = res(c.t), px = q.cw * q.ch;
         acc += px;
-        rows.push([pname(pt), i + 1, c.t.id, c.t.name, c.c + 1, c.r + 1, PITCH[c.t.kind].name, px, acc,
-          c.t.cx + c.c * q.px, c.t.cy + c.r * q.px, st]);
+        rows.push([pname(pt), i + 1, c.t.id, c.t.name, c.c + 1, c.r + 1, cabNome(c.t), px, acc,
+          c.t.cx + c.c * q.cw, c.t.cy + c.r * q.ch, st]);
       });
     });
     return csv(rows);
@@ -188,18 +189,18 @@ function drawMap(mode, items) {
       ctx.lineWidth = plain ? 2 : 1.5;
       ctx.beginPath();
       var k;
-      for (k = 1; k < q.cols; k++) { ctx.moveTo(x + k * q.px, y); ctx.lineTo(x + k * q.px, y + q.h); }
-      for (k = 1; k < q.rows; k++) { ctx.moveTo(x, y + k * q.px); ctx.lineTo(x + q.w, y + k * q.px); }
+      for (k = 1; k < q.cols; k++) { ctx.moveTo(x + k * q.cw, y); ctx.lineTo(x + k * q.cw, y + q.h); }
+      for (k = 1; k < q.rows; k++) { ctx.moveTo(x, y + k * q.ch); ctx.lineTo(x + q.w, y + k * q.ch); }
       ctx.stroke();
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 4;
       ctx.strokeRect(x + 2, y + 2, q.w - 4, q.h - 4);
       if (mode !== "cabling") {
-        var fz = Math.max(12, Math.round(q.px * 0.17));
+        var fz = Math.max(12, Math.round(q.u * 0.17));
         ctx.font = "400 " + fz + "px " + MONO;
         for (var r = 0; r < q.rows; r++) {
           for (var c = 0; c < q.cols; c++) {
-            halo(ctx, (c + 1) + "-" + (r + 1), x + c * q.px + 6, y + r * q.px + fz + 4, "rgba(255,255,255,0.8)", 3);
+            halo(ctx, (c + 1) + "-" + (r + 1), x + c * q.cw + 6, y + r * q.ch + fz + 4, "rgba(255,255,255,0.8)", 3);
           }
         }
       }
@@ -212,7 +213,7 @@ function drawMap(mode, items) {
         ctx.font = "500 44px " + MONO;
         halo(ctx, q.w + " × " + q.h + " px", x + q.w / 2, y + q.h / 2 + big * 0.25, "#ffffff", 8);
         ctx.font = "400 36px " + MONO;
-        halo(ctx, PITCH[t.kind].name + " · " + q.cols + " × " + q.rows + " gab.", x + q.w / 2, y + q.h / 2 + big * 0.25 + 56, "#ffffff", 8);
+        halo(ctx, cabNome(t) + " · " + q.cols + " × " + q.rows + " gab.", x + q.w / 2, y + q.h / 2 + big * 0.25 + 56, "#ffffff", 8);
       } else {
         ctx.font = "700 " + big + "px " + DISP;
         halo(ctx, t.id + "  " + q.w + " × " + q.h + " px", x + q.w / 2, y + q.h / 2, "#ffffff", 8);
@@ -252,12 +253,12 @@ function drawMap(mode, items) {
         var c = cellEl[key], q = res(c.t), it = pos[c.t.id];
         ctx.globalAlpha = 0.6;
         ctx.fillStyle = pcolor(portById(own[key].pid));
-        ctx.fillRect(it.x + ox + c.c * q.px, it.y + oy + c.r * q.px, q.px, q.px);
+        ctx.fillRect(it.x + ox + c.c * q.cw, it.y + oy + c.r * q.ch, q.cw, q.ch);
         ctx.globalAlpha = 1;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.font = "700 " + Math.round(q.px * 0.34) + "px " + MONO;
-        halo(ctx, String(own[key].i + 1), it.x + ox + (c.c + 0.5) * q.px, it.y + oy + (c.r + 0.5) * q.px, "#ffffff", 5);
+        ctx.font = "700 " + Math.round(q.u * 0.34) + "px " + MONO;
+        halo(ctx, String(own[key].i + 1), it.x + ox + (c.c + 0.5) * q.cw, it.y + oy + (c.r + 0.5) * q.ch, "#ffffff", 5);
       });
       ctx.textAlign = "left";
       ctx.textBaseline = "alphabetic";
@@ -267,7 +268,7 @@ function drawMap(mode, items) {
         var col = pcolor(pt);
         var pts = route.map(function (key) {
           var c = cellEl[key], q = res(c.t), it = pos[c.t.id];
-          return [it.x + ox + (c.c + 0.5) * q.px, it.y + oy + (c.r + 0.5) * q.px, q.px];
+          return [it.x + ox + (c.c + 0.5) * q.cw, it.y + oy + (c.r + 0.5) * q.ch, q.u];
         });
         ctx.strokeStyle = col;
         ctx.lineWidth = 6;
@@ -305,7 +306,7 @@ function drawMap(mode, items) {
 
 function drawLayout(withCab) {
     var S = 120, b = boundsM, pad = 60, head = 150;
-    var bw = (b.x1 - b.x0) * S, bh = (b.y1 - b.y0) * S, cs = 0.5 * S;
+    var bw = (b.x1 - b.x0) * S, bh = (b.y1 - b.y0) * S;
     var legendH = withCab ? 260 + Math.ceil(Math.max(ports.length, 1) / 3) * 110 : 0;
     var W = Math.round(Math.max(bw + pad * 2, 2400)), H = Math.round(bh + pad * 2 + head + legendH);
     var cv = document.createElement("canvas");
@@ -347,8 +348,8 @@ function drawLayout(withCab) {
       ctx.globalAlpha = 1;
       ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 1.5;
       ctx.beginPath();
-      for (k = 1; k < q.cols; k++) { ctx.moveTo(x + k * cs, y); ctx.lineTo(x + k * cs, y + h); }
-      for (k = 1; k < q.rows; k++) { ctx.moveTo(x, y + k * cs); ctx.lineTo(x + w, y + k * cs); }
+      for (k = 1; k < q.cols; k++) { ctx.moveTo(x + k * q.mw * S, y); ctx.lineTo(x + k * q.mw * S, y + h); }
+      for (k = 1; k < q.rows; k++) { ctx.moveTo(x, y + k * q.mh * S); ctx.lineTo(x + w, y + k * q.mh * S); }
       ctx.stroke();
       ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4;
       ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
@@ -373,25 +374,25 @@ function drawLayout(withCab) {
     if (withCab) {
       var own = owners();
       function cc(key) {
-        var c = cellEl[key], t = c.t;
-        return { x: X(t.mx + c.c * 0.5), y: Y(FLOOR - t.my - t.h + c.r * 0.5) };
+        var c = cellEl[key], t = c.t, q = res(t);
+        return { x: X(t.mx + c.c * q.mw), y: Y(FLOOR - t.my - t.h + c.r * q.mh), cs: q.mw * S, ch: q.mh * S };
       }
       Object.keys(own).forEach(function (key) {
         var p = cc(key);
         ctx.globalAlpha = 0.6;
         ctx.fillStyle = pcolor(portById(own[key].pid));
-        ctx.fillRect(p.x, p.y, cs, cs);
+        ctx.fillRect(p.x, p.y, p.cs, p.ch);
         ctx.globalAlpha = 1;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.font = "700 22px " + MONO;
-        halo(ctx, String(own[key].i + 1), p.x + cs / 2, p.y + cs / 2, "#ffffff", 4);
+        halo(ctx, String(own[key].i + 1), p.x + p.cs / 2, p.y + p.ch / 2, "#ffffff", 4);
       });
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       ports.forEach(function (pt) {
         var route = routes[pt.id];
         if (!route.length) return;
         var col = pcolor(pt);
-        var pts = route.map(function (key) { var p = cc(key); return [p.x + cs / 2, p.y + cs / 2]; });
+        var pts = route.map(function (key) { var p = cc(key); return [p.x + p.cs / 2, p.y + p.ch / 2]; });
         ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.lineJoin = "round"; ctx.lineCap = "round";
         ctx.beginPath();
         pts.forEach(function (a, i) { if (i) ctx.lineTo(a[0], a[1]); else ctx.moveTo(a[0], a[1]); });
@@ -427,7 +428,7 @@ function layoutCsv() {
     var rows = [["tela", "nome", "pitch", "largura_m", "altura_m", "x_m", "y_chao_m", "gab_colunas", "gab_linhas", "resolucao_px", "pixels_total"]];
     tiles.forEach(function (t) {
       var q = res(t);
-      rows.push([t.id, t.name, PITCH[t.kind].name, fmt(t.w), fmt(t.h), fmt(t.mx), fmt(t.my), q.cols, q.rows, q.w + "x" + q.h, q.total]);
+      rows.push([t.id, t.name, cabNome(t), fmt(t.w), fmt(t.h), fmt(t.mx), fmt(t.my), q.cols, q.rows, q.w + "x" + q.h, q.total]);
     });
     return csv(rows);
   }
