@@ -58,3 +58,14 @@ body.fs .stage.pan { max-height: 100dvh; height: 100dvh; }
 .prow .btn { padding: 3px 7px; }
 body[data-aba="p"] .drawer, body[data-aba="n"] .drawer, body[data-aba="e"] .drawer, body[data-aba="r"] .drawer { display: none; }
 body[data-aba="p"] .wrap, body[data-aba="n"] .wrap, body[data-aba="e"] .wrap, body[data-aba="r"] .wrap { padding-bottom: 14px; }
+
+/* Sinal (bits, Hz, capacidade, limite de portas por Screen) */
+.sinal { margin: 8px 0; border: 1px solid var(--line); border-radius: 6px; background: var(--panel, transparent); }
+.sinal > summary { cursor: pointer; padding: 8px 10px; font-size: 12px; font-weight: 600; }
+.sinal-box { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 10px; }
+.sinal .three { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; }
+.sinal .fld { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); }
+.sinal .fld input, .sinal .fld select { font: 500 13px var(--font-data); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px; min-width: 0; width: 100%; }
+.sinal .hint { font-size: 11px; color: var(--muted); margin: 0; }
+.sinal .srow { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; padding: 3px 0; border-top: 1px solid var(--line); }
+.sinal .srow.bad b { color: var(--bad); }

@@ -1,18 +1,70 @@
-import { res, tiles, nf, bbox, el, text } from "./core.js";
+import { res, tiles, groups, nf, bbox, el, text } from "./core.js";
 import { cabNome } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
+import { SINAL_PADRAO, MAX_PORTAS_PADRAO, limpaSinal, limitePx, limpaMax } from "./sinal.js";
 
-let LIMIT, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
+let sinal, sinalScreens, maxPortas, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
 
 function kmsg(t) { document.getElementById("k-msg").textContent = t || ""; }
+
+export function cfgDe(t) { return (t.grp && sinalScreens[t.grp]) || sinal; }
+
+export function limiteTela(t) { return limitePx(cfgDe(t)); }
+
+// limite da rota: o menor entre as telas que ela atravessa (conservador)
+export function limiteRota(route) {
+    var m = Infinity;
+    route.forEach(function (k) { m = Math.min(m, limiteTela(cellEl[k].t)); });
+    return m === Infinity ? limitePx(sinal) : m;
+  }
+
+export function limiteTxt() {
+    var seen = {}, vals = [];
+    tiles.forEach(function (t) { var v = limiteTela(t); if (!seen[v]) { seen[v] = 1; vals.push(v); } });
+    return vals.length > 1 ? nf(Math.min.apply(null, vals)) + " a " + nf(Math.max.apply(null, vals)) : nf(vals.length ? vals[0] : limitePx(sinal));
+  }
+
+// portas necessárias (mínimo por área) e em uso, por Screen
+export function resumoScreens(groups) {
+    var chaves = groups.map(function (g) { return { id: g.id, nome: g.name.trim() || "Sem nome" }; }).concat([{ id: "", nome: "Sem screen" }]);
+    var pe = {};
+    ports.forEach(function (p) { var r = routes[p.id] || []; if (r.length) { var g = cellEl[r[0]].t.grp || ""; pe[g] = (pe[g] || 0) + 1; } });
+    return chaves.map(function (c) {
+      var px = 0, n = 0, lim = 0;
+      tiles.forEach(function (t) { if ((t.grp || "") === c.id) { px += res(t).total; n++; lim = limiteTela(t); } });
+      return { id: c.id, nome: c.nome, telas: n, px: px, limite: lim, min: n ? Math.ceil(px / lim) : 0, usadas: pe[c.id] || 0 };
+    }).filter(function (x) { return x.telas; });
+  }
+
+let sinalHook = null;
+export function onSinal(fn) { sinalHook = fn; }
+
+export function setSinal(grp, cfg) {
+    if (!grp) sinal = limpaSinal(cfg);
+    else if (cfg) sinalScreens[grp] = limpaSinal(cfg);
+    else delete sinalScreens[grp];
+    renderCabling();
+    ksave();
+  }
+
+export function setMaxPortas(n) { maxPortas = limpaMax(n); renderCabling(); ksave(); }
+
+export function sinalState() { return { sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas }; }
+
+export function loadSinal(sn, ss, mp) {
+    sinal = limpaSinal(sn);
+    sinalScreens = {};
+    if (ss && typeof ss === "object") Object.keys(ss).forEach(function (k) { sinalScreens[k] = limpaSinal(ss[k]); });
+    maxPortas = limpaMax(mp);
+  }
 
 function cabPx(t) { var q = res(t); return q.cw * q.ch; }
 
 export function ksave() {
     histTick();
-    try { localStorage.setItem(CSTORE, JSON.stringify({ ports: ports, routes: routes, nextP: nextP, oc: oc })); } catch (e) {}
+    try { localStorage.setItem(CSTORE, JSON.stringify({ ports: ports, routes: routes, nextP: nextP, oc: oc, sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas })); } catch (e) {}
   }
 
 export function portById(id) { for (var i = 0; i < ports.length; i++) if (ports[i].id === id) return ports[i]; return null; }
@@ -31,7 +83,7 @@ function routeLoad(route) { return route.reduce(function (a, k) { return a + cab
 
 export function portState(route) {
     if (!route.length) return { cls: "", txt: "Vazia", load: 0 };
-    var load = routeLoad(route);
+    var load = routeLoad(route), LIMIT = limiteRota(route);
     var lastPx = cabPx(cellEl[route[route.length - 1]].t);
     if (load <= LIMIT) return { cls: "ok", txt: "OK", load: load };
     if (load - lastPx < LIMIT) return oc ? { cls: "oc", txt: "OC", load: load } : { cls: "bad", txt: "Excede, cabe com OC", load: load };
@@ -46,13 +98,13 @@ function center(k) {
 function capsText() {
     var seenP = {}, out = [];
     tiles.forEach(function (t) {
-      var name = cabNome(t);
-      if (seenP[name]) return;
-      seenP[name] = 1;
+      var name = cabNome(t), LIMIT = limiteTela(t), kk = name + "|" + LIMIT;
+      if (seenP[kk]) return;
+      seenP[kk] = 1;
       var px = cabPx(t), f = Math.floor(LIMIT / px), cc = Math.ceil(LIMIT / px);
       out.push(name + ": " + nf(px) + " px por gabinete, " + f + " gab por porta" + (cc !== f ? " (" + cc + " com overclock)" : ""));
     });
-    return "Limite de " + nf(LIMIT) + " px por porta. " + out.join(" · ");
+    return "Limite de " + limiteTxt() + " px por porta. " + out.join(" · ");
   }
 
 export function renderCabling() {
@@ -93,15 +145,16 @@ export function renderCabling() {
     });
     var totalCab = Object.keys(cellEl).length;
     var totalPx = tiles.reduce(function (a, t) { return a + res(t).total; }, 0);
-    document.getElementById("k-stat").innerHTML = "<b>" + totalCab + "</b> gabinetes · <b>" + assigned + "</b> com porta · <b>" + (totalCab - assigned) + "</b> sem porta · mínimo de <b>" + Math.ceil(totalPx / LIMIT) + "</b> portas";
+    document.getElementById("k-stat").innerHTML = "<b>" + totalCab + "</b> gabinetes · <b>" + assigned + "</b> com porta · <b>" + (totalCab - assigned) + "</b> sem porta · mínimo de <b>" + resumoScreens(groups).reduce(function (a, x) { return a + x.min; }, 0) + "</b> portas";
     renderPorts();
+    if (sinalHook) sinalHook();
   }
 
 function renderPorts() {
     var box = document.getElementById("ports");
     box.textContent = "";
     ports.forEach(function (p) {
-      var route = routes[p.id], st = portState(route);
+      var route = routes[p.id], st = portState(route), LIMIT = limiteRota(route);
       var b = document.createElement("button");
       b.className = "port";
       b.setAttribute("aria-pressed", String(p.id === activePort));
@@ -132,7 +185,7 @@ export function setActivePort(id) {
 
 function tryAppend(key) {
     var route = routes[activePort];
-    var load = routeLoad(route), add = cabPx(cellEl[key].t);
+    var load = routeLoad(route), add = cabPx(cellEl[key].t), LIMIT = Math.min(limiteRota(route.concat([key])), 1e12);
     var ok = oc ? load < LIMIT : load + add <= LIMIT;
     if (!ok) {
       if (!oc && load < LIMIT) kmsg("Porta cheia: " + nf(load) + " de " + nf(LIMIT) + " px. Ative o overclock para encaixar mais um gabinete.");
@@ -175,7 +228,9 @@ function applyTrace() {
 export function applyOc() { btnOc.setAttribute("aria-pressed", String(oc)); }
 
 export function init() {
-  LIMIT = 655360;
+  sinal = Object.assign({}, SINAL_PADRAO);
+  sinalScreens = {};
+  maxPortas = MAX_PORTAS_PADRAO;
   CSTORE = chave("cabos");
   svgK = document.getElementById("svg-k");
   ports = [];
@@ -194,6 +249,7 @@ export function init() {
         if (Array.isArray(sk.ports)) ports = sk.ports.filter(function (p) { return p && typeof p.id === "string" && typeof p.name === "string" && Number(p.n) > 0; });
         nextP = Number(sk.nextP) || ports.length + 1;
         oc = !!sk.oc;
+        loadSinal(sk.sinal, sk.sinalScreens, sk.maxPortas);
         routes = (sk.routes && typeof sk.routes === "object") ? sk.routes : {};
       }
     } catch (e) {}
@@ -318,7 +374,7 @@ export function init() {
   setActivePort(activePort);
 }
 
-export { cellEl, ports, routes, LIMIT, oc, nextP, activePort, viewK };
+export { cellEl, ports, routes, oc, nextP, activePort, viewK };
 export function set_ports(v) { ports = v; return v; }
 export function set_routes(v) { routes = v; return v; }
 export function set_nextP(v) { nextP = v; return v; }

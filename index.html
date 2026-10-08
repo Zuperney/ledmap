@@ -269,6 +269,23 @@
           </div>
         </div>
       </div>
+      <details class="sinal" id="k-sinal">
+        <summary>Sinal: <span id="ks-res"></span></summary>
+        <div class="sinal-box">
+          <label class="fld">Aplicar a <select id="ks-escopo"></select></label>
+          <div class="three">
+            <label class="fld">Bits <input type="number" id="ks-bits" min="6" max="16" step="1" list="ks-bitsl" inputmode="numeric"></label>
+            <label class="fld">Hz <input type="number" id="ks-hz" min="24" max="240" step="1" list="ks-hzl" inputmode="numeric"></label>
+            <label class="fld">px por porta (60 Hz) <input type="number" id="ks-cap" min="0" step="1000" inputmode="numeric" placeholder="auto"></label>
+          </div>
+          <datalist id="ks-bitsl"><option value="8"><option value="10"><option value="12"><option value="16"></datalist>
+          <datalist id="ks-hzl"><option value="24"><option value="30"><option value="50"><option value="60"><option value="120"></datalist>
+          <p class="hint" id="ks-info"></p>
+          <button class="btn" id="ks-padrao" hidden>Usar o padrão do projeto</button>
+          <label class="fld">Máximo de portas por Screen <input type="number" id="ks-max" min="1" max="256" step="1" inputmode="numeric"></label>
+          <div id="ks-lista"></div>
+        </div>
+      </details>
       <p class="empty" id="k-caps"></p>
       <div class="ports" id="ports"></div>
       <div class="detail" id="k-detail">

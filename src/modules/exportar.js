@@ -1,6 +1,6 @@
 import { cabNome } from "./gabinetes.js";
 import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR } from "./core.js";
-import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, LIMIT, oc } from "./cabeamento.js";
+import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, limiteRota, limiteTxt, oc } from "./cabeamento.js";
 import { boundsM } from "./rig.js";
 
 let tById, dl, toastT, KCOL, MONO, DISP;
@@ -294,11 +294,11 @@ function drawMap(mode, items) {
         ctx.font = "700 40px " + DISP;
         halo(ctx, pname(pt), px0 + 52, py0 + 32, "#ffffff", 0);
         ctx.font = "400 28px " + MONO;
-        halo(ctx, route.length + " gab. · " + nf(st.load) + " / " + nf(LIMIT) + " px · " + st.txt, px0 + 52, py0 + 76, "#9fb2c1", 0);
+        halo(ctx, route.length + " gab. · " + nf(st.load) + " / " + nf(limiteRota(route)) + " px · " + st.txt, px0 + 52, py0 + 76, "#9fb2c1", 0);
       });
       var tot = Object.keys(cellEl).length, asg = Object.keys(own).length;
       ctx.font = "400 30px " + MONO;
-      halo(ctx, tot + " gabinetes · " + asg + " com porta · " + (tot - asg) + " sem porta · limite de " + nf(LIMIT) + " px por porta · overclock " + (oc ? "ligado" : "desligado"),
+      halo(ctx, tot + " gabinetes · " + asg + " com porta · " + (tot - asg) + " sem porta · limite de " + limiteTxt() + " px por porta · overclock " + (oc ? "ligado" : "desligado"),
         pad, H - 50, "#9fb2c1", 0);
     }
     return cv;
@@ -414,11 +414,11 @@ function drawLayout(withCab) {
         ctx.font = "700 40px " + DISP;
         halo(ctx, pname(pt), px0 + 52, py0 + 32, "#ffffff", 0);
         ctx.font = "400 28px " + MONO;
-        halo(ctx, route.length + " gab. · " + nf(st.load) + " / " + nf(LIMIT) + " px · " + st.txt, px0 + 52, py0 + 76, "#9fb2c1", 0);
+        halo(ctx, route.length + " gab. · " + nf(st.load) + " / " + nf(limiteRota(route)) + " px · " + st.txt, px0 + 52, py0 + 76, "#9fb2c1", 0);
       });
       var tot = Object.keys(cellEl).length, asg = Object.keys(own).length;
       ctx.font = "400 30px " + MONO;
-      halo(ctx, tot + " gabinetes · " + asg + " com porta · " + (tot - asg) + " sem porta · limite de " + nf(LIMIT) + " px por porta · overclock " + (oc ? "ligado" : "desligado"),
+      halo(ctx, tot + " gabinetes · " + asg + " com porta · " + (tot - asg) + " sem porta · limite de " + limiteTxt() + " px por porta · overclock " + (oc ? "ligado" : "desligado"),
         pad, H - 50, "#9fb2c1", 0);
     }
     return cv;

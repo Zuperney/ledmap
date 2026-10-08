@@ -1,6 +1,6 @@
 import { ID_V1, TELAS_V1, projetoAtivo } from "./projetos.js";
 import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG } from "./core.js";
-import { LIMIT, oc, nextP, ports, routes, cellEl, activePort, applyOc, setActivePort, ksave, set_ports, set_routes, set_nextP, set_oc, set_activePort } from "./cabeamento.js";
+import { limiteTxt, sinalState, loadSinal, oc, nextP, ports, routes, cellEl, activePort, applyOc, setActivePort, ksave, set_ports, set_routes, set_nextP, set_oc, set_activePort } from "./cabeamento.js";
 import { commitAndReload } from "./telas.js";
 import { tById, pmsg, saveFile } from "./exportar.js";
 import { refreshM } from "./rig-edicao.js";
@@ -22,7 +22,9 @@ export function buildProject() {
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
       cabeamento: {
-        limitePorPorta: LIMIT,
+        sinal: sinalState().sinal,
+        sinalScreens: sinalState().sinalScreens,
+        maxPortasScreen: sinalState().maxPortas,
         overclock: oc,
         proximaPorta: nextP,
         portas: ports.map(function (pt) { return { id: pt.id, n: pt.n, nome: pt.name }; }),
@@ -130,6 +132,7 @@ export function applyProject(o) {
       (set_nextP(nextP + 1), nextP - 1);
     }
     set_oc(!!cab.overclock);
+    loadSinal(cab.sinal, cab.sinalScreens, cab.maxPortasScreen);
     set_activePort(ports[0].id);
     setActive(null);
     refreshSelects();
