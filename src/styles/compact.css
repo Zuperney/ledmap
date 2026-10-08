@@ -1,0 +1,41 @@
+/* compacto: prioriza área útil */
+body { font-size: 11px; padding-inline: 6px; padding-block: 0 14px; }
+.wrap { gap: 5px; }
+.top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; background: var(--bg); padding: 4px 0; border-bottom: 1px solid var(--line); }
+.top .sp { flex: 1; }
+.brand { font: 700 14px var(--font-display); letter-spacing: .08em; }
+.tabs { align-self: auto; }
+.tab { font-size: 10px; padding: 5px 12px; letter-spacing: .04em; }
+.btn, .chip, select, .xdel, .mi { font-size: 10px; }
+.btn { padding: 4px 7px; border-radius: 3px; }
+.bar { gap: 4px; align-items: center; }
+.chip { padding: 3px 8px; }
+select, input[type="text"] { padding: 3px 5px; font-size: 10px; }
+.snap, .stat, .zoom span, .legend, .hint, .ro, .note, .msg, .empty, .detail .st, .port .mt, .paste, .medit { font-size: 10px; }
+.zoom .btn { min-width: 24px; }
+.zoom span { min-width: 34px; }
+.legend { gap: 3px 10px; font-size: 9px; }
+.hint { font-size: 9px; }
+h2 { font-size: 14px; }
+.screens { padding: 6px; gap: 5px; }
+.screens-head { gap: 4px; }
+.detail { gap: 4px; padding-top: 5px; }
+.stage.pan { max-height: max(280px, calc(100dvh - 120px)); }
+.cap { font: 700 9px var(--font-data); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 2px 2px 0; }
+table { font-size: 10px; }
+th { font-size: 8px; padding: 4px 6px; }
+td { padding: 3px 6px; }
+td.gsel { padding-block: 2px; }
+td.gsel select { padding: 2px 4px; }
+.n { font-size: 13px; min-width: 18px; height: 18px; }
+.port { font-size: 10px; padding: 5px 7px; gap: 3px 7px; }
+.pill { font-size: 8px; padding: 1px 6px; }
+.medit input[type=number] { font-size: 10px; width: 62px; padding: 3px 4px; }
+.modal .fld input, .modal .fld select { font-size: 12px; padding: 6px; }
+.modal .box { padding: 12px; gap: 9px; }
+.toast { font-size: 10px; }
+.dd { position: relative; }
+.dd-m { position: absolute; z-index: 40; top: calc(100% + 3px); left: 0; min-width: 168px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 3px; display: flex; flex-direction: column; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.dd-m.right { left: auto; right: 0; }
+.mi { text-align: left; padding: 7px 9px; background: none; border: 0; color: var(--fg); font-family: var(--font-data); font-weight: 500; cursor: pointer; border-radius: 3px; white-space: nowrap; }
+.mi:hover, .mi:focus-visible { background: var(--bg); }

@@ -1,0 +1,45 @@
+/* Temas: cada tema só redefine os tokens. Para criar um novo, copie um bloco, mude o nome em data-theme
+   e registre-o em src/themes.js. */
+:root {
+  --bg: #eef1f4; --panel: #ffffff; --fg: #14202b; --muted: #566877; --line: #cfd8e0; --grid: #e2e8ed;
+  --imag: #1b84c4; --up: #c2358f; --cpiece: #cf8000; --bad: #d12f2f;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+/* Automático: segue o sistema */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0e161d; --panel: #16212a; --fg: #e6edf2; --muted: #8da0af; --line: #2a3945; --grid: #1f2c36;
+    --imag: #3aa9f2; --up: #e46bb8; --cpiece: #f2ab35; --bad: #ff6b6b; color-scheme: dark;
+  }
+}
+:root[data-theme="claro"] { color-scheme: light; }
+:root[data-theme="escuro"] {
+  --bg: #0e161d; --panel: #16212a; --fg: #e6edf2; --muted: #8da0af; --line: #2a3945; --grid: #1f2c36;
+  --imag: #3aa9f2; --up: #e46bb8; --cpiece: #f2ab35; --bad: #ff6b6b; color-scheme: dark;
+}
+/* Norte: preto + azul de sistema */
+:root[data-theme="norte"] {
+  --bg: #000000; --panel: #1c1c1e; --fg: #f2f2f7; --muted: #8e8e93; --line: #38383a; --grid: #2c2c2e;
+  --imag: #0a84ff; --up: #ff6482; --cpiece: #ff9f0a; --bad: #ff453a; color-scheme: dark;
+}
+/* Instrumento: verde-oliva, cor só onde importa */
+:root[data-theme="instrumento"] {
+  --bg: #12140f; --panel: #1a1d15; --fg: #e4e7da; --muted: #8f9684; --line: #2e3326; --grid: #23271c;
+  --imag: #8fb339; --up: #b98ab1; --cpiece: #d1a64a; --bad: #e5594f; color-scheme: dark;
+}
+/* Palco: roxo */
+:root[data-theme="palco"] {
+  --bg: #0f0b1a; --panel: #181326; --fg: #ece8f7; --muted: #9a90b5; --line: #2f2748; --grid: #211a36;
+  --imag: #7c5cff; --up: #ff5cb0; --cpiece: #ffb347; --bad: #ff6b6b; color-scheme: dark;
+}
+/* Alto contraste */
+:root[data-theme="contraste"] {
+  --bg: #000000; --panel: #000000; --fg: #ffffff; --muted: #d0d0d0; --line: #8a8a8a; --grid: #3a3a3a;
+  --imag: #3db8ff; --up: #ff5ccb; --cpiece: #ffd23d; --bad: #ff5555; color-scheme: dark;
+}
+/* Papel: claro, quente */
+:root[data-theme="papel"] {
+  --bg: #f3efe6; --panel: #fbf9f3; --fg: #231f18; --muted: #6d6556; --line: #d9d1bf; --grid: #e7e0d0;
+  --imag: #1f6fa8; --up: #a6307a; --cpiece: #b8720a; --bad: #c0392b; color-scheme: light;
+}
