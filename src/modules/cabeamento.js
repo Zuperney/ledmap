@@ -3,7 +3,7 @@ import { cabNome, cabDe } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
-import { balancedChunks, snakePorTela, ordenaPortas } from "./auto-cabos.js";
+import { balancedChunks, snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas } from "./auto-cabos.js";
 import { SINAL_PADRAO, MAX_PORTAS_PADRAO, limpaSinal, limitePx, limpaMax } from "./sinal.js";
 
 let sinal, sinalScreens, maxPortas, autoCfg, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
@@ -53,11 +53,17 @@ export function setSinal(grp, cfg) {
 export function setMaxPortas(n) { maxPortas = limpaMax(n); renderCabling(); ksave(); }
 
 export function autoState() { return autoCfg; }
-export function setAuto(c) {
+function limpaAuto(c) {
     c = c || {};
-    autoCfg = { corner: ["bl", "br", "tl", "tr"].indexOf(c.corner) >= 0 ? c.corner : "bl", routing: c.routing === "zigzag" ? "zigzag" : "updown" };
-    ksave();
+    return {
+      corner: ["bl", "br", "tl", "tr"].indexOf(c.corner) >= 0 ? c.corner : "bl",
+      routing: c.routing === "zigzag" ? "zigzag" : "updown",
+      estrategia: ["continuo", "linha", "coluna", "bloco"].indexOf(c.estrategia) >= 0 ? c.estrategia : "continuo",
+      ordem: ["row", "row-serp", "col", "col-serp"].indexOf(c.ordem) >= 0 ? c.ordem : "row"
+    };
   }
+
+export function setAuto(c) { autoCfg = limpaAuto(c); ksave(); }
 
 // Distribui os gabinetes das telas do escopo ("*" = todas, "_" = sem Screen, ou id da Screen) em portas automáticas.
 export function distribuirAuto(escopo) {
@@ -74,19 +80,30 @@ export function distribuirAuto(escopo) {
       if (!grupos[k]) { grupos[k] = []; ordem.push(k); }
       grupos[k].push(c);
     });
-    var novas = [];
+    var porScreen = {};
     ordem.forEach(function (k) {
-      var g = grupos[k], px = cabPx(g[0].t), lim = limiteTela(g[0].t);
+      var g = grupos[k], t0 = g[0].t, q0 = res(t0), px = cabPx(t0), lim = limiteTela(t0), scr = t0.grp || "";
       var budget = Math.max(1, oc ? Math.ceil(lim / px) : Math.floor(lim / px));
-      balancedChunks(snakePorTela(g, autoCfg.routing, autoCfg.corner), budget).forEach(function (ch) { novas.push({ cells: ch, grp: g[0].t.grp || "" }); });
+      var lista = [];
+      if (autoCfg.estrategia === "continuo") {
+        lista = balancedChunks(snakePorTela(g, autoCfg.routing, autoCfg.corner), budget);
+      } else {
+        var vistos = {}, telasG = [];
+        g.forEach(function (c) { if (!vistos[c.t.id]) { vistos[c.t.id] = 1; telasG.push({ id: c.t.id, x: c.t.cx, y: c.t.cy, w: q0.cw * res(c.t).cols, h: q0.ch * res(c.t).rows }); } });
+        aglomerados(telasG).forEach(function (ag) {
+          var ids = {}; ag.forEach(function (t) { ids[t.id] = 1; });
+          var cs = g.filter(function (c) { return ids[c.t.id]; });
+          var pb = portasPorBloco(cs, q0.cw, q0.ch, budget, autoCfg.estrategia, autoCfg.routing, autoCfg.corner);
+          lista = lista.concat(pb || balancedChunks(snakePorTela(cs, autoCfg.routing, autoCfg.corner), budget));
+        });
+      }
+      lista.forEach(function (ch) { (porScreen[scr] = porScreen[scr] || []).push(ch); });
     });
-    var gi = {};
+    var gi = {}, final = [];
     groups.forEach(function (g, i) { gi[g.id] = i; });
-    novas.sort(function (a, b) { return (a.grp in gi ? gi[a.grp] : 1e9) - (b.grp in gi ? gi[b.grp] : 1e9); });
-    var porScreen = {}, final = [];
-    novas.forEach(function (p) { (porScreen[p.grp] = porScreen[p.grp] || []).push(p.cells); });
+    var eixo = autoCfg.ordem.split("-")[0], serp = autoCfg.ordem.indexOf("serp") > 0;
     Object.keys(porScreen).sort(function (a, b) { return (a in gi ? gi[a] : 1e9) - (b in gi ? gi[b] : 1e9); }).forEach(function (g) {
-      ordenaPortas(porScreen[g], autoCfg.routing, autoCfg.corner).forEach(function (cs) { final.push({ grp: g, cells: cs }); });
+      ordemPortas(porScreen[g], esquemaDe(eixo, serp, autoCfg.corner)).forEach(function (cs) { final.push({ grp: g, cells: cs }); });
     });
     // tira os gabinetes do escopo das rotas atuais e descarta portas que ficaram vazias
     ports.forEach(function (p) { routes[p.id] = (routes[p.id] || []).filter(function (k) { return !alvo[cellEl[k] && cellEl[k].t.id]; }); });
@@ -284,7 +301,7 @@ export function init() {
   sinal = Object.assign({}, SINAL_PADRAO);
   sinalScreens = {};
   maxPortas = MAX_PORTAS_PADRAO;
-  autoCfg = { corner: "bl", routing: "updown" };
+  autoCfg = { corner: "bl", routing: "updown", estrategia: "continuo", ordem: "row" };
   CSTORE = chave("cabos");
   svgK = document.getElementById("svg-k");
   ports = [];
@@ -304,7 +321,7 @@ export function init() {
         nextP = Number(sk.nextP) || ports.length + 1;
         oc = !!sk.oc;
         loadSinal(sk.sinal, sk.sinalScreens, sk.maxPortas);
-        autoCfg = Object.assign({}, autoCfg, sk.auto || {});
+        autoCfg = limpaAuto(sk.auto);
         routes = (sk.routes && typeof sk.routes === "object") ? sk.routes : {};
       }
     } catch (e) {}

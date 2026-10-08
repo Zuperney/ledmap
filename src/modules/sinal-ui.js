@@ -17,6 +17,8 @@ function preencherAuto() {
     sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === v; }) ? v : "*";
     $("ka-canto").value = autoState().corner;
     $("ka-sentido").value = autoState().routing;
+    $("ka-estrategia").value = autoState().estrategia;
+    $("ka-ordem").value = autoState().ordem;
   }
 
 function preencherEscopo() {
@@ -61,7 +63,7 @@ export function init() {
   ["ks-bits", "ks-hz", "ks-cap"].forEach(function (id) { $(id).addEventListener("change", aplicar); });
   $("ks-max").addEventListener("change", function (e) { setMaxPortas(e.target.value); });
   $("ks-padrao").addEventListener("click", function () { setSinal(escopo, null); });
-  ["ka-canto", "ka-sentido"].forEach(function (id) { $(id).addEventListener("change", function () { setAuto({ corner: $("ka-canto").value, routing: $("ka-sentido").value }); }); });
+  ["ka-canto", "ka-sentido", "ka-estrategia", "ka-ordem"].forEach(function (id) { $(id).addEventListener("change", function () { setAuto({ corner: $("ka-canto").value, routing: $("ka-sentido").value, estrategia: $("ka-estrategia").value, ordem: $("ka-ordem").value }); }); });
   twoStep($("ka-go"), "Distribuir", "Confirmar: substitui as rotas", function () {
       var r = distribuirAuto($("ka-escopo").value);
       kmsg(r.aviso && !r.portas ? r.aviso : r.portas + " portas criadas para " + r.gabinetes + " gabinetes." + (r.aviso ? " " + r.aviso : ""));

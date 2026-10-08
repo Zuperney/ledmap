@@ -290,11 +290,27 @@
         <summary>Distribuição automática</summary>
         <div class="sinal-box">
           <label class="fld">Escopo <select id="ka-escopo"></select></label>
+          <label class="fld">Estratégia
+            <select id="ka-estrategia">
+              <option value="continuo">Contínuo (pixels reais, tela a tela)</option>
+              <option value="linha">Linha (faixas horizontais em bloco)</option>
+              <option value="coluna">Coluna (faixas verticais em bloco)</option>
+              <option value="bloco">Bloco (retângulos quase quadrados)</option>
+            </select>
+          </label>
           <div class="two">
-            <label class="fld">Começa em <select id="ka-canto"><option value="bl">Embaixo à esquerda</option><option value="br">Embaixo à direita</option><option value="tl">Em cima à esquerda</option><option value="tr">Em cima à direita</option></select></label>
-            <label class="fld">Varre <select id="ka-sentido"><option value="updown">Coluna por coluna</option><option value="zigzag">Linha por linha</option></select></label>
+            <label class="fld">Cabo entra em <select id="ka-canto"><option value="bl">Embaixo à esquerda</option><option value="br">Embaixo à direita</option><option value="tl">Em cima à esquerda</option><option value="tr">Em cima à direita</option></select></label>
+            <label class="fld">Dentro do cabo <select id="ka-sentido"><option value="updown">Sobe e desce</option><option value="zigzag">Zigzag (linha a linha)</option></select></label>
           </div>
-          <p class="hint">Serpentina tela a tela, cortada em blocos iguais que respeitam o limite de px por porta (e o overclock, se ligado). Substitui as rotas do escopo escolhido.</p>
+          <label class="fld">Entrada do próximo cabo
+            <select id="ka-ordem">
+              <option value="row">Por linha, em zigzag</option>
+              <option value="row-serp">Por linha, sobe e desce</option>
+              <option value="col">Empilhado (por coluna), em zigzag</option>
+              <option value="col-serp">Empilhado (por coluna), sobe e desce</option>
+            </select>
+          </label>
+          <p class="hint">Todas as estratégias respeitam o limite de px por porta (e o overclock, se ligado). Em bloco, telas encostadas contam como uma área só, e blocos podem economizar portas em processadores que reservam o retângulo. Substitui as rotas do escopo escolhido.</p>
           <button class="btn" id="ka-go">Distribuir</button>
         </div>
       </details>
