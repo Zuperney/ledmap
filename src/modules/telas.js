@@ -94,7 +94,7 @@ export function init() {
     });
   document.getElementById("a-ok").addEventListener("click", function () {
       aErr.textContent = "";
-      if (EXTRAS.length >= EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " telas extras."; return; }
+      if (EXTRAS.length >= EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " telas."; return; }
       if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Largura e altura precisam ser múltiplos de 0,5 m."; return; }
       var id = nextExtraId();
       if (Number(id) > 999) { aErr.textContent = "Numeração esgotada."; return; }

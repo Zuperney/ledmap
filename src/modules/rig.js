@@ -39,6 +39,7 @@ export function statM() {
       });
     });
     tiles.forEach(function (t) { if (bad[t.id]) nb++; gM[t.id].classList.toggle("overlap", !!bad[t.id]); });
+    if (!tiles.length) { document.getElementById("stat-m").textContent = "Sem telas · ⋮ → + Adicionar tela"; return; }
     document.getElementById("stat-m").innerHTML = "Conjunto: <b>" + fmt(maxX - minX) + " m</b> de largura × <b>" + fmt(maxY - minY) + " m</b> de altura" +
       (nb ? ' · <span class="warn">' + nb + " telas sobrepostas</span>" : "");
   }

@@ -82,9 +82,8 @@ function nearestFree(px, py, w, h, others) {
 function assembledItems() {
     var items = BASE.map(function (d) {
       var t = tById[d.id], q = res(t);
-      var mv = !!d.extra || t.mx !== d.mx || t.my !== d.my, p;
+      var mv = t.mx !== d.mx || t.my !== d.my, p;
       if (!mv) p = { x: d.cx, y: d.cy };
-      else if (d.extra) p = scaledPos(t);
       else {
         var k = q.px * 2;
         p = {
@@ -460,14 +459,14 @@ export function init() {
   KCOL = { imag: "#1f78b4", up: "#b0307f", c: "#c77a00" };
   MONO = "IBM Plex Mono, ui-monospace, Menlo, Consolas, monospace";
   DISP = "Barlow Condensed, Arial Narrow, sans-serif";
-  document.getElementById("m-lay-png").addEventListener("click", function () { exportLayout(false, "layout-montagem.png"); });
-  document.getElementById("m-laycab-png").addEventListener("click", function () { exportLayout(true, "montagem-cabeamento.png"); });
-  document.getElementById("m-lay-csv").addEventListener("click", function () { saveFile("layout-montagem.csv", layoutCsv()); });
-  document.getElementById("m-export").addEventListener("click", function () { exportPng("pixelmap", assembledItems(), "pixelmap-montagem.png"); });
-  document.getElementById("scr-png").addEventListener("click", function () { exportPng("screens", currentItems(), "screens-configuracao.png"); });
-  document.getElementById("scr-csv").addEventListener("click", function () { saveFile("screens-configuracao.csv", screensCsv()); });
-  document.getElementById("k-png").addEventListener("click", function () { exportPng("cabling", currentItems(), "cabeamento.png"); });
-  document.getElementById("k-csv").addEventListener("click", function () { saveFile("cabeamento.csv", cablingCsv()); });
+  document.getElementById("m-lay-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportLayout(false, "layout-montagem.png"); });
+  document.getElementById("m-laycab-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportLayout(true, "montagem-cabeamento.png"); });
+  document.getElementById("m-lay-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } saveFile("layout-montagem.csv", layoutCsv()); });
+  document.getElementById("m-export").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportPng("pixelmap", assembledItems(), "pixelmap-montagem.png"); });
+  document.getElementById("scr-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportPng("screens", currentItems(), "screens-configuracao.png"); });
+  document.getElementById("scr-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } saveFile("screens-configuracao.csv", screensCsv()); });
+  document.getElementById("k-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportPng("cabling", currentItems(), "cabeamento.png"); });
+  document.getElementById("k-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } saveFile("cabeamento.csv", cablingCsv()); });
 }
 
 export { tById };

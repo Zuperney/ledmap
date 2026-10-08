@@ -1,5 +1,6 @@
 import { res, tiles, PITCH, nf, bbox, el, text } from "./core.js";
 import { histTick } from "./historico.js";
+import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
 
 let LIMIT, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
@@ -174,7 +175,7 @@ export function applyOc() { btnOc.setAttribute("aria-pressed", String(oc)); }
 
 export function init() {
   LIMIT = 655360;
-  CSTORE = "mapa-telas-led-cabos-v1";
+  CSTORE = chave("cabos");
   svgK = document.getElementById("svg-k");
   ports = [];
   routes = {};

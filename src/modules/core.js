@@ -1,6 +1,7 @@
 import { histTick } from "./historico.js";
+import { chave } from "./projetos.js";
 
-let NS, FLOOR, CW, CH, STORE, DATA, SEED_GROUPS, PITCH, EXTRA_MAX, EXTRAS, FR, moved, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
+let NS, FLOOR, CW, CH, STORE, PITCH, EXTRA_MAX, EXTRAS, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
 
 function half(v, lo, hi) {
     v = Number(v);
@@ -17,7 +18,7 @@ export function mnum(v) {
 export function cleanExtra(x) {
     if (!x || typeof x !== "object") return null;
     var id = String(x.id == null ? "" : x.id);
-    if (!/^\d{1,3}$/.test(id) || DATA.some(function (d) { return d.id === id; })) return null;
+    if (!/^\d{1,3}$/.test(id)) return null;
     var kind = x.kind;
     if (!Object.prototype.hasOwnProperty.call(PITCH, kind)) return null;
     var w = half(x.w, 0.5, 30), h = half(x.h, 0.5, 30), mx = half(x.mx, -30, 60), my = half(x.my, -10, 30);
@@ -48,9 +49,10 @@ export function freeSpot(w, h, list) {
   }
 
 export function scaledPos(t) {
-    var q = res(t);
-    var x = Math.round((FR.ax0 + (t.mx - FR.mx0) * FR.sx) / 8) * 8;
-    var y = Math.round((FR.ay0 + (FR.mtop - (t.my + t.h)) * FR.sy) / 8) * 8;
+    var q = res(t), k = q.px * 2, minX = Infinity, maxTop = -Infinity;
+    tiles.concat([t]).forEach(function (o) { minX = Math.min(minX, o.mx); maxTop = Math.max(maxTop, o.my + o.h); });
+    var x = Math.round(((t.mx - minX) * k) / 8) * 8;
+    var y = Math.round(((maxTop - (t.my + t.h)) * k) / 8) * 8;
     return { x: Math.min(Math.max(x, 0), CW - q.w), y: Math.min(Math.max(y, 0), CH - q.h) };
   }
 
@@ -116,52 +118,18 @@ export function init() {
   FLOOR = 8;
   CW = 6144;
   CH = 2560;
-  STORE = "mapa-telas-led-config-v3";
-  DATA = [
-    { id: "1",  name: "IMAG esquerda",       kind: "imag", w: 4,   h: 6, mx: 0,    my: 0,   cx: 0,    cy: 784,  grp: "g1" },
-    { id: "2a", name: "C esquerdo · base",   kind: "c",    w: 8.5, h: 1, mx: 5,    my: 0,   cx: 800,  cy: 1536, grp: "g3" },
-    { id: "2b", name: "C esquerdo · coluna", kind: "c",    w: 1.5, h: 5, mx: 5,    my: 1,   cx: 800,  cy: 256,  grp: "g3" },
-    { id: "2c", name: "C esquerdo · teto",   kind: "c",    w: 7,   h: 1, mx: 5,    my: 6,   cx: 800,  cy: 0,    grp: "g3" },
-    { id: "3",  name: "Upstage",             kind: "up",   w: 12,  h: 4, mx: 7.5,  my: 1.5, cx: 1968, cy: 560,  grp: "g2" },
-    { id: "4a", name: "C direito · base",    kind: "c",    w: 8.5, h: 1, mx: 13.5, my: 0,   cx: 2976, cy: 1536, grp: "g3" },
-    { id: "4b", name: "C direito · coluna",  kind: "c",    w: 1.5, h: 5, mx: 20.5, my: 1,   cx: 4768, cy: 256,  grp: "g3" },
-    { id: "4c", name: "C direito · teto",    kind: "c",    w: 7,   h: 1, mx: 15,   my: 6,   cx: 3360, cy: 0,    grp: "g3" },
-    { id: "5",  name: "IMAG direita",        kind: "imag", w: 4,   h: 6, mx: 23,   my: 0,   cx: 5280, cy: 784,  grp: "g1" }
-  ];
-  SEED_GROUPS = [{ id: "g1", name: "IMAGs" }, { id: "g2", name: "Upstage" }, { id: "g3", name: "Cs" }];
+  STORE = chave("config");
   PITCH = { imag: { name: "P5.9", px: 84 }, up: { name: "P5.9", px: 84 }, c: { name: "P3.9", px: 128 } };
-  EXTRA_MAX = 40;
+  EXTRA_MAX = 200;
   EXTRAS = [];
   try {
       var s0 = JSON.parse(localStorage.getItem(STORE) || "null");
       if (s0 && Array.isArray(s0.extras)) EXTRAS = cleanExtras(s0.extras);
     } catch (e) {}
-  FR = (function () {
-    var mx0 = Infinity, mtop = -Infinity, mx1 = -Infinity, mbot = Infinity, ax0 = Infinity, ay0 = Infinity, ax1 = -Infinity, ay1 = -Infinity;
-    DATA.forEach(function (d) {
-      var q = res(d);
-      mx0 = Math.min(mx0, d.mx); mx1 = Math.max(mx1, d.mx + d.w); mtop = Math.max(mtop, d.my + d.h); mbot = Math.min(mbot, d.my);
-      ax0 = Math.min(ax0, d.cx); ay0 = Math.min(ay0, d.cy); ax1 = Math.max(ax1, d.cx + q.w); ay1 = Math.max(ay1, d.cy + q.h);
-    });
-    return { mx0: mx0, mtop: mtop, ax0: ax0, ay0: ay0, sx: (ax1 - ax0) / (mx1 - mx0), sy: (ay1 - ay0) / (mtop - mbot) };
-  })();
-  moved = {};
-  (function () {
-      var placed = DATA.slice();
-      EXTRAS.forEach(function (e) {
-        var q = res(e);
-        var hit = placed.some(function (t) { var b = res(t); return e.cx < t.cx + b.w && t.cx < e.cx + q.w && e.cy < t.cy + b.h && t.cy < e.cy + q.h; });
-        if (hit) {
-          var f = freeSpot(q.w, q.h, placed);
-          if (f) { moved[e.id] = [e.cx, e.cy]; e.cx = f.x; e.cy = f.y; }
-        }
-        placed.push(e);
-      });
-    })();
-  BASE = DATA.concat(EXTRAS);
+  BASE = EXTRAS.slice();
   tiles = BASE.map(function (s) { return Object.assign({}, s); });
-  groups = SEED_GROUPS.map(function (g) { return Object.assign({}, g); });
-  nextG = 4;
+  groups = [];
+  nextG = 1;
   active = null;
   groupMove = true;
   try {
@@ -174,8 +142,7 @@ export function init() {
         tiles.forEach(function (t) {
           var mp = saved.mpos && saved.mpos[t.id];
           if (Array.isArray(mp) && mnum(mp[0]) !== null && mnum(mp[1]) !== null) { t.mx = mnum(mp[0]); t.my = mnum(mp[1]); }
-          var mv = moved[t.id], sp = saved.pos && saved.pos[t.id];
-          if (sp && mv && sp[0] === mv[0] && sp[1] === mv[1]) sp = null;
+          var sp = saved.pos && saved.pos[t.id];
           if (sp) { t.cx = saved.pos[t.id][0]; t.cy = saved.pos[t.id][1]; }
           if (saved.tg && Object.prototype.hasOwnProperty.call(saved.tg, t.id)) t.grp = saved.tg[t.id] || "";
         });

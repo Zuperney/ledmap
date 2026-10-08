@@ -19,6 +19,7 @@ import { init as init_abas } from "./modules/abas.js";
 import { init as init_rig_edicao } from "./modules/rig-edicao.js";
 import { init as init_telas } from "./modules/telas.js";
 import { init as init_historico } from "./modules/historico.js";
+import { init as init_projeto_ui } from "./modules/projeto-ui.js";
 import { init as init_gaveta } from "./modules/gaveta.js";
 import { init as init_ui } from "./modules/ui.js";
 
@@ -37,6 +38,7 @@ init_abas();
 init_rig_edicao();
 init_telas();
 init_historico();
+init_projeto_ui();
 init_gaveta();
 init_ui();
 

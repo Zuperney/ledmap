@@ -38,3 +38,23 @@ body.fs .stage.pan { max-height: 100dvh; height: 100dvh; }
 #menu-btn { white-space: nowrap; }
 .tab { white-space: nowrap; }
 @media (max-width: 460px) { .brand { display: none; } }
+/* fase 0: casca com 7 áreas */
+.top .tabs { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.top .tabs::-webkit-scrollbar { display: none; }
+.top .tab { flex: 0 0 auto; }
+.top .sp { display: none; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.card h2 { font-size: 13px; }
+.card .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.card .fld { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); }
+.card .fld input { width: 100%; }
+.card.soon p, .card.soon li { font-size: 11px; line-height: 1.45; margin: 0; }
+.card.soon ul { margin: 0; padding-left: 16px; }
+.plist { display: flex; flex-direction: column; gap: 4px; }
+.prow { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 4px; }
+.prow.cur { border-color: var(--imag); }
+.prow .nm { flex: 1; min-width: 0; font-size: 11px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow .sb { display: block; font-weight: 400; font-size: 9px; color: var(--muted); }
+.prow .btn { padding: 3px 7px; }
+body[data-aba="p"] .drawer, body[data-aba="n"] .drawer, body[data-aba="e"] .drawer, body[data-aba="r"] .drawer { display: none; }
+body[data-aba="p"] .wrap, body[data-aba="n"] .wrap, body[data-aba="e"] .wrap, body[data-aba="r"] .wrap { padding-bottom: 14px; }

@@ -45,7 +45,7 @@ function histGo(dir) {
 export function duplicateSel() {
     var t = selected && tById[selected];
     if (!t) return;
-    if (EXTRAS.length >= EXTRA_MAX) { pmsg("Limite de " + EXTRA_MAX + " telas extras."); return; }
+    if (EXTRAS.length >= EXTRA_MAX) { pmsg("Limite de " + EXTRA_MAX + " telas."); return; }
     var id = nextExtraId();
     if (Number(id) > 999) { pmsg("Numeração esgotada."); return; }
     var fm = freeM(t.w, t.h) || { x: t.mx + t.w, y: t.my };

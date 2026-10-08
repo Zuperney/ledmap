@@ -24,10 +24,12 @@ export function placeC() {
     });
     var nBad = 0;
     tiles.forEach(function (s) { var b = !!bad[s.id]; if (b) nBad++; gC[s.id].classList.toggle("overlap", b); });
+    if (!tiles.length) { minX = 0; maxX = 0; minY = 0; maxY = 0; }
     occupied.setAttribute("x", minX); occupied.setAttribute("y", minY);
     occupied.setAttribute("width", maxX - minX); occupied.setAttribute("height", maxY - minY);
     var out = (minX < 0 || minY < 0 || maxX > CW || maxY > CH);
-    document.getElementById("stat-c").innerHTML = "Área ocupada: <b>" + nf(maxX - minX) + " × " + nf(maxY - minY) + " px</b>" +
+    if (!tiles.length) document.getElementById("stat-c").textContent = "Sem telas · ⋮ → + Adicionar tela";
+    else document.getElementById("stat-c").innerHTML = "Área ocupada: <b>" + nf(maxX - minX) + " × " + nf(maxY - minY) + " px</b>" +
       (nBad ? ' · <span class="warn">' + nBad + " telas sobrepostas</span>" : "") +
       (out ? ' · <span class="warn">fora do quadro</span>' : "");
     updateBoxes();

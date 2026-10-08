@@ -58,20 +58,24 @@
 <div class="wrap">
   <div class="top">
     <b class="brand">LED·MAP</b>
-    <div class="tabs" role="tablist" aria-label="Áreas">
+    <div class="tabs" role="tablist" aria-label="Áreas" id="tabs">
+      <button class="tab" id="tab-p" role="tab" aria-selected="false" aria-controls="view-p">Projeto</button>
       <button class="tab" id="tab-m" role="tab" aria-selected="true" aria-controls="view-m">Rig</button>
-      <button class="tab" id="tab-c" role="tab" aria-selected="false" aria-controls="view-c">Canvas</button>
-      <button class="tab" id="tab-k" role="tab" aria-selected="false" aria-controls="view-k">Dados</button>
+      <button class="tab" id="tab-c" role="tab" aria-selected="false" aria-controls="view-c">Screen</button>
+      <button class="tab" id="tab-k" role="tab" aria-selected="false" aria-controls="view-k">Cabeamento</button>
+      <button class="tab" id="tab-n" role="tab" aria-selected="false" aria-controls="view-n">Composição</button>
+      <button class="tab" id="tab-e" role="tab" aria-selected="false" aria-controls="view-e">Elétrica</button>
+      <button class="tab" id="tab-r" role="tab" aria-selected="false" aria-controls="view-r">Caderno</button>
     </div>
     <span class="sp"></span>
     <button class="btn" id="undo" aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled>↶</button>
     <button class="btn" id="redo" aria-label="Refazer" title="Refazer (Ctrl+Y)" disabled>↷</button>
     <div class="dd">
-      <button class="btn" id="menu-btn" aria-haspopup="true">⋮ Projeto</button>
+      <button class="btn" id="menu-btn" aria-haspopup="true" aria-label="Menu">⋮</button>
       <div class="dd-m right" hidden>
         <button class="mi" id="add-open">+ Adicionar tela</button>
         <button class="mi" id="proj-export">Exportar projeto (JSON)</button>
-        <button class="mi" id="proj-import">Importar projeto…</button>
+        <button class="mi" id="proj-import">Importar neste projeto…</button>
         <button class="mi" id="paste-open">Colar / copiar JSON…</button>
         <label class="mi snap" data-keep>Tema <select id="theme-sel" aria-label="Tema de cores"></select></label>
       </div>
@@ -87,6 +91,55 @@
     </div>
   </details>
   <p class="note" id="proj-msg" role="status" hidden></p>
+
+  <section class="view" id="view-p" role="tabpanel" aria-labelledby="tab-p" hidden>
+    <div class="card">
+      <h2>Projeto atual</h2>
+      <div class="two">
+        <label class="fld">Nome <input type="text" id="p-nome" maxlength="80" autocomplete="off"></label>
+        <label class="fld">Cliente <input type="text" id="p-cliente" maxlength="80" autocomplete="off"></label>
+        <label class="fld">Local <input type="text" id="p-local" maxlength="80" autocomplete="off"></label>
+        <label class="fld">Data <input type="text" id="p-data" maxlength="40" autocomplete="off" placeholder="ex.: 12/12/2026"></label>
+      </div>
+      <p class="note" id="p-resumo"></p>
+    </div>
+    <div class="card">
+      <div class="screens-head">
+        <h2>Projetos neste aparelho</h2>
+        <button class="btn" id="p-novo">+ Novo</button>
+        <button class="btn" id="p-importar">Importar arquivo…</button>
+      </div>
+      <div class="plist" id="p-lista"></div>
+      <p class="note">Os projetos ficam só neste navegador. Use ⋮ → Exportar projeto para guardar uma cópia em arquivo.</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-n" role="tabpanel" aria-labelledby="tab-n" hidden>
+    <div class="card soon">
+      <h2>Composição</h2>
+      <p>Canvas de conteúdo: como as telas do Screen viram o que o servidor de vídeo enxerga.</p>
+      <ul><li>Test card por tela, em resolução nativa</li><li>Regiões (x, y, largura, altura) para copiar</li><li>PNG da composição</li></ul>
+      <p class="note">Em breve. Esta área ainda não calcula nada.</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-e" role="tabpanel" aria-labelledby="tab-e" hidden>
+    <div class="card soon">
+      <h2>Elétrica</h2>
+      <p>Consumo e distribuição de energia a partir das telas e do cabeamento.</p>
+      <ul><li>Tensão e consumo por tela (pico e típico)</li><li>Gerador mínimo e balanço entre fases</li><li>Circuitos por conector, com a regra dos 80%</li></ul>
+      <p class="note">Em breve. Esta área ainda não calcula nada.</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-r" role="tabpanel" aria-labelledby="tab-r" hidden>
+    <div class="card soon">
+      <h2>Caderno</h2>
+      <p>Documento do projeto para imprimir ou enviar.</p>
+      <ul><li>Capa com dados do projeto</li><li>Rig, Screen e cabeamento em desenhos vetoriais</li><li>Tabelas de telas, portas e energia</li></ul>
+      <p class="note">Em breve. Esta área ainda não calcula nada.</p>
+    </div>
+  </section>
 
   <section class="view" id="view-m" role="tabpanel" aria-labelledby="tab-m">
     <div class="bar">

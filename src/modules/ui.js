@@ -47,7 +47,8 @@ export function init() {
   applyFocus();
   placeC();
   fitM();
-  showTab("m");
+  var abaIni = "m"; try { abaIni = localStorage.getItem("ledmap-aba") || "m"; } catch (e) {}
+  showTab(/^[pmckner]$/.test(abaIni) ? abaIni : "m");
   try {
       var pend = localStorage.getItem(KEY_PEND);
       if (pend) { localStorage.removeItem(KEY_PEND); loadText(pend); }
@@ -55,7 +56,7 @@ export function init() {
       if (ro) {
         localStorage.removeItem(KEY_REOPEN);
         var pr = ro.split(":");
-        if (/^[mck]$/.test(pr[0])) showTab(pr[0]);
+        if (/^[pmckner]$/.test(pr[0])) showTab(pr[0]);
         if (pr[1] && tById[pr[1]]) {
           select(pr[1]);
           if (!pend) pmsg("Tela " + pr[1] + " adicionada.");
