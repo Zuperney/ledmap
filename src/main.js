@@ -23,6 +23,7 @@ import { init as init_historico } from "./modules/historico.js";
 import { init as init_projeto_ui } from "./modules/projeto-ui.js";
 import { init as init_gaveta } from "./modules/gaveta.js";
 import { init as init_ui } from "./modules/ui.js";
+import { init as init_seletor } from "./modules/seletor.js";
 
 init_core();
 init_rig();
@@ -49,3 +50,4 @@ iniciarTemas();
 if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
+init_seletor();

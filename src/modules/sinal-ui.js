@@ -61,6 +61,14 @@ function aplicar() {
 export function init() {
   $("ks-escopo").addEventListener("change", function (e) { escopo = e.target.value; atualizarSinal(); });
   ["ks-bits", "ks-hz", "ks-cap"].forEach(function (id) { $(id).addEventListener("change", aplicar); });
+  Array.prototype.forEach.call(document.querySelectorAll(".presets button"), function (b) {
+      b.addEventListener("click", function (e) {
+        e.preventDefault();
+        var i = $(b.parentNode.getAttribute("data-for"));
+        i.value = b.textContent;
+        i.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    });
   $("ks-max").addEventListener("change", function (e) { setMaxPortas(e.target.value); });
   $("ks-padrao").addEventListener("click", function () { setSinal(escopo, null); });
   ["ka-canto", "ka-sentido", "ka-estrategia", "ka-ordem"].forEach(function (id) { $(id).addEventListener("change", function () { setAuto({ corner: $("ka-canto").value, routing: $("ka-sentido").value, estrategia: $("ka-estrategia").value, ordem: $("ka-ordem").value }); }); });

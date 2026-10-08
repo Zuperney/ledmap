@@ -69,3 +69,35 @@ body[data-aba="p"] .wrap, body[data-aba="n"] .wrap, body[data-aba="e"] .wrap, bo
 .sinal .hint { font-size: 11px; color: var(--muted); margin: 0; }
 .sinal .srow { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; padding: 3px 0; border-top: 1px solid var(--line); }
 .sinal .srow.bad b { color: var(--bad); }
+
+/* Seletor próprio (substitui o <select> nativo) */
+.nsel-src { position: absolute !important; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; clip: rect(0 0 0 0); }
+.nsel { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; max-width: 100%; min-width: 0; text-align: left; cursor: pointer;
+  font: 500 12px var(--font-data); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 7px 8px; }
+.nsel > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.nsel::after { content: ""; flex: none; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
+.nsel[aria-expanded="true"]::after { transform: translateY(1px) rotate(225deg); }
+.nsel:disabled { opacity: 0.5; cursor: default; }
+.nsel:focus-visible { outline: 2px solid var(--imag); outline-offset: 2px; }
+.fld .nsel, .modal .fld .nsel, .sinal .fld .nsel { width: 100%; background: var(--bg); font-size: 13px; padding: 7px 8px; }
+.modal .fld .nsel { font-size: 14px; padding: 8px; }
+.insp .nsel { max-width: 110px; }
+td.gsel .nsel { max-width: 150px; padding: 4px 6px; }
+.mi .nsel { margin-left: 6px; }
+.nsel-pop { position: fixed; z-index: 1000; overflow-y: auto; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,0.35); padding: 4px; outline: none; font: 500 13px var(--font-data); }
+.nsel-op { padding: 9px 10px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.nsel-op.foco, .nsel-op:hover { background: var(--grid); }
+.nsel-op.sel { color: var(--imag); font-weight: 700; }
+.nsel-op.sel::after { content: "✓"; }
+.nsel-op.off { opacity: 0.4; cursor: default; }
+.nsel-fundo { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.45); }
+.nsel-pop.folha { left: 0; right: 0; bottom: 0; top: auto; max-height: 65vh; border-radius: 14px 14px 0 0; border-width: 1px 0 0; padding: 6px 8px calc(10px + env(safe-area-inset-bottom)); }
+.nsel-pop.folha .nsel-op { padding: 14px 12px; font-size: 15px; }
+.nsel-tit { padding: 8px 12px 10px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* campos numéricos sem os botões nativos de +/- do navegador */
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.presets { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+.presets button { font: 600 11px var(--font-data); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; cursor: pointer; }
+.presets button:hover { color: var(--fg); border-color: var(--muted); }
