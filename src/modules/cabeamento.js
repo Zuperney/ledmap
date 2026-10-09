@@ -3,7 +3,9 @@ import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
-import { snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas, areaRet, cortarPorArea } from "./auto-cabos.js";
+import { snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas, areaRet, cortarPorArea, cabeNaPorta } from "./auto-cabos.js";
+
+function m4(v) { return Math.round(v * 10000) / 10000; }
 import { SINAL_PADRAO, MAX_PORTAS_PADRAO, limpaSinal, limitePx, limpaMax } from "./sinal.js";
 
 let sinal, sinalScreens, maxPortas, autoCfg, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
@@ -71,7 +73,8 @@ export function distribuirAuto(escopo) {
     tiles.forEach(function (t) { if (escopo === "*" || (escopo === "_" ? !t.grp : t.grp === escopo)) alvo[t.id] = 1; });
     Object.keys(cellEl).forEach(function (k) {
       var c = cellEl[k], q = res(c.t);
-      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: c.t.cx + c.c * q.cw, y: c.t.cy + c.r * q.ch, w: q.cw, h: q.ch });
+      // x, y, w, h = montagem (m, y de cima para baixo): ordem e vizinhança do cabo; ax.. = canvas (px): área da porta
+      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(c.t.mx + c.c * q.mw), y: m4(-(c.t.my + c.t.h) + c.r * q.mh), w: q.mw, h: q.mh, ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch });
     });
     if (!cels.length) return { portas: 0, gabinetes: 0, aviso: "Não há gabinetes nesse escopo." };
     var grupos = {}, ordem = [];
@@ -89,11 +92,18 @@ export function distribuirAuto(escopo) {
         lista = cortarPorArea(snakePorTela(g, autoCfg.routing, autoCfg.corner), lim, oc);
       } else {
         var vistos = {}, telasG = [];
-        g.forEach(function (c) { if (!vistos[c.t.id]) { vistos[c.t.id] = 1; telasG.push({ id: c.t.id, x: c.t.cx, y: c.t.cy, w: q0.cw * res(c.t).cols, h: q0.ch * res(c.t).rows }); } });
+        g.forEach(function (c) {
+          if (vistos[c.t.id]) return;
+          vistos[c.t.id] = 1;
+          var q = res(c.t);
+          telasG.push({ id: c.t.id, x: c.t.mx, y: m4(-(c.t.my + c.t.h)), w: q.mw * q.cols, h: q.mh * q.rows, k: { x: c.t.cx, y: c.t.cy, w: q.cw * q.cols, h: q.ch * q.rows } });
+        });
         aglomerados(telasG).forEach(function (ag) {
           var ids = {}; ag.forEach(function (t) { ids[t.id] = 1; });
           var cs = g.filter(function (c) { return ids[c.t.id]; });
-          var pb = portasPorBloco(cs, q0.cw, q0.ch, budget, autoCfg.estrategia, autoCfg.routing, autoCfg.corner);
+          var pb = portasPorBloco(cs, q0.mw, q0.mh, budget, autoCfg.estrategia, autoCfg.routing, autoCfg.corner);
+          // o bloco é montado na grade da montagem; se no canvas o retângulo passar do limite, volta para o contínuo
+          if (pb && !pb.every(function (p) { return cabeNaPorta(p, lim, oc); })) pb = null;
           lista = lista.concat(pb || cortarPorArea(snakePorTela(cs, autoCfg.routing, autoCfg.corner), lim, oc));
         });
       }
@@ -150,7 +160,7 @@ export function owners() {
   }
 
 // carga da porta = área do retângulo que envolve os gabinetes dela (o processador reserva o retângulo inteiro)
-function cellRet(k) { var c = cellEl[k], q = res(c.t); return { x: c.t.cx + c.c * q.cw, y: c.t.cy + c.r * q.ch, w: q.cw, h: q.ch }; }
+function cellRet(k) { var c = cellEl[k], q = res(c.t); return { ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch }; }
 function routeLoad(route) { return areaRet(route.map(cellRet)); }
 
 export function portState(route) {

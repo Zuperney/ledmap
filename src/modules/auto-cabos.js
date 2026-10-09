@@ -16,13 +16,36 @@ export function balancedChunks(arr, budget) {
   return out;
 }
 
-// área (px) do retângulo que envolve as células: é o que o processador reserva para a porta.
-// Cada célula: { x, y, w, h } no canvas.
+// Cada célula traz duas geometrias:
+//   x, y, w, h     = montagem (Rig), em metros, y de cima para baixo: ordem do cabo e vizinhança física;
+//   ax, ay, aw, ah = canvas do processador (Screen), em px: área reservada pela porta.
+
+// área (px) do retângulo que envolve as células no canvas: é o que o processador reserva para a porta.
 export function areaRet(cells) {
   if (!cells.length) return 0;
   var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  cells.forEach(function (c) { x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y); x1 = Math.max(x1, c.x + c.w); y1 = Math.max(y1, c.y + c.h); });
+  cells.forEach(function (c) { x0 = Math.min(x0, c.ax); y0 = Math.min(y0, c.ay); x1 = Math.max(x1, c.ax + c.aw); y1 = Math.max(y1, c.ay + c.ah); });
   return (x1 - x0) * (y1 - y0);
+}
+
+// dois retângulos encostam por um lado (não basta tocar a quina)
+function encostam(a, b, eps) {
+  var ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return (ox > eps && Math.abs(oy) <= eps) || (oy > eps && Math.abs(ox) <= eps);
+}
+
+// gabinetes vizinhos na montagem: o cabo passa de um para o outro sem atravessar o vão
+export function vizinhos(a, b) { return encostam(a, b, 0.02); }
+
+// quebra a sequência onde o próximo gabinete não encosta no anterior na montagem
+export function trechosFisicos(seq) {
+  var out = [], cur = [];
+  seq.forEach(function (c) {
+    if (cur.length && !vizinhos(cur[cur.length - 1], c)) { out.push(cur); cur = []; }
+    cur.push(c);
+  });
+  if (cur.length) out.push(cur);
+  return out;
 }
 
 // cabe numa porta? Com overclock, aceita passar do limite se sem a última célula ainda cabia.
@@ -31,9 +54,14 @@ export function cabeNaPorta(cells, lim, oc) {
   return !!oc && cells.length > 1 && areaRet(cells.slice(0, -1)) < lim;
 }
 
-// corta a sequência (já em serpentina) em pedaços contíguos cujo retângulo cabe na porta,
-// com o menor número de portas e tamanhos o mais iguais possível
+// corta a sequência (já em serpentina) em portas: primeiro onde os gabinetes não se encostam na montagem,
+// depois cada trecho em pedaços cujo retângulo no canvas cabe na porta
 export function cortarPorArea(seq, lim, oc) {
+  return trechosFisicos(seq).reduce(function (acc, t) { return acc.concat(cortarTrecho(t, lim, oc)); }, []);
+}
+
+// menor número de portas e tamanhos o mais iguais possível
+function cortarTrecho(seq, lim, oc) {
   if (!seq.length) return [];
   var gulosa = [], cur = [];
   seq.forEach(function (c) {
@@ -121,15 +149,15 @@ function portasGrade(cols, rows, budget, estrategia, routing, corner) {
   return ports;
 }
 
-// agrupa telas encostadas (mesma Screen e mesmo gabinete) num aglomerado: o bloco pode cruzar a emenda entre elas
+// agrupa painéis encostados (mesma Screen e mesmo gabinete) num aglomerado: o bloco pode cruzar a emenda entre eles.
+// Precisam encostar na montagem (x, y, w, h em m) e no canvas (k: x, y, w, h em px).
 export function aglomerados(telas) {
   var pai = telas.map(function (_, i) { return i; });
   var raiz = function (i) { while (pai[i] !== i) { pai[i] = pai[pai[i]]; i = pai[i]; } return i; };
   telas.forEach(function (a, i) {
     telas.forEach(function (b, j) {
       if (j <= i) return;
-      var ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-      if ((ox > 0 && oy >= -1) || (oy > 0 && ox >= -1)) pai[raiz(i)] = raiz(j);
+      if (encostam(a, b, 0.02) && (!a.k || encostam(a.k, b.k, 1))) pai[raiz(i)] = raiz(j);
     });
   });
   var g = {};
@@ -139,11 +167,11 @@ export function aglomerados(telas) {
 
 // células de um aglomerado -> portas retangulares. Se as telas não casam na grade do gabinete, devolve null (o chamador cai no modo contínuo).
 export function portasPorBloco(cells, cw, ch, budget, estrategia, routing, corner) {
-  var minX = Infinity, minY = Infinity, maxC = 0, maxR = 0, byPos = {};
+  var minX = Infinity, minY = Infinity, maxC = 0, maxR = 0, byPos = {}, tol = Math.min(cw, ch) * 0.05;
   cells.forEach(function (c) { minX = Math.min(minX, c.x); minY = Math.min(minY, c.y); });
   for (var i = 0; i < cells.length; i++) {
     var gc = Math.round((cells[i].x - minX) / cw), gr = Math.round((cells[i].y - minY) / ch);
-    if (Math.abs(cells[i].x - minX - gc * cw) > 1 || Math.abs(cells[i].y - minY - gr * ch) > 1 || byPos[gc + "," + gr]) return null;
+    if (Math.abs(cells[i].x - minX - gc * cw) > tol || Math.abs(cells[i].y - minY - gr * ch) > tol || byPos[gc + "," + gr]) return null;
     byPos[gc + "," + gr] = cells[i]; maxC = Math.max(maxC, gc); maxR = Math.max(maxR, gr);
   }
   return portasGrade(maxC + 1, maxR + 1, budget, estrategia, routing, corner)
