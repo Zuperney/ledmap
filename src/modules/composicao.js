@@ -2,7 +2,7 @@
 //   Montagem (entrada): os painéis nas posições do Rig, numa escala única (px por metro) — onde o conteúdo é feito.
 //   Composição (saída): os painéis nas posições da aba Screen, em px nativos — o que vai para o processador.
 // Não tem posição própria: test card por painel, regiões das duas pontas e proporção.
-import { tiles, groups, gname, members, res, nf, fmt } from "./core.js";
+import { tiles, groups, gname, members, res, nf, fmt, painelById, pnome } from "./core.js";
 import { chave, projetoAtivo } from "./projetos.js";
 import { cabDe } from "./gabinetes.js";
 import { ports, routes, cellEl, owners, pcolor, portById } from "./cabeamento.js";
@@ -90,7 +90,11 @@ function textOn(hex) {
 // caixa de informações: a maior fonte que cabe, com teto para não dominar telas grandes
 function infoBox(ctx, it, x, y) {
   var t = it.t, q = it.q, g = cabDe(t);
-  var linhas = [t.name, q.w + " × " + q.h + " px", q.cols + " × " + q.rows + " = " + (q.cols * q.rows) + " gab.", fmt(t.w) + " × " + fmt(t.h) + " m · pitch " + fmt(g.mw / g.rx * 1000) + " mm"];
+  caixaInfo(ctx, [t.name, q.w + " × " + q.h + " px", q.cols + " × " + q.rows + " = " + (q.cols * q.rows) + " gab.", fmt(t.w) + " × " + fmt(t.h) + " m · pitch " + fmt(g.mw / g.rx * 1000) + " mm"], x, y, q.w, q.h);
+}
+
+function caixaInfo(ctx, linhas, x, y, w, h) {
+  var q = { w: w, h: h };
   ctx.font = "600 100px " + MONO;
   var larg = Math.max.apply(null, linhas.map(function (l) { return ctx.measureText(l).width; }));
   var fs = Math.min(100 * q.w * 0.8 / larg, q.h * 0.8 / (linhas.length * 1.3 + 0.6), Math.pow(q.w * q.h, 0.25) * 0.85);
@@ -112,7 +116,8 @@ function geometria(ctx, x, y, w, h) {
   ctx.strokeRect(x + lw / 2, y + lw / 2, w - lw, h - lw);
 }
 
-function tela(ctx, it, ox, oy, own) {
+// semSobre: o painel faz parte de um grupo que vira uma imagem só; barras, geometria e info vão sobre o grupo
+function tela(ctx, it, ox, oy, own, semSobre) {
   var t = it.t, q = it.q, x = 0, y = 0, p = cfg.preset, r, c, n = 1;
   ctx.save();
   ctx.translate(it.x - ox, it.y - oy); ctx.scale(it.sx, it.sy);
@@ -135,9 +140,36 @@ function tela(ctx, it, ox, oy, own) {
       n++;
     }
   }
-  if (p === "barras") { var bh = q.h * 0.2, bw = q.w / BARRAS.length; BARRAS.forEach(function (col, i) { ctx.fillStyle = col; ctx.fillRect(x + i * bw, y + (q.h - bh) / 2, bw + 0.5, bh); }); }
-  if (p === "alinhamento") geometria(ctx, x, y, q.w, q.h);
-  if (p === "mapa") infoBox(ctx, it, x, y);
+  if (!semSobre) {
+    if (p === "barras") barras(ctx, x, y, q.w, q.h);
+    if (p === "alinhamento") geometria(ctx, x, y, q.w, q.h);
+    if (p === "mapa") infoBox(ctx, it, x, y);
+  }
+  ctx.restore();
+}
+
+function barras(ctx, x, y, w, h) { var bh = h * 0.2, bw = w / BARRAS.length; BARRAS.forEach(function (col, i) { ctx.fillStyle = col; ctx.fillRect(x + i * bw, y + (h - bh) / 2, bw + 0.5, bh); }); }
+
+// na Montagem, cada grupo de painéis (com 2 ou mais no escopo) é uma imagem só
+function unidades(items) {
+  if (cfg.modo !== "mont") return [];
+  var por = {}, out = [];
+  items.forEach(function (it) { var pn = it.t.pn; if (pn && painelById(pn)) (por[pn] = por[pn] || []).push(it); });
+  Object.keys(por).forEach(function (pn) {
+    if (por[pn].length < 2) return;
+    var gabs = {}, n = 0, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    por[pn].forEach(function (it) { gabs[it.t.cab] = 1; n += it.q.cols * it.q.rows; x0 = Math.min(x0, it.t.mx); x1 = Math.max(x1, it.t.mx + it.t.w); y0 = Math.min(y0, it.t.my); y1 = Math.max(y1, it.t.my + it.t.h); });
+    out.push({ p: painelById(pn), items: por[pn], r: caixa(por[pn].map(function (it) { return it.ent; })), gab: n, tipos: Object.keys(gabs).length, mw: x1 - x0, mh: y1 - y0 });
+  });
+  return out;
+}
+
+function sobreGrupo(ctx, u, ox, oy) {
+  var x = u.r.x - ox, y = u.r.y - oy, w = u.r.w, h = u.r.h, p = cfg.preset;
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  if (p === "barras") barras(ctx, x, y, w, h);
+  if (p === "alinhamento") geometria(ctx, x, y, w, h);
+  if (p === "mapa") caixaInfo(ctx, [pnome(u.p), nf(w) + " × " + nf(h) + " px", u.items.length + " painéis · " + u.gab + " gab.", fmt(u.mw) + " × " + fmt(u.mh) + " m · " + u.tipos + (u.tipos === 1 ? " gabinete" : " gabinetes")], x, y, w, h);
   ctx.restore();
 }
 
@@ -165,8 +197,10 @@ function desenhar(cv, k) {
   var ctx = cv.getContext("2d");
   ctx.setTransform(k, 0, 0, k, 0, 0);
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, b.w, b.h);
-  var own = cfg.preset === "cabos" ? owners() : {}, noEscopo = {};
-  items.forEach(function (it) { noEscopo[it.t.id] = it; tela(ctx, it, b.x, b.y, own); });
+  var own = cfg.preset === "cabos" ? owners() : {}, noEscopo = {}, us = unidades(items), emGrupo = {};
+  us.forEach(function (u) { u.items.forEach(function (it) { emGrupo[it.t.id] = 1; }); });
+  items.forEach(function (it) { noEscopo[it.t.id] = it; tela(ctx, it, b.x, b.y, own, !!emGrupo[it.t.id]); });
+  us.forEach(function (u) { sobreGrupo(ctx, u, b.x, b.y); });
   if (cfg.preset === "cabos") rotasDeCabo(ctx, b.x, b.y, noEscopo);
   return b;
 }
@@ -229,6 +263,12 @@ export function renderComp() {
       bd.appendChild(l);
     });
   }
+  // grupos de painel: na Montagem cada um é uma imagem só (uma região de entrada); os painéis dele seguem embaixo
+  unidades(r.items).forEach(function (u) {
+    var l = h("tr", "grow");
+    [pnome(u.p), "grupo", nf(u.r.x - b.x), nf(u.r.y - b.y), nf(u.r.w) + " × " + nf(u.r.h), proporcao(u.r.w, u.r.h), "painéis " + u.items.map(function (it) { return it.t.id; }).join(", ")].forEach(function (s, i) { l.appendChild(h("td", i > 1 ? "r" : null, s)); });
+    bd.appendChild(l);
+  });
   r.telas.forEach(function (x) {
     var g = x.t.grp ? groups.filter(function (o) { return o.id === x.t.grp; })[0] : null, l = h("tr"), o = mont ? x.sai : x.ent;
     [x.t.id + " · " + x.t.name, g ? gname(g) : "—", nf(x.x), nf(x.y), nf(x.w) + " × " + nf(x.h), proporcao(x.w, x.h), nf(o.x) + ", " + nf(o.y) + " · " + nf(o.w) + " × " + nf(o.h)].forEach(function (s, i) { l.appendChild(h("td", i > 1 ? "r" : null, s)); });
@@ -247,17 +287,21 @@ function nomeArq(ext) {
 
 // as duas pontas de cada região, como uma fatia do Resolume: entrada (conteúdo) → saída (processador)
 function textoRegioes() {
-  var r = linhasRegioes();
-  return ["Entrada (montagem) " + r.be.w + "×" + r.be.h + " px · Saída (composição) " + r.bs.w + "×" + r.bs.h + " px"].concat(r.telas.map(function (x) {
+  var r = linhasRegioes(), modo = cfg.modo;
+  cfg.modo = "mont"; var us = unidades(r.items); cfg.modo = modo;
+  return ["Entrada (montagem) " + r.be.w + "×" + r.be.h + " px · Saída (composição) " + r.bs.w + "×" + r.bs.h + " px"].concat(us.map(function (u) {
+    return pnome(u.p) + " (imagem única na entrada): x " + (u.r.x - r.be.x) + " · y " + (u.r.y - r.be.y) + " · " + u.r.w + "×" + u.r.h + " · painéis " + u.items.map(function (it) { return it.t.id; }).join(", ");
+  }), r.telas.map(function (x) {
     return x.t.name + ": entrada x " + x.ent.x + " · y " + x.ent.y + " · " + x.ent.w + "×" + x.ent.h + "  →  saída x " + x.sai.x + " · y " + x.sai.y + " · " + x.sai.w + "×" + x.sai.h;
   })).join("\n");
 }
 
 function csvRegioes() {
-  var r = linhasRegioes(), rows = [["painel", "nome", "screen", "entrada_x_px", "entrada_y_px", "entrada_largura_px", "entrada_altura_px", "saida_x_px", "saida_y_px", "saida_largura_px", "saida_altura_px", "proporcao", "x_canvas_px", "y_canvas_px"]];
+  var r = linhasRegioes(), rows = [["painel", "nome", "screen", "grupo", "entrada_x_px", "entrada_y_px", "entrada_largura_px", "entrada_altura_px", "saida_x_px", "saida_y_px", "saida_largura_px", "saida_altura_px", "proporcao", "x_canvas_px", "y_canvas_px"]];
   r.telas.forEach(function (x) {
     var g = x.t.grp ? groups.filter(function (o) { return o.id === x.t.grp; })[0] : null;
-    rows.push([x.t.id, x.t.name, g ? gname(g) : "", x.ent.x, x.ent.y, x.ent.w, x.ent.h, x.sai.x, x.sai.y, x.sai.w, x.sai.h, proporcao(x.sai.w, x.sai.h), x.t.cx, x.t.cy]);
+    var pg = x.t.pn && painelById(x.t.pn);
+    rows.push([x.t.id, x.t.name, g ? gname(g) : "", pg ? pnome(pg) : "", x.ent.x, x.ent.y, x.ent.w, x.ent.h, x.sai.x, x.sai.y, x.sai.w, x.sai.h, proporcao(x.sai.w, x.sai.h), x.t.cx, x.t.cy]);
   });
   return csv(rows);
 }
