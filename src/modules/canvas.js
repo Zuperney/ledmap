@@ -1,5 +1,6 @@
 import { el, svgC, CW, CH, text, tiles, res, cabPath, fmt, gC } from "./core.js";
 import { onDown } from "./canvas-edicao.js";
+import { corCab } from "./gabinetes.js";
 let i;
 
 let gridC, occupied, layerC, boxes, guideV, guideH;
@@ -13,7 +14,7 @@ export function init() {
   occupied = el("rect", { "class": "occupied", x: 0, y: 0, width: 0, height: 0 }, svgC);
   layerC = el("g", {}, svgC);
   tiles.forEach(function (s) {
-      var g = el("g", { "class": "scr edit " + s.kind }, layerC);
+      var g = el("g", { "class": "scr edit", style: "--cor:" + corCab(s) }, layerC);
       var rs = res(s);
       el("rect", { "class": "body", x: 0, y: 0, width: rs.w, height: rs.h }, g);
       el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.cw, rs.ch) }, g);

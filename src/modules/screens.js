@@ -17,7 +17,7 @@ export function renderChips() {
     if (!groups.length) {
       var p = document.createElement("p");
       p.className = "empty";
-      p.textContent = "Nenhuma screen ainda. Crie uma e atribua telas na coluna Screen da tabela.";
+      p.textContent = "Nenhuma screen ainda. Crie uma e atribua painéis na coluna Screen da tabela.";
       chipsEl.appendChild(p);
       return;
     }
@@ -32,7 +32,7 @@ export function renderChips() {
     chip("Todas", active === null, function () { setActive(null); });
     groups.forEach(function (g) {
       var n = members(g.id).length;
-      chip(gname(g) + " · " + n + (n === 1 ? " tela" : " telas"), active === g.id, function () { setActive(active === g.id ? null : g.id); });
+      chip(gname(g) + " · " + n + (n === 1 ? " painel" : " painéis"), active === g.id, function () { setActive(active === g.id ? null : g.id); });
     });
   }
 
@@ -40,9 +40,9 @@ export function updateDetailStat() {
     var st = document.getElementById("screen-stat");
     if (active === null) { st.textContent = ""; return; }
     var mem = members(active);
-    if (!mem.length) { st.textContent = "Vazia. Atribua telas na coluna Screen da tabela."; return; }
+    if (!mem.length) { st.textContent = "Vazia. Atribua painéis na coluna Screen da tabela."; return; }
     var b = bbox(mem);
-    st.textContent = mem.length + (mem.length === 1 ? " tela" : " telas") + " · " + nf(b.w) + " × " + nf(b.h) + " px";
+    st.textContent = mem.length + (mem.length === 1 ? " painel" : " painéis") + " · " + nf(b.w) + " × " + nf(b.h) + " px";
   }
 
 function disarm() {

@@ -98,7 +98,7 @@ export function renderEletrica() {
   res0.appendChild(h("p", "note", "Tudo é dimensionado pelo consumo máximo. O app entrega corrente e kVA e não sugere disjuntor: a proteção é do eletricista do quadro."));
   root.appendChild(res0);
 
-  if (!r.screens.length) { root.appendChild(h("p", "empty", "Adicione telas para calcular a energia.")); return; }
+  if (!r.screens.length) { root.appendChild(h("p", "empty", "Adicione painéis para calcular a energia.")); return; }
 
   var maxFase = 0;
   r.screens.forEach(function (s) { s.fases.forEach(function (f) { maxFase = Math.max(maxFase, f.A); }); });
@@ -107,7 +107,7 @@ export function renderEletrica() {
     var c = h("div", "card");
     var cab = h("div", "ecab");
     cab.appendChild(h("h2", null, s.nome));
-    cab.appendChild(h("span", "sb", s.telas + (s.telas === 1 ? " tela" : " telas") + " · " + nf(s.gab) + " gab. · " + f1(s.S / 1000) + " kVA · " + nf(Math.round(s.W)) + " W · " + f1(s.I) + " A · " + s.cabos.length + " cabos"));
+    cab.appendChild(h("span", "sb", s.telas + (s.telas === 1 ? " painel" : " painéis") + " · " + nf(s.gab) + " gab. · " + f1(s.S / 1000) + " kVA · " + nf(Math.round(s.W)) + " W · " + f1(s.I) + " A · " + s.cabos.length + " cabos"));
     c.appendChild(cab);
     if (s.fases.length) {
       var fb = h("div", "efases");
@@ -134,7 +134,7 @@ export function renderEletrica() {
 }
 
 function csvCabos() {
-  var r = calcular(), rows = [["screen", "cabo", "fase", "telas", "gabinetes", "corrente_A", "limite_A", "uso_pct", "conector", "gabinete"]];
+  var r = calcular(), rows = [["screen", "cabo", "fase", "paineis", "gabinetes", "corrente_A", "limite_A", "uso_pct", "conector", "gabinete"]];
   r.screens.forEach(function (s) {
     s.cabos.forEach(function (k) { rows.push([s.nome, k.n, k.fase || "", k.telas.join("+"), k.cells.length, f1(k.A), k.rating, Math.round(k.pct), k.conector, cabNome(k.cells[0].t)]); });
   });
@@ -154,7 +154,7 @@ export function init() {
     document.getElementById(p[0]).addEventListener("change", function (e) { var n = limpa(Object.assign({}, cfg, (function () { var o = {}; o[p[1]] = e.target.value; return o; })())); cfg = n; salvar(); renderEletrica(); });
   });
   document.getElementById("e-csv").addEventListener("click", function () {
-    if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; }
+    if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; }
     saveFile("eletrica-cabos.csv", csvCabos());
   });
 }

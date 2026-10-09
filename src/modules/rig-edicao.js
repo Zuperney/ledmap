@@ -1,8 +1,8 @@
-import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE } from "./core.js";
+import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis } from "./core.js";
 import { updInsp } from "./gaveta.js";
-import { placeM, fitM, guideMV, guideMH, boundsM, statM } from "./rig.js";
+import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis } from "./rig.js";
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
-import { tById } from "./exportar.js";
+import { tById, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep } from "./cabeamento.js";
@@ -30,10 +30,55 @@ export function refreshM() {
 
 export function syncMPanel() {
     var t = selected && tById[selected];
-    document.getElementById("m-who").textContent = t ? "Tela " + t.id + " · " + t.name : "Toque numa tela para movê-la";
+    document.getElementById("m-who").textContent = t ? "Painel " + t.id + " · " + t.name : "Toque num painel para movê-lo";
     var ix = document.getElementById("m-x"), iy = document.getElementById("m-y");
     ix.disabled = iy.disabled = !t;
     ix.value = t ? t.mx : ""; iy.value = t ? t.my : "";
+    syncGrupo();
+    desenharPaineis();
+  }
+
+// multisseleção do Rig (Shift ou Ctrl + clique) e o botão Grupo
+var mselM = [];
+
+function marcarMsel() {
+    tiles.forEach(function (t) { gM[t.id].classList.toggle("msel", mselM.indexOf(t.id) >= 0); });
+    syncGrupo();
+  }
+
+export function toggleMselM(id) {
+    if (!mselM.length && selected && selected !== id) mselM.push(selected);
+    var i = mselM.indexOf(id);
+    if (i >= 0) mselM.splice(i, 1); else mselM.push(id);
+    marcarMsel();
+  }
+
+export function limparMselM() { if (mselM.length) { mselM = []; marcarMsel(); } }
+
+function syncGrupo() {
+    var b = document.getElementById("m-grp");
+    if (!b) return;
+    var t = selected && tById[selected];
+    if (mselM.length >= 2) { b.textContent = "Agrupar (" + mselM.length + ")"; b.disabled = false; }
+    else if (t && t.pn) { b.textContent = "Desagrupar"; b.disabled = false; }
+    else { b.textContent = "Grupo"; b.disabled = true; }
+  }
+
+function clicarGrupo() {
+    if (mselM.length >= 2) {
+      var p = novoPainel();
+      mselM.forEach(function (id) { if (tById[id]) tById[id].pn = p.id; });
+      podarPaineis();
+      pmsg(pnome(p) + " criado com " + mselM.length + " painéis. Em Editar, o grupo se move junto.");
+      mselM = [];
+    } else {
+      var t = selected && tById[selected];
+      if (!t || !t.pn) return;
+      membrosPainel(t.pn).forEach(function (o) { o.pn = ""; });
+      podarPaineis();
+      pmsg("Grupo desfeito.");
+    }
+    marcarMsel(); save(); refreshM();
   }
 
 export function setEditM(on) {
@@ -47,10 +92,12 @@ export function setEditM(on) {
   }
 
 export function onDownM(e, t) {
-    if (!editM) return;
+    if (!editM || e.shiftKey || e.ctrlKey || e.metaKey) return;
+    limparMselM();
     select(t.id);
     var w = toWorldM(e);
-    dragM = { t: t, x0: t.mx, y0: t.my, wx: w.x, wy: w.y };
+    var outros = membrosPainel(t.pn).filter(function (o) { return o !== t; }).map(function (o) { return { t: o, x0: o.mx, y0: o.my }; });
+    dragM = { t: t, x0: t.mx, y0: t.my, wx: w.x, wy: w.y, outros: outros };
     gM[t.id].setPointerCapture(e.pointerId);
     e.preventDefault();
   }
@@ -81,7 +128,7 @@ export function init() {
         var mys = [{ v: ny, k: 0 }, { v: ny + t.h, k: 0 }, { v: ny + t.h / 2, k: 1 }];
         var txs = [], tys = [{ v: 0, k: 0 }];
         tiles.forEach(function (o) {
-          if (o === t) return;
+          if (o === t || (t.pn && o.pn === t.pn)) return;
           txs.push({ v: o.mx, k: 0 }, { v: o.mx + o.w, k: 0 }, { v: o.mx + o.w / 2, k: 1 });
           tys.push({ v: o.my, k: 0 }, { v: o.my + o.h, k: 0 }, { v: o.my + o.h / 2, k: 1 });
         });
@@ -93,6 +140,12 @@ export function init() {
       nx = Math.min(Math.max(nx, b.x0), b.x1 - t.w);
       ny = Math.min(Math.max(ny, FLOOR - b.y1), FLOOR - b.y0 - t.h);
       t.mx = Math.round(nx * 100) / 100; t.my = Math.round(ny * 100) / 100;
+      var dx = t.mx - dragM.x0, dy = t.my - dragM.y0;
+      dragM.outros.forEach(function (o) {
+        o.t.mx = Math.round((o.x0 + dx) * 100) / 100; o.t.my = Math.round((o.y0 + dy) * 100) / 100;
+        placeM(o.t); rowM(o.t);
+      });
+      if (dragM.outros.length) desenharPaineis();
       if (hx) { guideMV.setAttribute("x1", hx.line); guideMV.setAttribute("x2", hx.line); }
       if (hy) { guideMH.setAttribute("y1", FLOOR - hy.line); guideMH.setAttribute("y2", FLOOR - hy.line); }
       guideMV.classList.toggle("off", !hx);
@@ -107,10 +160,15 @@ export function init() {
         var t = selected && tById[selected];
         if (!t) return;
         var nx = mnum(document.getElementById("m-x").value), ny = mnum(document.getElementById("m-y").value);
-        if (nx !== null && ny !== null) { t.mx = nx; t.my = ny; save(); }
+        if (nx !== null && ny !== null) {
+          var dx = nx - t.mx, dy = ny - t.my;
+          membrosPainel(t.pn).forEach(function (o) { if (o !== t) { o.mx = mnum(o.mx + dx); o.my = mnum(o.my + dy); } });
+          t.mx = nx; t.my = ny; save();
+        }
         refreshM();
       });
     });
+  document.getElementById("m-grp").addEventListener("click", clicarGrupo);
   btnMagM = document.getElementById("m-magnet");
   btnMagM.addEventListener("click", function () { magnetM = !magnetM; btnMagM.setAttribute("aria-pressed", String(magnetM)); });
   twoStep(document.getElementById("m-reset"), "Restaurar", "Confirmar?", function () {

@@ -25,6 +25,7 @@ import { init as init_gaveta } from "./modules/gaveta.js";
 import { init as init_ui } from "./modules/ui.js";
 import { init as init_eletrica } from "./modules/eletrica.js";
 import { init as init_seletor } from "./modules/seletor.js";
+import { init as init_composicao } from "./modules/composicao.js";
 
 init_core();
 init_rig();
@@ -45,6 +46,7 @@ init_historico();
 init_projeto_ui();
 init_gaveta();
 init_eletrica();
+init_composicao();
 init_ui();
 
 iniciarTemas();

@@ -20,6 +20,9 @@ const EXEMPLO = {
   ]
 };
 /* ids do formato antigo (v1) → ids atuais */
+/* Projeto novo: página limpa com um painel só. */
+const LIMPO = { extras: [{ id: "1", name: "Painel 1", kind: "imag", cab: "5", w: 4, h: 3, mx: 0, my: 0, cx: 0, cy: 0, grp: "" }], groups: [], nextG: 1 };
+/* ids do formato antigo (v1) → ids atuais */
 export const ID_V1 = { "1": "1", "2a": "2", "2b": "3", "2c": "4", "3": "5", "4a": "6", "4b": "7", "4c": "8", "5": "9" };
 export const TELAS_V1 = EXEMPLO.extras;
 
@@ -40,8 +43,8 @@ function iniciar() {
   indice = Array.isArray(l) ? l.filter(function (p) { return p && typeof p.id === "string" && /^p\d+$/.test(p.id); }) : [];
   if (!indice.length) {
     var id = "p1";
-    indice = [{ id: id, nome: "Exemplo: IMAGs, Upstage e Cs", cliente: "", local: "", data: "", criado: Date.now(), atualizado: Date.now() }];
-    gravar(k(id, "config"), { extras: EXEMPLO.extras, groups: EXEMPLO.groups, nextG: EXEMPLO.nextG });
+    indice = [{ id: id, nome: "Projeto 1", cliente: "", local: "", data: "", obs: "", criado: Date.now(), atualizado: Date.now() }];
+    gravar(k(id, "config"), LIMPO);
     salvarIndice();
     gravar(ACT, id);
   }
@@ -55,14 +58,15 @@ export function listar() { return indice.slice(); }
 export function projetoAtivo() { return indice.filter(function (p) { return p.id === ativoId; })[0]; }
 export function tocar() { var p = projetoAtivo(); if (p) { p.atualizado = Date.now(); salvarIndice(); } }
 export function atualizarMeta(id, patch) {
-  indice.forEach(function (p) { if (p.id === id) for (var f in patch) p[f] = String(patch[f]).slice(0, 80); });
+  indice.forEach(function (p) { if (p.id === id) for (var f in patch) p[f] = String(patch[f]).slice(0, f === "obs" ? 2000 : 80); });
   salvarIndice();
 }
 export function abrirProjeto(id) { gravar(ACT, id); location.reload(); }
 export function criarProjeto(nome, modelo) {
   var id = novoId();
-  indice.push({ id: id, nome: (nome || "").trim().slice(0, 80) || "Projeto " + id.slice(1), cliente: "", local: "", data: "", criado: Date.now(), atualizado: Date.now() });
+  indice.push({ id: id, nome: (nome || "").trim().slice(0, 80) || "Projeto " + id.slice(1), cliente: "", local: "", data: "", obs: "", criado: Date.now(), atualizado: Date.now() });
   if (modelo === "exemplo") gravar(k(id, "config"), { extras: EXEMPLO.extras, groups: EXEMPLO.groups, nextG: EXEMPLO.nextG });
+  else if (modelo !== "vazio") gravar(k(id, "config"), LIMPO);
   salvarIndice();
   return id;
 }
@@ -71,13 +75,13 @@ export function duplicarProjeto(id) {
   if (!src) return null;
   var nid = novoId();
   indice.push(Object.assign({}, src, { id: nid, nome: (src.nome + " (cópia)").slice(0, 80), criado: Date.now(), atualizado: Date.now() }));
-  ["config", "cabos"].forEach(function (b) { var v = null; try { v = localStorage.getItem(k(id, b)); } catch (e) {} if (v) gravar(k(nid, b), v); });
+  ["config", "cabos", "eletrica", "comp"].forEach(function (b) { var v = null; try { v = localStorage.getItem(k(id, b)); } catch (e) {} if (v) gravar(k(nid, b), v); });
   salvarIndice();
   return nid;
 }
 export function excluirProjeto(id) {
   indice = indice.filter(function (p) { return p.id !== id; });
-  ["config", "cabos"].forEach(function (b) { try { localStorage.removeItem(k(id, b)); } catch (e) {} });
+  ["config", "cabos", "eletrica", "comp"].forEach(function (b) { try { localStorage.removeItem(k(id, b)); } catch (e) {} });
   if (!indice.length) { indice = []; }
   salvarIndice();
   if (id === ativoId) { ativoId = indice.length ? indice[0].id : ""; gravar(ACT, ativoId); }

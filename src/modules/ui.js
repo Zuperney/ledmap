@@ -59,7 +59,7 @@ export function init() {
         if (/^[pmckner]$/.test(pr[0])) showTab(pr[0]);
         if (pr[1] && tById[pr[1]]) {
           select(pr[1]);
-          if (!pend) pmsg("Tela " + pr[1] + " adicionada.");
+          if (!pend) pmsg("Painel " + pr[1] + " adicionado.");
         }
       }
     } catch (e) {}

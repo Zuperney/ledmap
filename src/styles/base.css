@@ -44,9 +44,12 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .tick { font-family: var(--font-data); fill: var(--muted); }
 .scr { cursor: pointer; transition: opacity .15s; }
 .scr rect.body { stroke-width: 1.5; vector-effect: non-scaling-stroke; fill-opacity: .28; }
-.scr.imag rect.body { fill: var(--imag); stroke: var(--imag); }
-.scr.up rect.body { fill: var(--up); stroke: var(--up); }
-.scr.c rect.body { fill: var(--cpiece); stroke: var(--cpiece); }
+.scr rect.body { fill: var(--cor, var(--imag)); stroke: var(--cor, var(--imag)); }
+.pnlayer { pointer-events: none; }
+.pnbox { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 8 5; vector-effect: non-scaling-stroke; opacity: .8; }
+.pnbox.active { stroke: var(--fg); stroke-width: 2.5; opacity: 1; }
+.pnl { fill: var(--muted); font-family: var(--font-display); font-weight: 700; }
+.pnl.active { fill: var(--fg); }
 .scr .cab { fill: none; stroke: var(--fg); stroke-opacity: .28; stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
 .scr.msel rect.body { fill-opacity: .55; stroke-width: 3; stroke-dasharray: 10 5; }
 .scr.sel rect.body { fill-opacity: .5; stroke-width: 3; }
@@ -82,9 +85,7 @@ tfoot td { border-bottom: 0; color: var(--muted); }
 td.r, th.r { text-align: right; }
 .hint { font-size: 12px; color: var(--muted); margin: 0; }
 .kbody { stroke-width: 1.5; vector-effect: non-scaling-stroke; fill-opacity: .14; }
-.kt.imag .kbody { fill: var(--imag); stroke: var(--imag); }
-.kt.up .kbody { fill: var(--up); stroke: var(--up); }
-.kt.c .kbody { fill: var(--cpiece); stroke: var(--cpiece); }
+.kt .kbody { fill: var(--cor, var(--imag)); stroke: var(--cor, var(--imag)); }
 .klabel { fill: var(--fg); opacity: .1; font-family: var(--font-display); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .cell { fill: transparent; stroke: var(--fg); stroke-opacity: .28; stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: all; cursor: pointer; }
 .cell.act { stroke-opacity: .9; stroke-width: 1.5; }

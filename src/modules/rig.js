@@ -1,9 +1,10 @@
-import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected } from "./core.js";
-import { editM, onDownM } from "./rig-edicao.js";
+import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis, membrosPainel, pnome } from "./core.js";
+import { corCab } from "./gabinetes.js";
+import { editM, onDownM, toggleMselM, limparMselM } from "./rig-edicao.js";
 import { select } from "./tabela.js";
 let i;
 
-let gridM, floorLine, boundsM, layerM, guideMV, guideMH;
+let gridM, floorLine, boundsM, layerM, guideMV, guideMH, pnLayer;
 
 export function fitM() {
     var minX = Infinity, maxX = -Infinity, topY = Infinity, botY = -Infinity;
@@ -22,6 +23,7 @@ export function fitM() {
     for (k = gx0; k <= gx1; k++) el("line", { x1: k, y1: gy0, x2: k, y2: gy1 }, gridM);
     for (k = gy0; k <= gy1; k++) el("line", { x1: gx0, y1: k, x2: gx1, y2: k }, gridM);
     floorLine.setAttribute("x1", gx0); floorLine.setAttribute("x2", gx1);
+    desenharPaineis();
     statM();
   }
 
@@ -39,9 +41,24 @@ export function statM() {
       });
     });
     tiles.forEach(function (t) { if (bad[t.id]) nb++; gM[t.id].classList.toggle("overlap", !!bad[t.id]); });
-    if (!tiles.length) { document.getElementById("stat-m").textContent = "Sem telas · ⋮ → + Adicionar tela"; return; }
+    if (!tiles.length) { document.getElementById("stat-m").textContent = "Sem painéis · toque em + Painel"; return; }
     document.getElementById("stat-m").innerHTML = "Conjunto: <b>" + fmt(maxX - minX) + " m</b> de largura × <b>" + fmt(maxY - minY) + " m</b> de altura" +
-      (nb ? ' · <span class="warn">' + nb + " telas sobrepostas</span>" : "");
+      (nb ? ' · <span class="warn">' + nb + " painéis sobrepostos</span>" : "");
+  }
+
+// contorno tracejado de cada grupo de painel, com nome e medida do conjunto
+export function desenharPaineis() {
+    if (!pnLayer) return;
+    pnLayer.textContent = "";
+    paineis.forEach(function (p) {
+      var m = membrosPainel(p.id);
+      if (!m.length) return;
+      var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, gabs = {};
+      m.forEach(function (t) { x0 = Math.min(x0, t.mx); x1 = Math.max(x1, t.mx + t.w); y0 = Math.min(y0, t.my); y1 = Math.max(y1, t.my + t.h); gabs[t.cab] = 1; });
+      var on = selected && m.some(function (t) { return t.id === selected; }), pad = 0.12;
+      el("rect", { "class": "pnbox" + (on ? " active" : ""), x: x0 - pad, y: FLOOR - y1 - pad, width: x1 - x0 + pad * 2, height: y1 - y0 + pad * 2 }, pnLayer);
+      text(pnLayer, "pnl" + (on ? " active" : ""), x0 - pad, FLOOR - y1 - pad - 0.15, 0.36, pnome(p) + " · " + fmt(x1 - x0) + " × " + fmt(y1 - y0) + " m · " + Object.keys(gabs).length + (Object.keys(gabs).length === 1 ? " gabinete" : " gabinetes"));
+    });
   }
 
 export function placeM(t) { gM[t.id].setAttribute("transform", "translate(" + t.mx + " " + (FLOOR - t.my - t.h) + ")"); }
@@ -54,7 +71,7 @@ export function init() {
   [2, 4, 6, 8].forEach(function (v) { text(svgM, "tick", -0.85, FLOOR - v + 0.18, 0.45, v); });
   layerM = el("g", {}, svgM);
   tiles.forEach(function (s) {
-      var g = el("g", { "class": "scr " + s.kind, transform: "translate(" + s.mx + " " + (FLOOR - s.my - s.h) + ")" }, layerM);
+      var g = el("g", { "class": "scr", style: "--cor:" + corCab(s), transform: "translate(" + s.mx + " " + (FLOOR - s.my - s.h) + ")" }, layerM);
       var rs = res(s), tall = s.h >= 3;
       el("rect", { "class": "body", x: 0, y: 0, width: s.w, height: s.h }, g);
       el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.mw, rs.mh) }, g);
@@ -70,12 +87,17 @@ export function init() {
         text(g, "dim-t", s.w / 2, s.h / 2 + 0.95, 0.42, rs.w + " × " + rs.h + " px");
         text(g, "dim-t", s.w / 2, s.h / 2 + 1.5, 0.42, rs.cols + " × " + rs.rows + " gab.");
       } else if (s.w >= 3) {
-        text(g, "dim-t", (s.w + 1) / 2, s.h / 2, 0.45, fmt(s.w) + " × " + fmt(s.h) + " m · " + rs.w + "×" + rs.h);
+        var lbl = fmt(s.w) + " × " + fmt(s.h) + " m · " + rs.w + "×" + rs.h;
+        text(g, "dim-t", (s.w + 1.1) / 2, s.h / 2, Math.min(0.45, (s.w - 1.3) / (lbl.length * 0.62)), lbl);
       }
       gM[s.id] = g;
-      g.addEventListener("click", function () { if (!editM) select(selected === s.id ? null : s.id); });
+      g.addEventListener("click", function (e) {
+        if (e.shiftKey || e.ctrlKey || e.metaKey) { toggleMselM(s.id); return; }
+        if (!editM) { limparMselM(); select(selected === s.id ? null : s.id); }
+      });
       g.addEventListener("pointerdown", function (e) { onDownM(e, s); });
     });
+  pnLayer = el("g", { "class": "pnlayer" }, svgM);
   guideMV = el("line", { "class": "guide off", x1: 0, y1: -100, x2: 0, y2: 100 }, svgM);
   guideMH = el("line", { "class": "guide off", x1: -100, y1: 0, x2: 100, y2: 0 }, svgM);
 }

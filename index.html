@@ -21,25 +21,13 @@
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="modal" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-title" hidden>
   <div class="box">
-    <h2 id="add-title">Adicionar tela</h2>
+    <h2 id="add-title">Adicionar painel</h2>
     <label class="fld">Nome <input type="text" id="a-name" maxlength="40" autocomplete="off"></label>
-    <label class="fld">Tipo
-      <select id="a-kind">
-        <option value="imag">IMAG</option>
-        <option value="up">Upstage</option>
-        <option value="c">C</option>
-      </select>
-    </label>
-    <label class="fld">Gabinete <select id="a-cab"></select></label>
     <div class="two">
       <label class="fld">Largura (m) <input type="number" id="a-w" value="2" min="0.1" max="30" step="0.1" inputmode="decimal"></label>
       <label class="fld">Altura (m) <input type="number" id="a-h" value="2" min="0.1" max="30" step="0.1" inputmode="decimal"></label>
     </div>
-    <label class="fld">Screen <select id="a-grp"></select></label>
-    <div class="two">
-      <label class="fld">Montagem X (m) <input type="number" id="a-mx" step="0.5" placeholder="auto" inputmode="decimal"></label>
-      <label class="fld">Montagem Y (m) <input type="number" id="a-my" step="0.5" placeholder="auto" inputmode="decimal"></label>
-    </div>
+    <label class="fld">Gabinete <select id="a-cab"></select></label>
     <div class="prev" id="a-prev"></div>
     <div class="err" id="a-err" role="alert"></div>
     <div class="acts">
@@ -74,9 +62,6 @@
     <div class="dd">
       <button class="btn" id="menu-btn" aria-haspopup="true" aria-label="Menu">⋮</button>
       <div class="dd-m right" hidden>
-        <button class="mi" id="add-open">+ Adicionar tela</button>
-        <button class="mi" id="proj-export">Exportar projeto (JSON)</button>
-        <button class="mi" id="proj-import">Importar neste projeto…</button>
         <button class="mi" id="paste-open">Colar / copiar JSON…</button>
         <label class="mi snap" data-keep>Tema <select id="theme-sel" aria-label="Tema de cores"></select></label>
       </div>
@@ -94,34 +79,47 @@
   <p class="note" id="proj-msg" role="status" hidden></p>
 
   <section class="view" id="view-p" role="tabpanel" aria-labelledby="tab-p" hidden>
+    <div class="bar psel">
+      <select id="p-sel" aria-label="Projeto aberto"></select>
+      <button class="btn" id="p-novo">+ Novo</button>
+      <button class="btn" id="p-dup">Duplicar</button>
+      <button class="btn" id="p-del">Excluir</button>
+    </div>
     <div class="card">
-      <h2>Projeto atual</h2>
-      <div class="two">
-        <label class="fld">Nome <input type="text" id="p-nome" maxlength="80" autocomplete="off"></label>
+      <label class="fld">Nome <input type="text" id="p-nome" maxlength="80" autocomplete="off"></label>
+      <div class="three">
         <label class="fld">Cliente <input type="text" id="p-cliente" maxlength="80" autocomplete="off"></label>
         <label class="fld">Local <input type="text" id="p-local" maxlength="80" autocomplete="off"></label>
-        <label class="fld">Data <input type="text" id="p-data" maxlength="40" autocomplete="off" placeholder="ex.: 12/12/2026"></label>
+        <label class="fld">Data <input type="text" id="p-data" maxlength="40" autocomplete="off" placeholder="12/12/2026"></label>
       </div>
-      <p class="note" id="p-resumo"></p>
+      <label class="fld">Observações <textarea id="p-obs" rows="4" maxlength="2000"></textarea></label>
+      <div class="egrid" id="p-resumo"></div>
     </div>
-    <div class="card">
-      <div class="screens-head">
-        <h2>Projetos neste aparelho</h2>
-        <button class="btn" id="p-novo">+ Novo</button>
-        <button class="btn" id="p-importar">Importar arquivo…</button>
-      </div>
-      <div class="plist" id="p-lista"></div>
-      <p class="note">Os projetos ficam só neste navegador. Use ⋮ → Exportar projeto para guardar uma cópia em arquivo.</p>
+    <div class="bar">
+      <button class="btn" id="proj-export">Exportar projeto</button>
+      <button class="btn" id="p-importar">Importar projeto…</button>
     </div>
+    <p class="note">Os projetos ficam só neste navegador. Exporte para guardar uma cópia em arquivo (JSON). Importar abre o arquivo como um projeto novo.</p>
   </section>
 
   <section class="view" id="view-n" role="tabpanel" aria-labelledby="tab-n" hidden>
-    <div class="card soon">
-      <h2>Composição</h2>
-      <p>Canvas de conteúdo: como as telas do Screen viram o que o servidor de vídeo enxerga.</p>
-      <ul><li>Test card por tela, em resolução nativa</li><li>Regiões (x, y, largura, altura) para copiar</li><li>PNG da composição</li></ul>
-      <p class="note">Em breve. Esta área ainda não calcula nada.</p>
+    <div class="bar">
+      <select id="n-preset" aria-label="Test card"></select>
+      <select id="n-escopo" aria-label="Painéis na composição"></select>
+      <button class="btn" id="n-copy">Copiar regiões</button>
+      <div class="dd">
+        <button class="btn dd-b">Exportar ▾</button>
+        <div class="dd-m right" hidden>
+          <button class="mi" id="n-png">Composição (PNG)</button>
+          <button class="mi" id="n-csv">Regiões (CSV)</button>
+        </div>
+      </div>
     </div>
+    <div class="stagebox ncomp">
+      <canvas id="n-cv" role="img" aria-label="Prévia da composição com o test card"></canvas>
+      <div class="badge"><div class="stat" id="n-stat"></div></div>
+    </div>
+    <div id="n-root" class="e-root"></div>
   </section>
 
   <section class="view" id="view-e" role="tabpanel" aria-labelledby="tab-e" hidden>
@@ -143,16 +141,23 @@
     <div class="card soon">
       <h2>Caderno</h2>
       <p>Documento do projeto para imprimir ou enviar.</p>
-      <ul><li>Capa com dados do projeto</li><li>Rig, Screen e cabeamento em desenhos vetoriais</li><li>Tabelas de telas, portas e energia</li></ul>
+      <ul><li>Capa com dados do projeto</li><li>Rig, Screen e cabeamento em desenhos vetoriais</li><li>Tabelas de painéis, portas e energia</li></ul>
       <p class="note">Em breve. Esta área ainda não calcula nada.</p>
     </div>
   </section>
 
   <section class="view" id="view-m" role="tabpanel" aria-labelledby="tab-m">
     <div class="bar">
-      <button class="btn" id="btn-grid-m" aria-pressed="true">Grade</button>
-      <button class="btn" id="m-cab" aria-pressed="false">Cabos</button>
+      <button class="btn" id="add-open">+ Painel</button>
       <button class="btn" id="m-edit" aria-pressed="false">Editar</button>
+      <button class="btn" id="m-grp" title="Shift + clique para selecionar vários painéis" disabled>Grupo</button>
+      <div class="dd">
+        <button class="btn dd-b">Visão ▾</button>
+        <div class="dd-m keep" hidden>
+          <button class="mi" id="btn-grid-m" aria-pressed="true">Grade</button>
+          <button class="mi" id="m-cab" aria-pressed="false">Cabos</button>
+        </div>
+      </div>
       <div class="dd">
         <button class="btn dd-b">Exportar ▾</button>
         <div class="dd-m" hidden>
@@ -164,7 +169,7 @@
       </div>
     </div>
     <div class="stagebox">
-    <div class="stage pan"><svg id="svg-m" viewBox="-1 -0.5 29 10.5" role="img" aria-label="Montagem: vista frontal das telas LED em escala"></svg></div>
+    <div class="stage pan"><svg id="svg-m" viewBox="-1 -0.5 29 10.5" role="img" aria-label="Montagem: vista frontal dos painéis LED em escala"></svg></div>
       <div class="hud"><button class="btn" id="m-lock" aria-pressed="false">Travar</button><div class="zoom" role="group" aria-label="Zoom da montagem">
   <button class="btn" id="m-zout" aria-label="Diminuir zoom">−</button>
   <span id="m-zlabel">100%</span>
@@ -175,7 +180,7 @@
       <div class="badge"><div class="stat" id="stat-m"></div></div>
     </div>
     <div class="medit" id="m-edit-panel" hidden>
-      <span class="who" id="m-who">Toque numa tela para movê-la</span>
+      <span class="who" id="m-who">Toque num painel para movê-lo</span>
       <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
       <label>Y do chão (m) <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
       <label>Passo
@@ -189,7 +194,7 @@
 
   <section class="view" id="view-c" role="tabpanel" aria-labelledby="tab-c" hidden>
     <div class="bar">
-      <button class="btn" id="btn-move" aria-pressed="true">Mover telas</button>
+      <button class="btn" id="btn-move" aria-pressed="true">Mover painéis</button>
       <div class="dd">
         <button class="btn dd-b">Ajustes ▾</button>
         <div class="dd-m keep" hidden>
@@ -206,11 +211,11 @@
           <button class="mi" id="btn-reset">Inicial</button>
         </div>
       </div>
-      <button class="btn" id="btn-multi" aria-pressed="false" title="Toque em várias telas para movê-las juntas">Multi</button>
-      <button class="btn" id="add-open2">+ Tela</button>
+      <button class="btn" id="btn-multi" aria-pressed="false" title="Toque em vários painéis para movê-los juntos">Multi</button>
+      <button class="btn" id="add-open2">+ Painel</button>
     </div>
     <div class="stagebox">
-    <div class="stage pan"><svg id="svg-c" viewBox="-64 -150 6272 2790" role="img" aria-label="Configuração: telas no canvas em pixels"></svg></div>
+    <div class="stage pan"><svg id="svg-c" viewBox="-64 -150 6272 2790" role="img" aria-label="Configuração: painéis no canvas em pixels"></svg></div>
       <div class="hud"><button class="btn" id="btn-lock" aria-pressed="false">Travar</button><div class="zoom" role="group" aria-label="Zoom do canvas">
   <button class="btn" id="zoom-out" aria-label="Diminuir zoom">−</button>
   <span id="zoom-label">100%</span>
@@ -296,7 +301,7 @@
           <label class="fld">Escopo <select id="ka-escopo"></select></label>
           <label class="fld">Estratégia
             <select id="ka-estrategia">
-              <option value="continuo">Contínuo (pixels reais, tela a tela)</option>
+              <option value="continuo">Contínuo (pixels reais, painel a painel)</option>
               <option value="linha">Linha (faixas horizontais em bloco)</option>
               <option value="coluna">Coluna (faixas verticais em bloco)</option>
               <option value="bloco">Bloco (retângulos quase quadrados)</option>
@@ -314,7 +319,7 @@
               <option value="col-serp">Empilhado (por coluna), sobe e desce</option>
             </select>
           </label>
-          <p class="hint">Todas as estratégias respeitam o limite de px por porta (e o overclock, se ligado). Em bloco, telas encostadas contam como uma área só, e blocos podem economizar portas em processadores que reservam o retângulo. Substitui as rotas do escopo escolhido.</p>
+          <p class="hint">Todas as estratégias respeitam o limite de px por porta (e o overclock, se ligado). Em bloco, painéis encostados contam como uma área só, e blocos podem economizar portas em processadores que reservam o retângulo. Substitui as rotas do escopo escolhido.</p>
           <button class="btn" id="ka-go">Distribuir</button>
         </div>
       </details>
@@ -331,22 +336,17 @@
 
   <div class="drawer" id="drawer">
     <div class="dhead">
-      <button class="btn" id="d-toggle" aria-expanded="false">▲ Telas</button>
+      <button class="btn" id="d-toggle" aria-expanded="false">▲ Painéis</button>
       <span class="dsum" id="d-sum"></span>
       <span class="insp" id="insp" hidden></span>
     </div>
     <div class="dbody" id="dbody">
-  <div class="legend">
-    <span><i style="background:var(--imag)"></i>IMAG · P5.9 · 84 × 84 px</span>
-    <span><i style="background:var(--up)"></i>Upstage · P5.9 · 84 × 84 px</span>
-    <span><i style="background:var(--cpiece)"></i>Peças do C · P3.9 · 128 × 128 px</span>
-    <span>Linhas finas = gabinetes</span>
-  </div>
+  <div class="legend" id="legend-gab"></div>
 
   <p class="hint" id="hint"></p>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>Nº</th><th>Tela</th><th>Screen</th><th class="r">L × A (m)</th><th class="r">Gabinetes</th><th>Pitch</th><th class="r">Resolução (px)</th><th class="r">Pixels</th><th class="r">Montagem x, y (m)</th><th class="r">Canvas x, y (px)</th></tr></thead>
+      <thead><tr><th>Nº</th><th>Painel</th><th>Screen</th><th class="r">L × A (m)</th><th class="r">Gabinetes</th><th>Pitch</th><th class="r">Resolução (px)</th><th class="r">Pixels</th><th class="r">Montagem x, y (m)</th><th class="r">Canvas x, y (px)</th></tr></thead>
       <tbody id="rows"></tbody>
       <tfoot><tr><td></td><td>Total</td><td></td><td></td><td class="r" id="total-cab"></td><td></td><td></td><td class="r" id="total"></td><td></td><td></td></tr></tfoot>
     </table>
