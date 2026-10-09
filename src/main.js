@@ -26,6 +26,7 @@ import { init as init_ui } from "./modules/ui.js";
 import { init as init_eletrica } from "./modules/eletrica.js";
 import { init as init_seletor } from "./modules/seletor.js";
 import { init as init_composicao } from "./modules/composicao.js";
+import { init as init_gab_ui } from "./modules/gab-ui.js";
 
 init_core();
 init_rig();
@@ -47,11 +48,13 @@ init_projeto_ui();
 init_gaveta();
 init_eletrica();
 init_composicao();
+init_gab_ui();
 init_ui();
 
 iniciarTemas();
 
-if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+// só no build publicado: no servidor de desenvolvimento o cache do service worker serve código velho
+if (import.meta.env.PROD && "serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 init_seletor();

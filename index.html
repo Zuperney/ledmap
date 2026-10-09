@@ -28,11 +28,52 @@
       <label class="fld">Altura (m) <input type="number" id="a-h" value="2" min="0.1" max="30" step="0.1" inputmode="decimal"></label>
     </div>
     <label class="fld">Gabinete <select id="a-cab"></select></label>
+    <button class="btn lnk" id="a-gabs" type="button">Criar ou editar gabinetes…</button>
     <div class="prev" id="a-prev"></div>
     <div class="err" id="a-err" role="alert"></div>
     <div class="acts">
       <button class="btn" id="a-cancel">Cancelar</button>
       <button class="btn" id="a-ok" aria-pressed="true">Adicionar</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="gab-modal" role="dialog" aria-modal="true" aria-labelledby="gab-h" hidden>
+  <div class="box gab-box">
+    <div id="gab-v-lista">
+      <h2 id="gab-h">Gabinetes</h2>
+      <p class="sub">Valem para todos os projetos deste aparelho. Confira os dados no datasheet do fabricante.</p>
+      <input type="text" id="gab-busca" placeholder="Buscar por nome ou marca" autocomplete="off" aria-label="Buscar gabinete">
+      <div class="glist" id="gab-lista"></div>
+      <div class="acts">
+        <button class="btn" id="gab-fechar">Fechar</button>
+        <button class="btn" id="gab-novo" aria-pressed="true">+ Novo gabinete</button>
+      </div>
+    </div>
+    <div id="gab-v-form" hidden>
+      <h2 id="gab-tit">Gabinete</h2>
+      <div class="two">
+        <label class="fld">Marca <input type="text" id="g-marca" maxlength="40" autocomplete="off"></label>
+        <label class="fld">Nome <input type="text" id="g-nome" maxlength="60" autocomplete="off"></label>
+        <label class="fld">Pixels na largura <input type="number" id="g-rx" min="1" max="4096" step="1" inputmode="numeric"></label>
+        <label class="fld">Pixels na altura <input type="number" id="g-ry" min="1" max="4096" step="1" inputmode="numeric"></label>
+        <label class="fld">Largura (mm) <input type="number" id="g-mw" min="50" max="5000" step="1" inputmode="decimal"></label>
+        <label class="fld">Altura (mm) <input type="number" id="g-mh" min="50" max="5000" step="1" inputmode="decimal"></label>
+        <label class="fld">Peso (kg) <input type="number" id="g-peso" min="0" step="0.1" inputmode="decimal"></label>
+        <label class="fld">Potência máxima (W) <input type="number" id="g-pw" min="0" step="1" inputmode="numeric"></label>
+        <label class="fld">Consumo no preto (W) <input type="number" id="g-pb" min="0" step="1" inputmode="numeric"></label>
+        <label class="fld">Fator de potência <input type="number" id="g-fp" min="0.3" max="1" step="0.01" inputmode="decimal"></label>
+        <label class="fld">Conector de energia <input type="text" id="g-con" maxlength="40" autocomplete="off"></label>
+        <label class="fld">Corrente do conector (A) <input type="number" id="g-amp" min="1" max="125" step="1" inputmode="numeric"></label>
+      </div>
+      <div class="prev" id="g-prev"></div>
+      <div class="err" id="g-err" role="alert"></div>
+      <div class="acts">
+        <button class="btn" id="g-del">Excluir</button>
+        <button class="btn" id="g-dup">Duplicar</button>
+        <span class="sp"></span>
+        <button class="btn" id="g-voltar">Voltar</button>
+        <button class="btn" id="g-ok" aria-pressed="true">Salvar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -62,6 +103,7 @@
     <div class="dd">
       <button class="btn" id="menu-btn" aria-haspopup="true" aria-label="Menu">⋮</button>
       <div class="dd-m right" hidden>
+        <button class="mi" id="gab-open">Gabinetes…</button>
         <button class="mi" id="paste-open">Colar / copiar JSON…</button>
         <label class="mi snap" data-keep>Tema <select id="theme-sel" aria-label="Tema de cores"></select></label>
       </div>
@@ -151,6 +193,7 @@
       <button class="btn" id="add-open">+ Painel</button>
       <button class="btn" id="m-edit" aria-pressed="false">Editar</button>
       <button class="btn" id="m-grp" title="Shift + clique para selecionar vários painéis" disabled>Grupo</button>
+      <button class="btn" id="m-del" disabled>Excluir</button>
       <div class="dd">
         <button class="btn dd-b">Visão ▾</button>
         <div class="dd-m keep" hidden>

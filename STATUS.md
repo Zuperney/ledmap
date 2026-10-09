@@ -20,7 +20,10 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 
 **Projeto e Rig enxutos**
 - Aba Projeto: seletor compacto de projetos (Novo, Duplicar, Excluir), nome, cliente, local, data, observações, resumo (painéis, gabinetes, pixels, kVA de pico), Exportar e Importar (importar abre como projeto novo).
-- Projeto novo e primeira abertura: página limpa com um painel só (4 × 3 m, Absen PL3.9). O exemplo de IMAGs/Upstage/Cs não é mais criado.
+- Projeto novo e primeira abertura: Rig vazio, sem painel. O exemplo de IMAGs/Upstage/Cs não é mais criado.
+- Excluir painel: botão Excluir no Rig (painel selecionado ou a multisseleção, com confirmação) e tecla Delete. As rotas de cabo que passavam por ele somem junto.
+- Biblioteca de gabinetes (⋮ → Gabinetes…, ou "Criar ou editar gabinetes…" no Adicionar painel): lista com busca, criar, editar, duplicar e excluir. Campos: marca, nome, pixels, tamanho em mm, peso, potência máxima, consumo no preto, fator de potência, conector e corrente. Vale para todos os projetos do aparelho; cada projeto guarda a definição dos gabinetes que usa (no armazenamento e no JSON) e os devolve à biblioteca se faltarem. Gabinete em uso no projeto aberto não pode ser excluído; editar um em uso recarrega e ajusta os painéis.
+- Service worker só no build publicado (no servidor de desenvolvimento ele servia código velho).
 - Rig: barra com + Painel, Editar, Visão (Grade e Cabos) e Exportar.
 - Adicionar painel: só nome, largura, altura e gabinete; posição automática. O campo Tipo saiu; as cores agora são por gabinete (legenda na gaveta).
 - Grupos de painel (conceito novo, separado da Screen): Shift (ou Ctrl) + clique seleciona vários painéis no Rig e o botão Grupo vira "Agrupar (n)"; com um painel agrupado selecionado, vira "Desagrupar". O grupo se move junto em Editar (arrastar ou X/Y) e tem contorno com nome automático, medida do conjunto e número de gabinetes diferentes. Salvo no projeto, no JSON e no desfazer. Pendente: multisseleção no celular (sem Shift) e renomear grupo.

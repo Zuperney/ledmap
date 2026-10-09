@@ -6,6 +6,7 @@ import { tById, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep } from "./cabeamento.js";
+import { excluirPaineis } from "./telas.js";
 
 let editM, dragM, magnetM, btnMagM;
 
@@ -55,9 +56,14 @@ export function toggleMselM(id) {
 
 export function limparMselM() { if (mselM.length) { mselM = []; marcarMsel(); } }
 
+// painéis que o botão Excluir apaga: a multisseleção ou o painel selecionado
+export function selecaoM() { return mselM.length ? mselM.slice() : (selected && tById[selected] ? [selected] : []); }
+
 function syncGrupo() {
     var b = document.getElementById("m-grp");
     if (!b) return;
+    var del = document.getElementById("m-del");
+    if (del) { var n = selecaoM().length; del.disabled = !n; del.title = n > 1 ? "Excluir " + n + " painéis" : "Excluir o painel selecionado"; }
     var t = selected && tById[selected];
     if (mselM.length >= 2) { b.textContent = "Agrupar (" + mselM.length + ")"; b.disabled = false; }
     else if (t && t.pn) { b.textContent = "Desagrupar"; b.disabled = false; }
@@ -169,6 +175,13 @@ export function init() {
       });
     });
   document.getElementById("m-grp").addEventListener("click", clicarGrupo);
+  twoStep(document.getElementById("m-del"), "Excluir", "Confirmar?", function () { excluirPaineis(selecaoM()); });
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== "Delete" && e.key !== "Backspace") || document.body.getAttribute("data-aba") !== "m") return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || "") || !selecaoM().length) return;
+    e.preventDefault();
+    document.getElementById("m-del").click();
+  });
   btnMagM = document.getElementById("m-magnet");
   btnMagM.addEventListener("click", function () { magnetM = !magnetM; btnMagM.setAttribute("aria-pressed", String(magnetM)); });
   twoStep(document.getElementById("m-reset"), "Restaurar", "Confirmar?", function () {
