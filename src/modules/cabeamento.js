@@ -3,7 +3,7 @@ import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
-import { balancedChunks, snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas } from "./auto-cabos.js";
+import { snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas, areaRet, cortarPorArea } from "./auto-cabos.js";
 import { SINAL_PADRAO, MAX_PORTAS_PADRAO, limpaSinal, limitePx, limpaMax } from "./sinal.js";
 
 let sinal, sinalScreens, maxPortas, autoCfg, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
@@ -71,7 +71,7 @@ export function distribuirAuto(escopo) {
     tiles.forEach(function (t) { if (escopo === "*" || (escopo === "_" ? !t.grp : t.grp === escopo)) alvo[t.id] = 1; });
     Object.keys(cellEl).forEach(function (k) {
       var c = cellEl[k], q = res(c.t);
-      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: c.t.cx + c.c * q.cw, y: c.t.cy + c.r * q.ch });
+      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: c.t.cx + c.c * q.cw, y: c.t.cy + c.r * q.ch, w: q.cw, h: q.ch });
     });
     if (!cels.length) return { portas: 0, gabinetes: 0, aviso: "Não há gabinetes nesse escopo." };
     var grupos = {}, ordem = [];
@@ -86,7 +86,7 @@ export function distribuirAuto(escopo) {
       var budget = Math.max(1, oc ? Math.ceil(lim / px) : Math.floor(lim / px));
       var lista = [];
       if (autoCfg.estrategia === "continuo") {
-        lista = balancedChunks(snakePorTela(g, autoCfg.routing, autoCfg.corner), budget);
+        lista = cortarPorArea(snakePorTela(g, autoCfg.routing, autoCfg.corner), lim, oc);
       } else {
         var vistos = {}, telasG = [];
         g.forEach(function (c) { if (!vistos[c.t.id]) { vistos[c.t.id] = 1; telasG.push({ id: c.t.id, x: c.t.cx, y: c.t.cy, w: q0.cw * res(c.t).cols, h: q0.ch * res(c.t).rows }); } });
@@ -94,7 +94,7 @@ export function distribuirAuto(escopo) {
           var ids = {}; ag.forEach(function (t) { ids[t.id] = 1; });
           var cs = g.filter(function (c) { return ids[c.t.id]; });
           var pb = portasPorBloco(cs, q0.cw, q0.ch, budget, autoCfg.estrategia, autoCfg.routing, autoCfg.corner);
-          lista = lista.concat(pb || balancedChunks(snakePorTela(cs, autoCfg.routing, autoCfg.corner), budget));
+          lista = lista.concat(pb || cortarPorArea(snakePorTela(cs, autoCfg.routing, autoCfg.corner), lim, oc));
         });
       }
       lista.forEach(function (ch) { (porScreen[scr] = porScreen[scr] || []).push(ch); });
@@ -149,14 +149,15 @@ export function owners() {
     return o;
   }
 
-function routeLoad(route) { return route.reduce(function (a, k) { return a + cabPx(cellEl[k].t); }, 0); }
+// carga da porta = área do retângulo que envolve os gabinetes dela (o processador reserva o retângulo inteiro)
+function cellRet(k) { var c = cellEl[k], q = res(c.t); return { x: c.t.cx + c.c * q.cw, y: c.t.cy + c.r * q.ch, w: q.cw, h: q.ch }; }
+function routeLoad(route) { return areaRet(route.map(cellRet)); }
 
 export function portState(route) {
     if (!route.length) return { cls: "", txt: "Vazia", load: 0 };
     var load = routeLoad(route), LIMIT = limiteRota(route);
-    var lastPx = cabPx(cellEl[route[route.length - 1]].t);
     if (load <= LIMIT) return { cls: "ok", txt: "OK", load: load };
-    if (load - lastPx < LIMIT) return oc ? { cls: "oc", txt: "OC", load: load } : { cls: "bad", txt: "Excede, cabe com OC", load: load };
+    if (route.length > 1 && routeLoad(route.slice(0, -1)) < LIMIT) return oc ? { cls: "oc", txt: "OC", load: load } : { cls: "bad", txt: "Excede, cabe com OC", load: load };
     return { cls: "bad", txt: "Excedido", load: load };
   }
 
@@ -172,9 +173,9 @@ function capsText() {
       if (seenP[kk]) return;
       seenP[kk] = 1;
       var px = cabPx(t), f = Math.floor(LIMIT / px), cc = Math.ceil(LIMIT / px);
-      out.push(name + ": " + nf(px) + " px por gabinete, " + f + " gab por porta" + (cc !== f ? " (" + cc + " com overclock)" : ""));
+      out.push(name + ": " + nf(px) + " px por gabinete, " + f + " gab por porta em retângulo cheio" + (cc !== f ? " (" + cc + " com overclock)" : ""));
     });
-    return "Limite de " + limiteTxt() + " px por porta. " + out.join(" · ");
+    return "Limite de " + limiteTxt() + " px por porta, medido no retângulo que envolve os gabinetes da porta. " + out.join(" · ");
   }
 
 export function renderCabling() {

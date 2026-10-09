@@ -16,6 +16,38 @@ export function balancedChunks(arr, budget) {
   return out;
 }
 
+// área (px) do retângulo que envolve as células: é o que o processador reserva para a porta.
+// Cada célula: { x, y, w, h } no canvas.
+export function areaRet(cells) {
+  if (!cells.length) return 0;
+  var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  cells.forEach(function (c) { x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y); x1 = Math.max(x1, c.x + c.w); y1 = Math.max(y1, c.y + c.h); });
+  return (x1 - x0) * (y1 - y0);
+}
+
+// cabe numa porta? Com overclock, aceita passar do limite se sem a última célula ainda cabia.
+export function cabeNaPorta(cells, lim, oc) {
+  if (areaRet(cells) <= lim) return true;
+  return !!oc && cells.length > 1 && areaRet(cells.slice(0, -1)) < lim;
+}
+
+// corta a sequência (já em serpentina) em pedaços contíguos cujo retângulo cabe na porta,
+// com o menor número de portas e tamanhos o mais iguais possível
+export function cortarPorArea(seq, lim, oc) {
+  if (!seq.length) return [];
+  var gulosa = [], cur = [];
+  seq.forEach(function (c) {
+    if (cur.length && !cabeNaPorta(cur.concat([c]), lim, oc)) { gulosa.push(cur); cur = []; }
+    cur.push(c);
+  });
+  if (cur.length) gulosa.push(cur);
+  for (var n = gulosa.length; n <= Math.min(seq.length, gulosa.length * 2); n++) {
+    var pedacos = balancedChunks(seq, Math.ceil(seq.length / n));
+    if (pedacos.length === n && pedacos.every(function (p) { return cabeNaPorta(p, lim, oc); })) return pedacos;
+  }
+  return gulosa;
+}
+
 function eixos(routing, corner) {
   var rightStart = corner === "br" || corner === "tr", bottomStart = corner === "bl" || corner === "br";
   var prim = routing === "zigzag" ? "y" : "x", sec = prim === "x" ? "y" : "x";
