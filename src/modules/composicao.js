@@ -9,12 +9,13 @@ import { ports, routes, cellEl, owners, pcolor, portById } from "./cabeamento.js
 import { saveFile, csv, pmsg } from "./exportar.js";
 import { histTick } from "./historico.js";
 
-var CSTORE, cfg = { preset: "mapa", escopo: "", modo: "comp" };
+var CSTORE, cfg = { preset: "mapa", escopo: "", modo: "comp", cores: {} };
 var MONO = "IBM Plex Mono, ui-monospace, Menlo, Consolas, monospace";
 var DISP = "Barlow Condensed, Arial Narrow, sans-serif";
 
 export var PRESETS = {
   mapa: "Mapa de gabinetes",
+  cores: "Cor por painel",
   alinhamento: "Alinhamento",
   cabos: "Mapa de cabos (sinal)",
   barras: "Barras de cor",
@@ -27,7 +28,9 @@ var FORMATOS = [[16, 9], [4, 3], [1, 1], [21, 9], [32, 9], [9, 16], [3, 1], [4, 
 function limpa(c) {
   c = c && typeof c === "object" ? c : {};
   var esc = typeof c.escopo === "string" && groups.some(function (g) { return g.id === c.escopo; }) ? c.escopo : "";
-  return { preset: PRESETS[c.preset] ? c.preset : "mapa", escopo: esc, modo: c.modo === "mont" ? "mont" : "comp" };
+  var cores = {};
+  if (c.cores && typeof c.cores === "object") Object.keys(c.cores).forEach(function (k) { if (/^[pa]:[\w-]{1,12}$/.test(k) && /^#[0-9a-f]{6}$/i.test(c.cores[k])) cores[k] = c.cores[k].toLowerCase(); });
+  return { preset: PRESETS[c.preset] ? c.preset : "mapa", escopo: esc, modo: c.modo === "mont" ? "mont" : "comp", cores: cores };
 }
 
 export function compState() { return cfg; }
@@ -82,6 +85,42 @@ function caixa(rs) {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
+// ---- cor por painel: a mesma na entrada e na saída; painéis agrupados usam a cor do grupo ----
+var PALETA = ["#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#ffe119", "#469990", "#9a6324", "#800000", "#000075", "#808000", "#fabed4", "#dcbeff"];
+
+function chaveCor(t) { return t.pn && painelById(t.pn) ? "a:" + t.pn : "p:" + t.id; }
+
+export function corDe(t) {
+  var k = chaveCor(t);
+  if (cfg.cores[k]) return cfg.cores[k];
+  var n = parseInt(k.slice(3), 10) || 0, base = k.charAt(0) === "a" ? 7 : 0;
+  return PALETA[(n - 1 + base + PALETA.length * 4) % PALETA.length];
+}
+
+function tom(hex, f) {
+  var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  var m = function (v) { return Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f); };
+  return "rgb(" + m(r) + "," + m(g) + "," + m(b) + ")";
+}
+
+// rótulo grande no centro, com contorno escuro para ler sobre qualquer cor
+function rotulo(ctx, linhas, x, y, w, h) {
+  ctx.font = "700 100px " + DISP;
+  var larg = Math.max.apply(null, linhas.map(function (l, i) { return ctx.measureText(l).width * (i ? 0.5 : 1); }));
+  var fat = linhas.map(function (_, i) { return i ? 0.5 : 1; }), soma = fat.reduce(function (a, v) { return a + v * 1.15; }, 0);
+  var fs = Math.min(100 * w * 0.85 / larg, h * 0.7 / soma);
+  if (fs < 6) return;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  var cur = y + (h - fs * soma) / 2;
+  linhas.forEach(function (l, i) {
+    var s = fs * fat[i], cy = cur + s * 1.15 / 2;
+    cur += s * 1.15;
+    ctx.font = "700 " + s + "px " + DISP;
+    ctx.lineWidth = s * 0.14; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.strokeText(l, x + w / 2, cy);
+    ctx.fillStyle = "#fff"; ctx.fillText(l, x + w / 2, cy);
+  });
+}
+
 function textOn(hex) {
   var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#111" : "#fff";
@@ -128,6 +167,7 @@ function tela(ctx, it, ox, oy, own, semSobre) {
       if (p === "branco") cor = "#ffffff";
       else if (p === "barras" || p === "alinhamento") cor = p === "barras" ? "#000000" : CORES[(r + c) % 2 ? 3 : 0];
       else if (p === "cabos") { var o = own[t.id + ":" + c + ":" + r]; cor = o ? pcolor(portById(o.pid)) : "#2a2a2a"; }
+      else if (p === "cores") cor = tom(corDe(t), (r + c) % 2 ? -0.28 : 0);
       else cor = CORES[(r * q.cols + c) % CORES.length];
       ctx.fillStyle = cor; ctx.fillRect(cx, cy, q.cw, q.ch);
       if (p === "branco" || p === "barras") continue;
@@ -144,6 +184,7 @@ function tela(ctx, it, ox, oy, own, semSobre) {
     if (p === "barras") barras(ctx, x, y, q.w, q.h);
     if (p === "alinhamento") geometria(ctx, x, y, q.w, q.h);
     if (p === "mapa") infoBox(ctx, it, x, y);
+    if (p === "cores") rotulo(ctx, t.pn && painelById(t.pn) ? [t.name, pnome(painelById(t.pn))] : [t.name], x, y, q.w, q.h);
   }
   ctx.restore();
 }
@@ -169,6 +210,7 @@ function sobreGrupo(ctx, u, ox, oy) {
   ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
   if (p === "barras") barras(ctx, x, y, w, h);
   if (p === "alinhamento") geometria(ctx, x, y, w, h);
+  if (p === "cores") rotulo(ctx, [pnome(u.p), u.items.map(function (it) { return it.t.name; }).join(" + ")], x, y, w, h);
   if (p === "mapa") caixaInfo(ctx, [pnome(u.p), nf(w) + " × " + nf(h) + " px", u.items.length + " painéis · " + u.gab + " gab.", fmt(u.mw) + " × " + fmt(u.mh) + " m · " + u.tipos + (u.tipos === 1 ? " gabinete" : " gabinetes")], x, y, w, h);
   ctx.restore();
 }
@@ -252,29 +294,49 @@ export function renderComp() {
     : "Canvas do processador: as posições da aba Screen, em px nativos. x e y a partir do canto de cima à esquerda" + (b.x || b.y ? " (no canvas do processador ela começa em " + b.x + ", " + b.y + ")" : "") + "."));
   c.appendChild(hd);
   var tw = h("div", "tablewrap"), tb = h("table"), th = h("thead"), tr = h("tr");
+  tr.appendChild(h("th", null, "Cor"));
   ["Painel", "Screen", "x", "y", "L × A (px)", "Proporção", mont ? "Saída (x, y · L × A)" : "Entrada (x, y · L × A)"].forEach(function (s, i) { tr.appendChild(h("th", i > 1 ? "r" : null, s)); });
   th.appendChild(tr); tb.appendChild(th);
   var bd = h("tbody");
+  // amostra de cor: toque para trocar (painel agrupado troca a cor do grupo todo)
+  function amostra(l, t) {
+    var td = h("td", "ncor");
+    if (t) {
+      var inp = document.createElement("input");
+      inp.type = "color"; inp.value = corDe(t);
+      inp.setAttribute("aria-label", "Cor de " + (t.pn && painelById(t.pn) ? pnome(painelById(t.pn)) : t.name));
+      inp.addEventListener("change", function () { cfg.cores[chaveCor(t)] = inp.value.toLowerCase(); salvar(); renderComp(); });
+      td.appendChild(inp);
+    }
+    l.appendChild(td);
+    return l;
+  }
   if (!cfg.escopo && groups.length) {
     groups.forEach(function (g) {
       var m = r.items.filter(function (it) { return it.t.grp === g.id; }); if (!m.length) return;
-      var gb = caixa(m), go = caixa(m.map(function (it) { return mont ? it.sai : it.ent; })), bo = mont ? r.bs : r.be, l = h("tr", "grow");
+      var gb = caixa(m), go = caixa(m.map(function (it) { return mont ? it.sai : it.ent; })), bo = mont ? r.bs : r.be, l = amostra(h("tr", "grow"), null);
       [gname(g), "screen", nf(gb.x - b.x), nf(gb.y - b.y), nf(gb.w) + " × " + nf(gb.h), proporcao(gb.w, gb.h), nf(go.x - bo.x) + ", " + nf(go.y - bo.y) + " · " + nf(go.w) + " × " + nf(go.h)].forEach(function (s, i) { l.appendChild(h("td", i > 1 ? "r" : null, s)); });
       bd.appendChild(l);
     });
   }
   // grupos de painel: na Montagem cada um é uma imagem só (uma região de entrada); os painéis dele seguem embaixo
   unidades(r.items).forEach(function (u) {
-    var l = h("tr", "grow");
+    var l = amostra(h("tr", "grow"), u.items[0].t);
     [pnome(u.p), "grupo", nf(u.r.x - b.x), nf(u.r.y - b.y), nf(u.r.w) + " × " + nf(u.r.h), proporcao(u.r.w, u.r.h), "painéis " + u.items.map(function (it) { return it.t.id; }).join(", ")].forEach(function (s, i) { l.appendChild(h("td", i > 1 ? "r" : null, s)); });
     bd.appendChild(l);
   });
   r.telas.forEach(function (x) {
-    var g = x.t.grp ? groups.filter(function (o) { return o.id === x.t.grp; })[0] : null, l = h("tr"), o = mont ? x.sai : x.ent;
+    var g = x.t.grp ? groups.filter(function (o) { return o.id === x.t.grp; })[0] : null, l = amostra(h("tr"), x.t), o = mont ? x.sai : x.ent;
     [x.t.id + " · " + x.t.name, g ? gname(g) : "—", nf(x.x), nf(x.y), nf(x.w) + " × " + nf(x.h), proporcao(x.w, x.h), nf(o.x) + ", " + nf(o.y) + " · " + nf(o.w) + " × " + nf(o.h)].forEach(function (s, i) { l.appendChild(h("td", i > 1 ? "r" : null, s)); });
     bd.appendChild(l);
   });
   tb.appendChild(bd); tw.appendChild(tb); c.appendChild(tw);
+  if (Object.keys(cfg.cores).length) {
+    var rc = h("button", "btn lnk", "Voltar às cores automáticas");
+    rc.type = "button";
+    rc.addEventListener("click", function () { cfg.cores = {}; salvar(); renderComp(); });
+    c.appendChild(rc);
+  }
   root.appendChild(c);
 }
 
