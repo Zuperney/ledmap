@@ -1,6 +1,6 @@
 import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis, membrosPainel, pnome } from "./core.js";
 import { corCab } from "./gabinetes.js";
-import { editM, onDownM, toggleMselM, limparMselM } from "./rig-edicao.js";
+import { editM, onDownM, toggleMselM, limparMselM, modoSelM } from "./rig-edicao.js";
 import { select } from "./tabela.js";
 let i;
 
@@ -92,7 +92,7 @@ export function init() {
       }
       gM[s.id] = g;
       g.addEventListener("click", function (e) {
-        if (e.shiftKey || e.ctrlKey || e.metaKey) { toggleMselM(s.id); return; }
+        if (e.shiftKey || e.ctrlKey || e.metaKey || modoSelM()) { toggleMselM(s.id); return; }
         if (!editM) { limparMselM(); select(selected === s.id ? null : s.id); }
       });
       g.addEventListener("pointerdown", function (e) { onDownM(e, s); });

@@ -39,8 +39,12 @@ export function syncMPanel() {
     desenharPaineis();
   }
 
-// multisseleção do Rig (Shift ou Ctrl + clique) e o botão Grupo
-var mselM = [];
+// multisseleção do Rig (Shift ou Ctrl + clique, ou o modo de seleção do botão Grupo, que serve no celular)
+var mselM = [], modoSel = false;
+
+export function modoSelM() { return modoSel; }
+
+function sairModoSel() { modoSel = false; mselM = []; marcarMsel(); }
 
 function marcarMsel() {
     tiles.forEach(function (t) { gM[t.id].classList.toggle("msel", mselM.indexOf(t.id) >= 0); });
@@ -65,26 +69,37 @@ function syncGrupo() {
     var del = document.getElementById("m-del");
     if (del) { var n = selecaoM().length; del.disabled = !n; del.title = n > 1 ? "Excluir " + n + " painéis" : "Excluir o painel selecionado"; }
     var t = selected && tById[selected];
-    if (mselM.length >= 2) { b.textContent = "Agrupar (" + mselM.length + ")"; b.disabled = false; }
-    else if (t && t.pn) { b.textContent = "Desagrupar"; b.disabled = false; }
-    else { b.textContent = "Grupo"; b.disabled = true; }
+    b.setAttribute("aria-pressed", String(modoSel));
+    b.disabled = tiles.length < 2;
+    if (mselM.length >= 2) b.textContent = "Agrupar (" + mselM.length + ")";
+    else if (modoSel) b.textContent = "Cancelar";
+    else if (t && t.pn) b.textContent = "Desagrupar";
+    else b.textContent = "Grupo";
   }
 
 function clicarGrupo() {
+    var t = selected && tById[selected];
     if (mselM.length >= 2) {
       var p = novoPainel();
       mselM.forEach(function (id) { if (tById[id]) tById[id].pn = p.id; });
       podarPaineis();
       pmsg(pnome(p) + " criado com " + mselM.length + " painéis. Em Editar, o grupo se move junto.");
-      mselM = [];
-    } else {
-      var t = selected && tById[selected];
-      if (!t || !t.pn) return;
+      modoSel = false; mselM = [];
+      marcarMsel(); save(); refreshM();
+    } else if (modoSel) {
+      sairModoSel();
+    } else if (t && t.pn) {
       membrosPainel(t.pn).forEach(function (o) { o.pn = ""; });
       podarPaineis();
       pmsg("Grupo desfeito.");
+      marcarMsel(); save(); refreshM();
+    } else {
+      // liga o modo de seleção: cada toque marca ou desmarca um painel
+      modoSel = true;
+      mselM = t ? [t.id] : [];
+      marcarMsel();
+      pmsg("Toque nos painéis do grupo e depois em Agrupar.");
     }
-    marcarMsel(); save(); refreshM();
   }
 
 export function setEditM(on) {
@@ -98,7 +113,7 @@ export function setEditM(on) {
   }
 
 export function onDownM(e, t) {
-    if (!editM || e.shiftKey || e.ctrlKey || e.metaKey) return;
+    if (!editM || modoSel || e.shiftKey || e.ctrlKey || e.metaKey) return;
     limparMselM();
     select(t.id);
     var w = toWorldM(e);
@@ -175,6 +190,8 @@ export function init() {
       });
     });
   document.getElementById("m-grp").addEventListener("click", clicarGrupo);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modoSel) sairModoSel(); });
+  syncGrupo();
   twoStep(document.getElementById("m-del"), "Excluir", "Confirmar?", function () { excluirPaineis(selecaoM()); });
   document.addEventListener("keydown", function (e) {
     if ((e.key !== "Delete" && e.key !== "Backspace") || document.body.getAttribute("data-aba") !== "m") return;

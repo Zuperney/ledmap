@@ -29,7 +29,7 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 - Service worker só no build publicado (no servidor de desenvolvimento ele servia código velho).
 - Rig: barra com + Painel, Editar, Visão (Grade e Cabos) e Exportar.
 - Adicionar painel: só nome, largura, altura e gabinete; posição automática. O campo Tipo saiu; as cores agora são por gabinete (legenda na gaveta).
-- Grupos de painel (conceito novo, separado da Screen): Shift (ou Ctrl) + clique seleciona vários painéis no Rig e o botão Grupo vira "Agrupar (n)"; com um painel agrupado selecionado, vira "Desagrupar". O grupo se move junto em Editar (arrastar ou X/Y) e tem contorno com nome automático, medida do conjunto e número de gabinetes diferentes. Salvo no projeto, no JSON e no desfazer. Pendente: multisseleção no celular (sem Shift) e renomear grupo.
+- Grupos de painel (conceito novo, separado da Screen): Shift (ou Ctrl) + clique seleciona vários painéis no Rig e o botão Grupo vira "Agrupar (n)"; com um painel agrupado selecionado, vira "Desagrupar". O grupo se move junto em Editar (arrastar ou X/Y) e tem contorno com nome automático, medida do conjunto e número de gabinetes diferentes. Salvo no projeto, no JSON e no desfazer. No celular (sem Shift): tocar em Grupo liga o modo de seleção (o painel já selecionado entra), cada toque marca ou desmarca um painel, e o botão vira "Agrupar (n)"; com menos de 2 marcados ele vira "Cancelar". Pendente: renomear grupo.
 - Vocabulário: a interface toda usa "painel" no lugar de "tela" (CSV também). As chaves do JSON continuam "telas" para não quebrar projetos salvos.
 
 **Composição**
