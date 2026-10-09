@@ -1,4 +1,4 @@
-import { GABINETES, GAB, CAB_PADRAO } from "./gabinetes.js";
+import { GABINETES, GAB, gabPadrao } from "./gabinetes.js";
 import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS } from "./core.js";
 import { ksave, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
@@ -38,8 +38,8 @@ function updatePrev() {
 export function freeM(w, h) {
     function hitAt(x, y) { return tiles.some(function (b) { return x < b.mx + b.w && b.mx < x + w && y < b.my + b.h && b.my < y + h; }); }
     var x, y;
-    for (y = 0; y <= 8 - h + 1e-9; y += 0.5) for (x = -1; x <= 28 - w + 1e-9; x += 0.5) if (!hitAt(x, y)) return { x: x, y: y };
-    for (y = 0; y <= 30 - h + 1e-9; y += 0.5) for (x = -1; x <= 60 - w + 1e-9; x += 0.5) if (!hitAt(x, y)) return { x: x, y: y };
+    for (y = 0; y <= 8 - h + 1e-9; y += 0.5) for (x = 0; x <= 28 - w + 1e-9; x += 0.5) if (!hitAt(x, y)) return { x: x, y: y };
+    for (y = 0; y <= 30 - h + 1e-9; y += 0.5) for (x = 0; x <= 60 - w + 1e-9; x += 0.5) if (!hitAt(x, y)) return { x: x, y: y };
     return null;
   }
 
@@ -59,18 +59,36 @@ function openAdd() {
 
 function closeAdd() { addModal.hidden = true; }
 
+// lista de gabinetes do modal de painel; chamada de novo quando a biblioteca muda
+export function preencherCabs(valor) {
+    if (!aCab) return;
+    var v = valor || aCab.value;
+    aCab.textContent = "";
+    GABINETES.forEach(function (g) {
+      var o = document.createElement("option"); o.value = g.id;
+      o.textContent = g.nome + " · " + g.rx + "×" + g.ry + " px · " + Math.round(g.mw * 1000) / 10 + "×" + Math.round(g.mh * 1000) / 10 + " cm";
+      aCab.appendChild(o);
+    });
+    aCab.value = GAB[v] ? v : gabPadrao().id;
+    if (!addModal.hidden) updatePrev();
+  }
+
+// exclui painéis (e as rotas de cabo que passam por eles) e recarrega
+export function excluirPaineis(ids) {
+    if (!ids.length) return;
+    var prevEx = EXTRAS;
+    set_EXTRAS(EXTRAS.filter(function (e) { return ids.indexOf(e.id) < 0; }));
+    Object.keys(routes).forEach(function (pid) {
+      routes[pid] = routes[pid].filter(function (k) { return ids.indexOf(k.split(":")[0]) < 0; });
+    });
+    if (!commitAndReload(curTab, "")) { set_EXTRAS(prevEx); pmsg("Não consegui salvar a exclusão neste navegador."); }
+  }
+
 export function init() {
   KEY_REOPEN = "mapa-telas-led-reopen";
   KEY_PEND = "mapa-telas-led-pending";
   deleteLater.forEach(function (pair) {
-      twoStep(pair[0], "Excluir", "Confirmar?", function () {
-        var id = pair[1], prevEx = EXTRAS;
-        set_EXTRAS(EXTRAS.filter(function (e) { return e.id !== id; }));
-        Object.keys(routes).forEach(function (pid) {
-          routes[pid] = routes[pid].filter(function (k) { return k.indexOf(id + ":") !== 0; });
-        });
-        if (!commitAndReload(curTab, "")) { set_EXTRAS(prevEx); pmsg("Não consegui salvar a exclusão neste navegador."); }
-      });
+      twoStep(pair[0], "Excluir", "Confirmar?", function () { excluirPaineis([pair[1]]); });
     });
   addModal = document.getElementById("add-modal");
   aName = document.getElementById("a-name");
@@ -79,12 +97,7 @@ export function init() {
   aPrev = document.getElementById("a-prev");
   aErr = document.getElementById("a-err");
   aCab = document.getElementById("a-cab");
-  GABINETES.forEach(function (g) {
-      var o = document.createElement("option"); o.value = g.id;
-      o.textContent = g.nome + " · " + g.rx + "×" + g.ry + " px · " + Math.round(g.mw * 1000) / 10 + "×" + Math.round(g.mh * 1000) / 10 + " cm";
-      aCab.appendChild(o);
-    });
-  aCab.value = "5";
+  preencherCabs(gabPadrao().id);
   [aCab, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
   document.getElementById("add-open").addEventListener("click", openAdd);
   document.getElementById("add-open2").addEventListener("click", openAdd);

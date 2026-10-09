@@ -20,8 +20,8 @@ const EXEMPLO = {
   ]
 };
 /* ids do formato antigo (v1) → ids atuais */
-/* Projeto novo: página limpa com um painel só. */
-const LIMPO = { extras: [{ id: "1", name: "Painel 1", kind: "imag", cab: "5", w: 4, h: 3, mx: 0, my: 0, cx: 0, cy: 0, grp: "" }], groups: [], nextG: 1 };
+/* Projeto novo: página limpa, sem painel. */
+const LIMPO = { extras: [], groups: [], nextG: 1 };
 /* ids do formato antigo (v1) → ids atuais */
 export const ID_V1 = { "1": "1", "2a": "2", "2b": "3", "2c": "4", "3": "5", "4a": "6", "4b": "7", "4c": "8", "5": "9" };
 export const TELAS_V1 = EXEMPLO.extras;

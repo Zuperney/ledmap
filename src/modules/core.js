@@ -1,6 +1,6 @@
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
-import { GAB, CAB_PADRAO, cabDe } from "./gabinetes.js";
+import { GAB, cabDe, garantirGabs } from "./gabinetes.js";
 
 let paineis = [];
 let NS, FLOOR, CW, CH, STORE, PITCH, EXTRA_MAX, EXTRAS, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
@@ -31,8 +31,7 @@ export function cleanExtra(x) {
     var id = String(x.id == null ? "" : x.id);
     if (!/^\d{1,3}$/.test(id)) return null;
     var kind = Object.prototype.hasOwnProperty.call(PITCH, x.kind) ? x.kind : "imag";
-    var cab = GAB[String(x.cab)] ? String(x.cab) : CAB_PADRAO[kind];
-    var g = GAB[cab], mx = half(x.mx, -30, 60), my = half(x.my, -10, 30);
+    var g = GAB[String(x.cab)] || cabDe({ kind: kind }), cab = g.id, mx = half(x.mx, -30, 60), my = half(x.my, -10, 30);
     var w = snapDim(x.w, g.mw), h = snapDim(x.h, g.mh);
     if (w === null || h === null || mx === null || my === null) return null;
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
@@ -68,12 +67,19 @@ export function scaledPos(t) {
     return { x: Math.min(Math.max(x, 0), CW - q.w), y: Math.min(Math.max(y, 0), CH - q.h) };
   }
 
+// definição completa dos gabinetes usados por uma lista de painéis
+export function gabsUsados(list) {
+    var vistos = {}, out = [];
+    list.forEach(function (t) { var g = cabDe(t); if (!vistos[g.id]) { vistos[g.id] = 1; out.push(Object.assign({}, g)); } });
+    return out;
+  }
+
 export function save() {
     histTick();
     try {
       var pos = {}, tg = {}, mpos = {}, tp = {};
       tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; tp[t.id] = t.pn || ""; });
-      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, extras: EXTRAS }));
+      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
     } catch (e) {}
   }
 
@@ -169,6 +175,7 @@ export function init() {
   EXTRAS = [];
   try {
       var s0 = JSON.parse(localStorage.getItem(STORE) || "null");
+      if (s0) garantirGabs(s0.gabs);
       if (s0 && Array.isArray(s0.extras)) EXTRAS = cleanExtras(s0.extras);
     } catch (e) {}
   BASE = EXTRAS.slice();

@@ -1,5 +1,6 @@
 import { ID_V1, TELAS_V1, projetoAtivo } from "./projetos.js";
-import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis } from "./core.js";
+import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis, gabsUsados } from "./core.js";
+import { garantirGabs } from "./gabinetes.js";
 import { eletricaState, loadEletrica } from "./eletrica.js";
 import { compState, loadComp } from "./composicao.js";
 import { autoState, setAuto, sinalState, loadSinal, oc, nextP, ports, routes, cellEl, activePort, applyOc, setActivePort, ksave, set_ports, set_routes, set_nextP, set_oc, set_activePort } from "./cabeamento.js";
@@ -22,6 +23,7 @@ export function buildProject() {
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
       paineis: paineis.map(function (p) { return { id: p.id, nome: p.name }; }),
       extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy }; }),
+      gabinetes: gabsUsados(EXTRAS),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
       eletrica: eletricaState(),
@@ -72,6 +74,7 @@ function converterV1(o) {
 export function applyProject(o) {
     if (o && typeof o === "object" && o.tipo === "mapa-telas-led") o = converterV1(o);
     if (!o || typeof o !== "object" || o.tipo !== "ledmap") throw new Error("Este arquivo não é um projeto do Led Map.");
+    garantirGabs(o.gabinetes);
     if (Array.isArray(o.extras)) {
       var ne = cleanExtras(o.extras.map(function (x) {
         return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "" } : null;
