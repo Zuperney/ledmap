@@ -139,6 +139,12 @@ input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-i
 .btn.lnk { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--imag); text-decoration: underline; cursor: pointer; font-size: 12px; }
 
 /* Composição */
+#view-n td.ncor { width: 1%; padding: 3px 6px; }
+#view-n td.ncor input[type="color"] { width: 30px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; }
+.seg { display: inline-flex; }
+.seg .btn { border-radius: 0; }
+.seg .btn:first-child { border-radius: 4px 0 0 4px; }
+.seg .btn:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
 .ncomp { display: flex; justify-content: center; align-items: center; min-height: 120px; padding: 8px 8px 30px; background: var(--panel); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
 .ncomp canvas { display: block; max-width: 100%; box-shadow: 0 0 0 1px var(--line); }
 #view-n .tablewrap { background: var(--bg); }

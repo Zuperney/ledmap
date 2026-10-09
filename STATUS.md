@@ -29,11 +29,15 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 - Service worker só no build publicado (no servidor de desenvolvimento ele servia código velho).
 - Rig: barra com + Painel, Editar, Visão (Grade e Cabos) e Exportar.
 - Adicionar painel: só nome, largura, altura e gabinete; posição automática. O campo Tipo saiu; as cores agora são por gabinete (legenda na gaveta).
-- Grupos de painel (conceito novo, separado da Screen): Shift (ou Ctrl) + clique seleciona vários painéis no Rig e o botão Grupo vira "Agrupar (n)"; com um painel agrupado selecionado, vira "Desagrupar". O grupo se move junto em Editar (arrastar ou X/Y) e tem contorno com nome automático, medida do conjunto e número de gabinetes diferentes. Salvo no projeto, no JSON e no desfazer. Pendente: multisseleção no celular (sem Shift) e renomear grupo.
+- Grupos de painel (conceito novo, separado da Screen): Shift (ou Ctrl) + clique seleciona vários painéis no Rig e o botão Grupo vira "Agrupar (n)"; com um painel agrupado selecionado, vira "Desagrupar". O grupo se move junto em Editar (arrastar ou X/Y) e tem contorno com nome automático, medida do conjunto e número de gabinetes diferentes. Salvo no projeto, no JSON e no desfazer. No celular (sem Shift): tocar em Grupo liga o modo de seleção (o painel já selecionado entra), cada toque marca ou desmarca um painel, e o botão vira "Agrupar (n)"; com menos de 2 marcados ele vira "Cancelar". Pendente: renomear grupo.
 - Vocabulário: a interface toda usa "painel" no lugar de "tela" (CSV também). As chaves do JSON continuam "telas" para não quebrar projetos salvos.
 
 **Composição**
-- Usa as posições da aba Screen: não há segunda posição para manter.
+- Dois modos, como a entrada e a saída do Resolume: **Montagem** (entrada: os painéis nas posições do Rig, numa escala única de px por metro, a maior densidade do projeto, onde o conteúdo é feito) e **Composição** (saída: as posições da aba Screen em px nativos, o que vai para o processador). A tabela de regiões mostra a outra ponta de cada painel; Copiar e o CSV levam entrada → saída de cada região.
+- Na Montagem, cada grupo de painéis é uma imagem só: o test card (alinhamento, barras e caixa de informações) é desenhado uma vez sobre o grupo inteiro, e o grupo aparece como uma região na tabela e no Copiar, com os painéis dele (cada um com sua saída). O CSV ganhou a coluna "grupo". Os gabinetes continuam numerados painel a painel.
+- Mapa de cabos (sinal): cada gabinete mostra a sua ordem no cabo (1, 2, 3…), como na aba Cabeamento.
+- Cor por painel (predefinição nova): cada painel tem uma cor, a mesma na Montagem e na Composição, para ver para onde cada região vai; gabinetes em xadrez de dois tons e o nome do painel (e do grupo) em destaque. Painéis agrupados usam a cor do grupo. Cores automáticas, trocáveis pela amostra na tabela de regiões ("Voltar às cores automáticas" desfaz); salvas no projeto e no JSON.
+- Não há posição própria para manter: usa as do Rig e as da Screen.
 - Test card com 5 predefinições: mapa de gabinetes (com caixa de informações), alinhamento (círculo, X, cantos), mapa de cabos (sinal), barras de cor e branco sólido.
 - Escopo: todas as telas ou uma Screen.
 - Regiões (x, y, L × A) relativas à composição, com a proporção de cada tela e Screen (ex.: 16:9, ou 3,32:1 ≈ formato mais próximo). Copiar, CSV e PNG em resolução real.

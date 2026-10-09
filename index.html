@@ -146,6 +146,10 @@
 
   <section class="view" id="view-n" role="tabpanel" aria-labelledby="tab-n" hidden>
     <div class="bar">
+      <div class="seg" role="group" aria-label="Modo">
+        <button class="btn" id="n-m-mont" aria-pressed="false" title="Entrada: os painéis como o público vê, onde o conteúdo é feito">Montagem</button>
+        <button class="btn" id="n-m-comp" aria-pressed="true" title="Saída: o canvas que vai para o processador">Composição</button>
+      </div>
       <select id="n-preset" aria-label="Test card"></select>
       <select id="n-escopo" aria-label="Painéis na composição"></select>
       <button class="btn" id="n-copy">Copiar regiões</button>
@@ -192,7 +196,7 @@
     <div class="bar">
       <button class="btn" id="add-open">+ Painel</button>
       <button class="btn" id="m-edit" aria-pressed="false">Editar</button>
-      <button class="btn" id="m-grp" title="Shift + clique para selecionar vários painéis" disabled>Grupo</button>
+      <button class="btn" id="m-grp" title="Toque em Grupo, depois nos painéis, e em Agrupar (no computador também dá Shift + clique)" aria-pressed="false" disabled>Grupo</button>
       <button class="btn" id="m-del" disabled>Excluir</button>
       <div class="dd">
         <button class="btn dd-b">Visão ▾</button>
