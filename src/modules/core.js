@@ -2,6 +2,7 @@ import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { GAB, CAB_PADRAO, cabDe } from "./gabinetes.js";
 
+let paineis = [];
 let NS, FLOOR, CW, CH, STORE, PITCH, EXTRA_MAX, EXTRAS, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
 
 function half(v, lo, hi) {
@@ -29,8 +30,7 @@ export function cleanExtra(x) {
     if (!x || typeof x !== "object") return null;
     var id = String(x.id == null ? "" : x.id);
     if (!/^\d{1,3}$/.test(id)) return null;
-    var kind = x.kind;
-    if (!Object.prototype.hasOwnProperty.call(PITCH, kind)) return null;
+    var kind = Object.prototype.hasOwnProperty.call(PITCH, x.kind) ? x.kind : "imag";
     var cab = GAB[String(x.cab)] ? String(x.cab) : CAB_PADRAO[kind];
     var g = GAB[cab], mx = half(x.mx, -30, 60), my = half(x.my, -10, 30);
     var w = snapDim(x.w, g.mw), h = snapDim(x.h, g.mh);
@@ -38,7 +38,7 @@ export function cleanExtra(x) {
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Tela " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", extra: true };
+    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", extra: true };
   }
 
 export function cleanExtras(list) {
@@ -71,9 +71,9 @@ export function scaledPos(t) {
 export function save() {
     histTick();
     try {
-      var pos = {}, tg = {}, mpos = {};
-      tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; });
-      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, groups: groups, nextG: nextG, extras: EXTRAS }));
+      var pos = {}, tg = {}, mpos = {}, tp = {};
+      tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; tp[t.id] = t.pn || ""; });
+      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, extras: EXTRAS }));
     } catch (e) {}
   }
 
@@ -108,6 +108,38 @@ export function cabPath(cols, rows, cw, ch) {
     for (k = 1; k < cols; k++) d += "M" + (k * cw) + " 0V" + (rows * ch);
     for (k = 1; k < rows; k++) d += "M0 " + (k * ch) + "H" + (cols * cw);
     return d;
+  }
+
+// Grupos de painel: telas (de gabinetes diferentes ou não) que formam uma peça física só no Rig.
+export function limpaPaineis(l) {
+    var out = [], seen = {};
+    (Array.isArray(l) ? l : []).forEach(function (p) {
+      if (p && typeof p.id === "string" && /^a\d{1,6}$/.test(p.id) && !seen[p.id]) { seen[p.id] = 1; out.push({ id: p.id, name: typeof p.name === "string" ? p.name.slice(0, 40) : "" }); }
+    });
+    return out;
+  }
+
+export function painelById(id) { for (var i = 0; i < paineis.length; i++) if (paineis[i].id === id) return paineis[i]; return null; }
+
+export function pnome(p) { return (p.name || "").trim() || "Grupo " + p.id.slice(1); }
+
+export function membrosPainel(id) { return id ? tiles.filter(function (t) { return t.pn === id; }) : []; }
+
+export function novoPainel() {
+    var n = 1;
+    paineis.forEach(function (p) { n = Math.max(n, (parseInt(p.id.slice(1), 10) || 0) + 1); });
+    var p = { id: "a" + n, name: "" };
+    paineis.push(p);
+    return p;
+  }
+
+// remove grupos sem tela (ou com uma só: grupo de uma tela não é grupo)
+export function podarPaineis() {
+    paineis = paineis.filter(function (p) {
+      var m = membrosPainel(p.id);
+      if (m.length < 2) { m.forEach(function (t) { t.pn = ""; }); return false; }
+      return true;
+    });
   }
 
 export function groupById(id) { for (var i = 0; i < groups.length; i++) if (groups[i].id === id) return groups[i]; return null; }
@@ -158,9 +190,13 @@ export function init() {
           var sp = saved.pos && saved.pos[t.id];
           if (sp) { t.cx = saved.pos[t.id][0]; t.cy = saved.pos[t.id][1]; }
           if (saved.tg && Object.prototype.hasOwnProperty.call(saved.tg, t.id)) t.grp = saved.tg[t.id] || "";
+          if (saved.tp && typeof saved.tp[t.id] === "string") t.pn = saved.tp[t.id];
         });
+        paineis = limpaPaineis(saved.paineis);
       }
     } catch (e) {}
+  tiles.forEach(function (t) { if (t.pn && !painelById(t.pn)) t.pn = ""; });
+  podarPaineis();
   tiles.forEach(function (t) {
       if (t.grp && !groups.some(function (g) { return g.id === t.grp; })) t.grp = "";
     });
@@ -172,7 +208,8 @@ export function init() {
   selected = null;
 }
 
-export { tiles, FLOOR, svgM, gM, selected, svgC, CW, CH, gC, rowsEl, groups, PITCH, active, nextG, groupMove, BASE, EXTRAS, STORE, EXTRA_MAX };
+export { tiles, FLOOR, svgM, gM, selected, svgC, CW, CH, gC, rowsEl, groups, PITCH, active, nextG, groupMove, BASE, EXTRAS, STORE, EXTRA_MAX, paineis };
+export function set_paineis(v) { paineis = v; return v; }
 export function set_selected(v) { selected = v; return v; }
 export function set_active(v) { active = v; return v; }
 export function set_nextG(v) { nextG = v; return v; }

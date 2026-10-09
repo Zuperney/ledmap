@@ -1,6 +1,6 @@
 # Led Map
 
-Mapa de telas LED com vários projetos: **Projeto**, **Rig** (montagem em metros), **Screen** (pixels do processador) e **Cabeamento** (portas). Composição, Elétrica e Caderno estão previstos. Exporta pixel map, layout (PNG/CSV) e projeto JSON. Funciona offline e instala no celular (PWA).
+Mapa de painéis LED com vários projetos: **Projeto**, **Rig** (montagem em metros), **Screen** (pixels do processador) e **Cabeamento** (portas). Composição, Elétrica e Caderno estão previstos. Exporta pixel map, layout (PNG/CSV) e projeto JSON. Funciona offline e instala no celular (PWA).
 
 **Usar:** https://zuperney.github.io/ledmap/
 

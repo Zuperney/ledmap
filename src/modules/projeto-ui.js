@@ -1,66 +1,75 @@
-/* Aba Projeto: dados do projeto atual e lista de projetos deste aparelho */
-import { tiles, res, nf, groups, esc } from "./core.js";
-import { ports, twoStep } from "./cabeamento.js";
+/* Aba Projeto: cadastro do projeto atual (nome, dados, observações), resumo e exportar/importar.
+   A troca de projeto fica num seletor compacto no topo. */
+import { tiles, res, nf, fmt } from "./core.js";
+import { twoStep } from "./cabeamento.js";
 import { pmsg } from "./exportar.js";
 import { KEY_PEND } from "./telas.js";
-import { listar, projetoAtivo, atualizarMeta, criarProjeto, duplicarProjeto, excluirProjeto, abrirProjeto, resumoDe } from "./projetos.js";
+import { calcular } from "./eletrica.js";
+import { listar, projetoAtivo, atualizarMeta, criarProjeto, duplicarProjeto, excluirProjeto, abrirProjeto } from "./projetos.js";
 
-function resumoAtual() {
-  var cab = 0, px = 0;
+function bloco(titulo, valor) {
+  var d = document.createElement("div"), t = document.createElement("span"), v = document.createElement("b");
+  d.className = "ek"; t.className = "ek-t"; v.className = "ek-v";
+  t.textContent = titulo; v.textContent = valor;
+  d.appendChild(t); d.appendChild(v);
+  return d;
+}
+
+function desenharResumo() {
+  var box = document.getElementById("p-resumo");
+  if (!box) return;
+  var cab = 0, px = 0, kva = 0;
   tiles.forEach(function (t) { var q = res(t); cab += q.cols * q.rows; px += q.total; });
-  return tiles.length + " telas · " + nf(cab) + " gabinetes · " + nf(px) + " px · " + groups.length + " screens · " + ports.length + " portas";
-}
-
-function quando(ms) {
-  var d = new Date(ms || 0);
-  return isNaN(d) ? "" : d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-}
-
-function desenharLista() {
-  var box = document.getElementById("p-lista"), at = projetoAtivo();
+  try { kva = calcular().total.kVA; } catch (e) {}
   box.textContent = "";
+  box.appendChild(bloco("Painéis", nf(tiles.length)));
+  box.appendChild(bloco("Gabinetes", nf(cab)));
+  box.appendChild(bloco("Pixels", nf(px)));
+  box.appendChild(bloco("Pico", fmt(Math.round(kva * 10) / 10) + " kVA"));
+}
+
+function desenharSeletor() {
+  var sel = document.getElementById("p-sel"), at = projetoAtivo();
+  sel.textContent = "";
   listar().forEach(function (p) {
-    var row = document.createElement("div");
-    row.className = "prow" + (at && p.id === at.id ? " cur" : "");
-    var n = at && p.id === at.id ? tiles.length : resumoDe(p.id).telas;
-    var meta = [p.cliente, p.local, p.data].filter(Boolean).join(" · ");
-    row.innerHTML = '<span class="nm">' + esc(p.nome) + '<span class="sb">' + n + " telas" + (meta ? " · " + esc(meta) : "") + " · " + quando(p.atualizado) + "</span></span>";
-    var b = function (txt) { var x = document.createElement("button"); x.className = "btn"; x.type = "button"; x.textContent = txt; row.appendChild(x); return x; };
-    if (!(at && p.id === at.id)) b("Abrir").addEventListener("click", function () { abrirProjeto(p.id); });
-    else { var s = document.createElement("span"); s.className = "pill"; s.textContent = "aberto"; row.appendChild(s); }
-    b("Duplicar").addEventListener("click", function () { var id = duplicarProjeto(p.id); if (id) { pmsg("Projeto duplicado."); desenharLista(); } });
-    var del = b("Excluir");
-    twoStep(del, "Excluir", "Confirmar?", function () {
-      var eraAtivo = at && p.id === at.id;
-      if (listar().length <= 1) { pmsg("Mantenha pelo menos um projeto."); return; }
-      var novo = excluirProjeto(p.id);
-      if (eraAtivo) abrirProjeto(novo); else desenharLista();
-    });
-    box.appendChild(row);
+    var o = document.createElement("option");
+    o.value = p.id; o.textContent = p.nome || "Sem nome";
+    sel.appendChild(o);
   });
+  if (at) sel.value = at.id;
 }
 
 export function atualizarResumoProjeto() {
-  var r = document.getElementById("p-resumo");
-  if (r) r.textContent = resumoAtual();
-  desenharLista();
+  desenharResumo();
+  desenharSeletor();
 }
 
 export function init() {
-  var at = projetoAtivo(), campos = { nome: "p-nome", cliente: "p-cliente", local: "p-local", data: "p-data" };
+  var at = projetoAtivo(), campos = { nome: "p-nome", cliente: "p-cliente", local: "p-local", data: "p-data", obs: "p-obs" };
   Object.keys(campos).forEach(function (f) {
     var el = document.getElementById(campos[f]);
     el.value = at ? at[f] || "" : "";
     el.addEventListener("input", function () {
       var a = projetoAtivo(); if (!a) return;
       var v = el.value; if (f === "nome" && !v.trim()) return;
-      var patch = {}; patch[f] = v; atualizarMeta(a.id, patch); desenharLista();
+      var patch = {}; patch[f] = v; atualizarMeta(a.id, patch);
+      if (f === "nome") desenharSeletor();
     });
   });
-  document.getElementById("p-novo").addEventListener("click", function () {
-    var nome = (window.prompt("Nome do novo projeto:", "") || "").trim();
-    if (!nome) return;
-    abrirProjeto(criarProjeto(nome, "vazio"));
+  document.getElementById("p-sel").addEventListener("change", function (e) {
+    var a = projetoAtivo();
+    if (e.target.value && (!a || e.target.value !== a.id)) abrirProjeto(e.target.value);
+  });
+  document.getElementById("p-novo").addEventListener("click", function () { abrirProjeto(criarProjeto("", "limpo")); });
+  document.getElementById("p-dup").addEventListener("click", function () {
+    var a = projetoAtivo(); if (!a) return;
+    var id = duplicarProjeto(a.id);
+    if (id) abrirProjeto(id);
+  });
+  twoStep(document.getElementById("p-del"), "Excluir", "Confirmar?", function () {
+    var a = projetoAtivo(); if (!a) return;
+    if (listar().length <= 1) { pmsg("Mantenha pelo menos um projeto."); return; }
+    abrirProjeto(excluirProjeto(a.id));
   });
   var arq = document.createElement("input");
   arq.type = "file"; arq.accept = ".json,application/json"; arq.hidden = true; document.body.appendChild(arq);
@@ -75,7 +84,7 @@ export function init() {
       if (!o || (o.tipo !== "ledmap" && o.tipo !== "mapa-telas-led")) { pmsg("Este arquivo não é um projeto do Led Map."); arq.value = ""; return; }
       var meta = o.projeto || {}, nome = (meta.nome || f.name.replace(/\.json$/i, "") || "Importado");
       var id = criarProjeto(nome, "vazio");
-      atualizarMeta(id, { cliente: meta.cliente || "", local: meta.local || "", data: meta.data || "" });
+      atualizarMeta(id, { cliente: meta.cliente || "", local: meta.local || "", data: meta.data || "", obs: meta.obs || "" });
       try { localStorage.setItem(KEY_PEND, txt); } catch (e) { pmsg("Não consegui guardar o arquivo neste navegador."); return; }
       abrirProjeto(id);
     };

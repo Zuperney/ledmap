@@ -28,9 +28,9 @@ export function placeC() {
     occupied.setAttribute("x", minX); occupied.setAttribute("y", minY);
     occupied.setAttribute("width", maxX - minX); occupied.setAttribute("height", maxY - minY);
     var out = (minX < 0 || minY < 0 || maxX > CW || maxY > CH);
-    if (!tiles.length) document.getElementById("stat-c").textContent = "Sem telas · ⋮ → + Adicionar tela";
+    if (!tiles.length) document.getElementById("stat-c").textContent = "Sem painéis · toque em + Painel";
     else document.getElementById("stat-c").innerHTML = "Área ocupada: <b>" + nf(maxX - minX) + " × " + nf(maxY - minY) + " px</b>" +
-      (nBad ? ' · <span class="warn">' + nBad + " telas sobrepostas</span>" : "") +
+      (nBad ? ' · <span class="warn">' + nBad + " painéis sobrepostos</span>" : "") +
       (out ? ' · <span class="warn">fora do quadro</span>' : "");
     updateBoxes();
     updateDetailStat();

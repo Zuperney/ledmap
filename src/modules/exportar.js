@@ -1,9 +1,9 @@
-import { cabNome } from "./gabinetes.js";
+import { cabNome, corCab } from "./gabinetes.js";
 import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR } from "./core.js";
 import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, limiteRota, limiteTxt, oc } from "./cabeamento.js";
 import { boundsM } from "./rig.js";
 
-let tById, dl, toastT, KCOL, MONO, DISP;
+let tById, dl, toastT, MONO, DISP;
 
 export function pmsg(t) {
     document.getElementById("proj-msg").textContent = t || "";
@@ -107,7 +107,7 @@ function assembledItems() {
   }
 
 function screensCsv() {
-    var rows = [["screen", "screen_x_px", "screen_y_px", "screen_largura_px", "screen_altura_px", "tela", "nome", "pitch",
+    var rows = [["screen", "screen_x_px", "screen_y_px", "screen_largura_px", "screen_altura_px", "painel", "nome", "pitch",
       "gabinetes_colunas", "gabinetes_linhas", "largura_px", "altura_px", "x_canvas_px", "y_canvas_px", "x_na_screen_px", "y_na_screen_px"]];
     function tileRow(label, bb, t) {
       var q = res(t);
@@ -125,7 +125,7 @@ function screensCsv() {
   }
 
 function cablingCsv() {
-    var rows = [["porta", "ordem", "tela", "nome_tela", "coluna", "linha", "pitch", "px_gabinete", "px_acumulado",
+    var rows = [["porta", "ordem", "painel", "nome_painel", "coluna", "linha", "pitch", "px_gabinete", "px_acumulado",
       "x_canvas_px", "y_canvas_px", "status_porta"]];
     ports.forEach(function (pt) {
       var route = routes[pt.id], acc = 0, st = portState(route).txt;
@@ -176,13 +176,13 @@ function drawMap(mode, items) {
       ctx.font = "700 72px " + DISP;
       halo(ctx, mode === "cabling" ? "Cabeamento de dados" : "Screens", pad, 96, "#ffffff", 0);
       ctx.font = "400 34px " + MONO;
-      halo(ctx, "Mapa de Telas LED · área ocupada " + nf(bw) + " × " + nf(bh) + " px", pad, 140, "#9fb2c1", 0);
+      halo(ctx, "Mapa de painéis LED · área ocupada " + nf(bw) + " × " + nf(bh) + " px", pad, 140, "#9fb2c1", 0);
     }
 
     items.forEach(function (it) {
       var t = it.t, q = res(t), x = it.x + ox, y = it.y + oy;
       ctx.globalAlpha = mode === "cabling" ? 0.3 : 0.9;
-      ctx.fillStyle = KCOL[t.kind];
+      ctx.fillStyle = corCab(t);
       ctx.fillRect(x, y, q.w, q.h);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = "rgba(255,255,255,0.55)";
@@ -326,7 +326,7 @@ function drawLayout(withCab) {
     ctx.font = "700 72px " + DISP;
     halo(ctx, withCab ? "Montagem com cabeamento" : "Layout da montagem", pad, 96, "#ffffff", 0);
     ctx.font = "400 34px " + MONO;
-    halo(ctx, "Mapa de Telas LED · conjunto " + fmt(maxX - minX) + " × " + fmt(maxY - minY) + " m · vista frontal, medidas em metros", pad, 140, "#9fb2c1", 0);
+    halo(ctx, "Mapa de painéis LED · conjunto " + fmt(maxX - minX) + " × " + fmt(maxY - minY) + " m · vista frontal, medidas em metros", pad, 140, "#9fb2c1", 0);
     var m, sy;
     ctx.strokeStyle = "#1c2a35"; ctx.lineWidth = 1;
     ctx.beginPath();
@@ -343,7 +343,7 @@ function drawLayout(withCab) {
     tiles.forEach(function (t) {
       var q = res(t), x = X(t.mx), y = Y(FLOOR - t.my - t.h), w = t.w * S, h = t.h * S, k;
       ctx.globalAlpha = withCab ? 0.3 : 0.85;
-      ctx.fillStyle = KCOL[t.kind];
+      ctx.fillStyle = corCab(t);
       ctx.fillRect(x, y, w, h);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 1.5;
@@ -425,7 +425,7 @@ function drawLayout(withCab) {
   }
 
 function layoutCsv() {
-    var rows = [["tela", "nome", "pitch", "largura_m", "altura_m", "x_m", "y_chao_m", "gab_colunas", "gab_linhas", "resolucao_px", "pixels_total"]];
+    var rows = [["painel", "nome", "pitch", "largura_m", "altura_m", "x_m", "y_chao_m", "gab_colunas", "gab_linhas", "resolucao_px", "pixels_total"]];
     tiles.forEach(function (t) {
       var q = res(t);
       rows.push([t.id, t.name, cabNome(t), fmt(t.w), fmt(t.h), fmt(t.mx), fmt(t.my), q.cols, q.rows, q.w + "x" + q.h, q.total]);
@@ -457,17 +457,16 @@ export function init() {
     }
   toastT = null;
   document.getElementById("img-close").addEventListener("click", function () { document.getElementById("img-modal").hidden = true; });
-  KCOL = { imag: "#1f78b4", up: "#b0307f", c: "#c77a00" };
   MONO = "IBM Plex Mono, ui-monospace, Menlo, Consolas, monospace";
   DISP = "Barlow Condensed, Arial Narrow, sans-serif";
-  document.getElementById("m-lay-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportLayout(false, "layout-montagem.png"); });
-  document.getElementById("m-laycab-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportLayout(true, "montagem-cabeamento.png"); });
-  document.getElementById("m-lay-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } saveFile("layout-montagem.csv", layoutCsv()); });
-  document.getElementById("m-export").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportPng("pixelmap", assembledItems(), "pixelmap-montagem.png"); });
-  document.getElementById("scr-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportPng("screens", currentItems(), "screens-configuracao.png"); });
-  document.getElementById("scr-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } saveFile("screens-configuracao.csv", screensCsv()); });
-  document.getElementById("k-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } exportPng("cabling", currentItems(), "cabeamento.png"); });
-  document.getElementById("k-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione telas antes de exportar."); return; } saveFile("cabeamento.csv", cablingCsv()); });
+  document.getElementById("m-lay-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } exportLayout(false, "layout-montagem.png"); });
+  document.getElementById("m-laycab-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } exportLayout(true, "montagem-cabeamento.png"); });
+  document.getElementById("m-lay-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } saveFile("layout-montagem.csv", layoutCsv()); });
+  document.getElementById("m-export").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } exportPng("pixelmap", assembledItems(), "pixelmap-montagem.png"); });
+  document.getElementById("scr-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } exportPng("screens", currentItems(), "screens-configuracao.png"); });
+  document.getElementById("scr-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } saveFile("screens-configuracao.csv", screensCsv()); });
+  document.getElementById("k-png").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } exportPng("cabling", currentItems(), "cabeamento.png"); });
+  document.getElementById("k-csv").addEventListener("click", function () { if (!tiles.length) { pmsg("Adicione painéis antes de exportar."); return; } saveFile("cabeamento.csv", cablingCsv()); });
 }
 
 export { tById };

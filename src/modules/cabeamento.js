@@ -1,5 +1,5 @@
 import { res, tiles, groups, nf, bbox, el, text } from "./core.js";
-import { cabNome, cabDe } from "./gabinetes.js";
+import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
@@ -327,7 +327,7 @@ export function init() {
     } catch (e) {}
   tiles.forEach(function (t) {
       var q = res(t);
-      var g = el("g", { "class": "kt " + t.kind }, svgK);
+      var g = el("g", { "class": "kt", style: "--cor:" + corCab(t) }, svgK);
       el("rect", { "class": "kbody", x: 0, y: 0, width: q.w, height: q.h }, g);
       text(g, "klabel", q.w / 2, q.h / 2, Math.min(q.w, q.h) * 0.55, t.id);
       for (var r = 0; r < q.rows; r++) {

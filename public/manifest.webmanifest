@@ -1,7 +1,7 @@
 {
   "name": "Led Map",
   "short_name": "Led Map",
-  "description": "Mapa de telas LED: rig, canvas e cabeamento",
+  "description": "Mapa de painéis LED: rig, canvas e cabeamento",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,6 +1,7 @@
 import { ID_V1, TELAS_V1, projetoAtivo } from "./projetos.js";
-import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG } from "./core.js";
+import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis } from "./core.js";
 import { eletricaState, loadEletrica } from "./eletrica.js";
+import { compState, loadComp } from "./composicao.js";
 import { autoState, setAuto, sinalState, loadSinal, oc, nextP, ports, routes, cellEl, activePort, applyOc, setActivePort, ksave, set_ports, set_routes, set_nextP, set_oc, set_activePort } from "./cabeamento.js";
 import { commitAndReload } from "./telas.js";
 import { tById, pmsg, saveFile } from "./exportar.js";
@@ -17,12 +18,14 @@ export function buildProject() {
       tipo: "ledmap",
       versao: 2,
       exportadoEm: new Date().toISOString(),
-      projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "" }; })(),
-      telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", mx: t.mx, my: t.my }; }),
+      projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "", obs: a.obs || "" }; })(),
+      telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
+      paineis: paineis.map(function (p) { return { id: p.id, nome: p.name }; }),
       extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy }; }),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
       eletrica: eletricaState(),
+      composicao: compState(),
       cabeamento: {
         sinal: sinalState().sinal,
         sinalScreens: sinalState().sinalScreens,
@@ -77,8 +80,8 @@ export function applyProject(o) {
       if (sig(ne) !== sig(EXTRAS)) {
         var prevEx = EXTRAS;
         set_EXTRAS(ne);
-        if (!commitAndReload("c", JSON.stringify(o))) { set_EXTRAS(prevEx); throw new Error("Não consegui criar as telas extras neste navegador."); }
-        return "recarregando para criar as telas extras…";
+        if (!commitAndReload("c", JSON.stringify(o))) { set_EXTRAS(prevEx); throw new Error("Não consegui criar os painéis neste navegador."); }
+        return "recarregando para criar os painéis…";
       }
     }
     var ng = [], gseen = {};
@@ -93,10 +96,10 @@ export function applyProject(o) {
       if (!t || typeof t.id !== "string" || !tById[t.id]) return;
       var x = whole(t.x, -20000, 20000), y = whole(t.y, -20000, 20000);
       if (x === null || y === null) return;
-      nt[t.id] = { x: x, y: y, grp: (typeof t.screen === "string" && gseen[t.screen]) ? t.screen : "", mx: mnum(t.mx), my: mnum(t.my) };
+      nt[t.id] = { x: x, y: y, grp: (typeof t.screen === "string" && gseen[t.screen]) ? t.screen : "", pn: typeof t.painel === "string" ? t.painel : "", mx: mnum(t.mx), my: mnum(t.my) };
       count++;
     });
-    if (!count && tiles.length) throw new Error("Nenhuma tela reconhecida no arquivo.");
+    if (!count && tiles.length) throw new Error("Nenhum painel reconhecido no arquivo.");
     var cab = (o.cabeamento && typeof o.cabeamento === "object") ? o.cabeamento : {};
     var np = [], pseen = {};
     (Array.isArray(cab.portas) ? cab.portas : []).forEach(function (pt) {
@@ -116,13 +119,15 @@ export function applyProject(o) {
       nCab += nr[pt.id].length;
     });
 
+    set_paineis(limpaPaineis((Array.isArray(o.paineis) ? o.paineis : []).map(function (p) { return p && { id: p.id, name: p.nome }; })));
     tiles.forEach(function (t) {
       var n = nt[t.id];
       if (n) {
-        t.cx = n.x; t.cy = n.y; t.grp = n.grp;
+        t.cx = n.x; t.cy = n.y; t.grp = n.grp; t.pn = n.pn && painelById(n.pn) ? n.pn : "";
         if (n.mx !== null && n.my !== null) { t.mx = n.mx; t.my = n.my; }
       }
     });
+    podarPaineis();
     refreshM();
     set_groups(ng);
     set_nextG(Math.max(Number(o.proximaScreen) || 1, ng.reduce(function (a, g) { return Math.max(a, idNum(g.id)); }, 0) + 1));
@@ -135,6 +140,7 @@ export function applyProject(o) {
       (set_nextP(nextP + 1), nextP - 1);
     }
     loadEletrica(o.eletrica);
+    loadComp(o.composicao);
     set_oc(!!cab.overclock);
     loadSinal(cab.sinal, cab.sinalScreens, cab.maxPortasScreen);
     setAuto(cab.distribuicao);
@@ -147,7 +153,7 @@ export function applyProject(o) {
     setActivePort(activePort);
     ksave();
     renderCabM();
-    return "Telas: " + count + " · screens: " + ng.length + " · portas: " + np.length + " · gabinetes cabeados: " + nCab + ".";
+    return "Painéis: " + count + " · screens: " + ng.length + " · portas: " + np.length + " · gabinetes cabeados: " + nCab + ".";
   }
 
 export function loadText(txt) {
@@ -161,7 +167,8 @@ export function init() {
       saveFile(((projetoAtivo() || {}).nome || "ledmap").replace(/[^\w\-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase() + ".json", JSON.stringify(buildProject(), null, 2));
     });
   fileIn = document.getElementById("proj-file");
-  document.getElementById("proj-import").addEventListener("click", function () { fileIn.click(); });
+  var pimp = document.getElementById("proj-import");
+  if (pimp) pimp.addEventListener("click", function () { fileIn.click(); });
   fileIn.addEventListener("change", function () {
       var f = fileIn.files && fileIn.files[0];
       if (!f) return;

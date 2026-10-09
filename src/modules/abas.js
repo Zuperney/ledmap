@@ -4,6 +4,7 @@ import { viewC } from "./visor.js";
 import { viewK, renderCabling } from "./cabeamento.js";
 import { atualizarResumoProjeto } from "./projeto-ui.js";
 import { renderEletrica } from "./eletrica.js";
+import { renderComp } from "./composicao.js";
 
 const TABS = ["p", "m", "c", "k", "n", "e", "r"];
 let HINT, curTab;
@@ -27,14 +28,15 @@ export function showTab(which) {
     if (which === "m") { viewM.apply(); renderCabM(); }
     if (which === "c") viewC.apply();
     if (which === "e") renderEletrica();
+    if (which === "n") renderComp();
     if (which === "k") { renderCabling(); viewK.apply(); }
   }
 
 export function init() {
   HINT = {
     k: "O cabeamento usa as posições do Canvas e não as altera. Escolha uma porta e toque ou arraste sobre os gabinetes, na ordem em que o cabo passa. Tocar no último gabinete da rota desfaz; tocar em um gabinete anterior corta a rota ali; tocar em um gabinete de outra porta seleciona essa porta. O limite de pixels por porta depende dos bits e dos Hz, configurados em Sinal (por Screen ou para o projeto todo). O overclock arredonda para cima o número de gabinetes por porta. Com a traçagem ligada, use dois dedos para mover e dar zoom.",
-    m: "O Rig mostra como as telas ficam penduradas. Toque numa tela ou numa linha da tabela para destacar. Em Editar posições dá para arrastar as telas ou digitar X e Y. As linhas finas são os gabinetes.",
-    c: "A aba Screen é o canvas de conteúdo, o espaço de conteúdo, em pixels do processador. As telas começam montadas como no desenho. Arraste para reorganizar. Escolha uma screen para trabalhar só nela: as outras ficam apagadas e travadas. Ajuste a vista, toque em “Travar rolagem” e arraste sem a tela se mexer. Contorno vermelho tracejado indica telas sobrepostas. O ímã alinha bordas e centros das outras telas. Zoom com + e −, ou pinça com a rolagem travada."
+    m: "O Rig mostra como os painéis ficam pendurados. Toque num painel ou numa linha da tabela para destacar. Em Editar dá para arrastar os painéis, digitar X e Y e colocar painéis num grupo: o grupo vira uma peça só (por exemplo, gabinetes diferentes no mesmo painel) e se move junto. A cor indica o gabinete. Grade e cabos ficam em Visão.",
+    c: "A aba Screen é o canvas de conteúdo, o espaço de conteúdo, em pixels do processador. Os painéis começam montados como no desenho. Arraste para reorganizar. Escolha uma screen para trabalhar só nela: as outras ficam apagadas e travadas. Ajuste a vista, toque em “Travar rolagem” e arraste sem a página se mexer. Contorno vermelho tracejado indica painéis sobrepostos. O ímã alinha bordas e centros dos outros painéis. Zoom com + e −, ou pinça com a rolagem travada."
   };
   curTab = "m";
   TABS.forEach(function (w) {

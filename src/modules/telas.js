@@ -5,7 +5,7 @@ import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
 import { pmsg } from "./exportar.js";
 
-let KEY_REOPEN, KEY_PEND, addModal, aName, aKind, aW, aH, aGrp, aMx, aMy, aPrev, aErr;
+let KEY_REOPEN, KEY_PEND, addModal, aName, aW, aH, aPrev, aErr;
 
 export function commitAndReload(reopen, pending) {
     save(); ksave();
@@ -31,8 +31,8 @@ let aCab;
 
 function updatePrev() {
     if (!mult(aW.value) || !mult(aH.value)) { aPrev.textContent = "Informe largura e altura entre 0,1 e 30 m."; return; }
-    var g = GAB[aCab.value], q = res({ w: Number(aW.value), h: Number(aH.value), kind: aKind.value, cab: aCab.value });
-    aPrev.textContent = "Gabinete " + fmt(g.mw * 100) + " × " + fmt(g.mh * 100) + " cm · tela final " + fmt(q.cols * g.mw) + " × " + fmt(q.rows * g.mh) + " m · " + q.cols + " × " + q.rows + " gabinetes (" + (q.cols * q.rows) + ") · " + q.w + " × " + q.h + " px · " + nf(q.total) + " px no total";
+    var g = GAB[aCab.value], q = res({ w: Number(aW.value), h: Number(aH.value), kind: "imag", cab: aCab.value });
+    aPrev.textContent = "Gabinete " + fmt(g.mw * 100) + " × " + fmt(g.mh * 100) + " cm · painel final " +fmt(q.cols * g.mw) + " × " + fmt(q.rows * g.mh) + " m · " + q.cols + " × " + q.rows + " gabinetes (" + (q.cols * q.rows) + ") · " + q.w + " × " + q.h + " px · " + nf(q.total) + " px no total";
   }
 
 export function freeM(w, h) {
@@ -50,11 +50,8 @@ export function freeC(t) {
   }
 
 function openAdd() {
-    aName.value = "Tela " + nextExtraId();
-    aGrp.textContent = "";
-    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "— sem screen —"; aGrp.appendChild(o0);
-    groups.forEach(function (g) { var o = document.createElement("option"); o.value = g.id; o.textContent = gname(g); aGrp.appendChild(o); });
-    aMx.value = ""; aMy.value = ""; aErr.textContent = "";
+    aName.value = "Painel " + nextExtraId();
+    aErr.textContent = "";
     updatePrev();
     addModal.hidden = false;
     aName.focus();
@@ -77,12 +74,8 @@ export function init() {
     });
   addModal = document.getElementById("add-modal");
   aName = document.getElementById("a-name");
-  aKind = document.getElementById("a-kind");
   aW = document.getElementById("a-w");
   aH = document.getElementById("a-h");
-  aGrp = document.getElementById("a-grp");
-  aMx = document.getElementById("a-mx");
-  aMy = document.getElementById("a-my");
   aPrev = document.getElementById("a-prev");
   aErr = document.getElementById("a-err");
   aCab = document.getElementById("a-cab");
@@ -91,8 +84,8 @@ export function init() {
       o.textContent = g.nome + " · " + g.rx + "×" + g.ry + " px · " + Math.round(g.mw * 1000) / 10 + "×" + Math.round(g.mh * 1000) / 10 + " cm";
       aCab.appendChild(o);
     });
-  aKind.addEventListener("change", function () { aCab.value = CAB_PADRAO[aKind.value]; });
-  [aKind, aCab, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
+  aCab.value = "5";
+  [aCab, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
   document.getElementById("add-open").addEventListener("click", openAdd);
   document.getElementById("add-open2").addEventListener("click", openAdd);
   document.getElementById("a-cancel").addEventListener("click", closeAdd);
@@ -104,25 +97,20 @@ export function init() {
     });
   document.getElementById("a-ok").addEventListener("click", function () {
       aErr.textContent = "";
-      if (EXTRAS.length >= EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " telas."; return; }
+      if (EXTRAS.length >= EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " painéis."; return; }
       if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Informe largura e altura válidas (até 30 m)."; return; }
       var id = nextExtraId();
       if (Number(id) > 999) { aErr.textContent = "Numeração esgotada."; return; }
-      var w = Number(aW.value), h = Number(aH.value), mx, my;
-      if (aMx.value === "" && aMy.value === "") {
-        var fm = freeM(w, h);
-        if (!fm) { aErr.textContent = "Sem espaço livre na montagem. Informe X e Y."; return; }
-        mx = fm.x; my = fm.y;
-      } else {
-        mx = Number(aMx.value === "" ? 0 : aMx.value); my = Number(aMy.value === "" ? 0 : aMy.value);
-      }
-      var fc = freeC({ w: w, h: h, kind: aKind.value, cab: aCab.value, mx: mx, my: my });
-      var c = cleanExtra({ id: id, name: aName.value, kind: aKind.value, cab: aCab.value, w: w, h: h, mx: mx, my: my, cx: fc.x, cy: fc.y, grp: aGrp.value });
+      var w = Number(aW.value), h = Number(aH.value);
+      var fm = freeM(w, h);
+      if (!fm) { aErr.textContent = "Sem espaço livre na montagem."; return; }
+      var fc = freeC({ w: w, h: h, kind: "imag", cab: aCab.value, mx: fm.x, my: fm.y });
+      var c = cleanExtra({ id: id, name: aName.value, kind: "imag", cab: aCab.value, w: w, h: h, mx: fm.x, my: fm.y, cx: fc.x, cy: fc.y, grp: "" });
       if (!c) { aErr.textContent = "Dimensões ou posição fora do limite (até 30 m de largura e altura)."; return; }
       EXTRAS.push(c);
-      if (!commitAndReload("c:" + id)) {
+      if (!commitAndReload(curTab + ":" + id)) {
         EXTRAS.pop();
-        aErr.textContent = "Não consegui salvar neste navegador, então a tela não foi adicionada.";
+        aErr.textContent = "Não consegui salvar neste navegador, então o painel não foi adicionado.";
       }
     });
 }

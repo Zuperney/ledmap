@@ -8,7 +8,7 @@ let drawerEl, dToggle, dState, DH;
 
 export function applyDrawer() {
     document.documentElement.style.setProperty("--dh", DH[dState]);
-    dToggle.textContent = (dState === 2 ? "▼ " : "▲ ") + "Telas";
+    dToggle.textContent = (dState === 2 ? "▼ " : "▲ ") + "Painéis";
     dToggle.setAttribute("aria-expanded", String(dState > 0));
   }
 
@@ -22,7 +22,7 @@ export function syncInsp() {
     var nm = document.createElement("span"); nm.className = "nm"; nm.textContent = t.name;
     var info = document.createElement("span"); info.className = "info"; info.id = "insp-info";
     var sel = document.createElement("select");
-    sel.setAttribute("aria-label", "Screen da tela " + t.id);
+    sel.setAttribute("aria-label", "Screen do painel " + t.id);
     var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "— screen —"; sel.appendChild(o0);
     groups.forEach(function (g) { var o = document.createElement("option"); o.value = g.id; o.textContent = gname(g); sel.appendChild(o); });
     sel.value = t.grp || "";
@@ -30,7 +30,7 @@ export function syncInsp() {
       t.grp = sel.value;
       applyFocus(); renderChips(); updateBoxes(); updateDetailStat(); save(); refreshSelects();
     });
-    var dup = document.createElement("button"); dup.className = "btn"; dup.textContent = "Duplicar"; dup.title = "Duplicar esta tela";
+    var dup = document.createElement("button"); dup.className = "btn"; dup.textContent = "Duplicar"; dup.title = "Duplicar este painel";
     dup.addEventListener("click", duplicateSel);
     box.appendChild(n); box.appendChild(nm); box.appendChild(info); box.appendChild(sel); box.appendChild(dup);
     updInsp();
@@ -49,6 +49,6 @@ export function init() {
   dState = 0;
   DH = ["28px", "34dvh", "74dvh"];
   dToggle.addEventListener("click", function () { dState = (dState + 1) % 3; applyDrawer(); });
-  document.getElementById("d-sum").textContent = tiles.length + " telas · " + document.getElementById("total-cab").textContent + " · " + document.getElementById("total").textContent + " px";
+  document.getElementById("d-sum").textContent = tiles.length + (tiles.length === 1 ? " painel · " : " painéis · ") + document.getElementById("total-cab").textContent + " · " + document.getElementById("total").textContent + " px";
 }
 

@@ -11,7 +11,7 @@ function cfgEscopo() { var st = sinalState(); return escopo ? (st.sinalScreens[e
 function preencherAuto() {
     var sel = $("ka-escopo"), v = sel.value || "*";
     sel.textContent = "";
-    [["*", "Todas as telas"]].concat(groups.map(function (g) { return [g.id, gname(g)]; })).concat([["_", "Telas sem Screen"]]).forEach(function (a) {
+    [["*", "Todos os painéis"]].concat(groups.map(function (g) { return [g.id, gname(g)]; })).concat([["_", "Painéis sem Screen"]]).forEach(function (a) {
       var o = document.createElement("option"); o.value = a[0]; o.textContent = a[1]; sel.appendChild(o);
     });
     sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === v; }) ? v : "*";

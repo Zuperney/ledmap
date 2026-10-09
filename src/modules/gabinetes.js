@@ -29,3 +29,10 @@ export const CAB_PADRAO = { imag: "6", up: "6", c: "5" };
 
 export function cabDe(t) { return GAB[t.cab] || GAB[CAB_PADRAO[t.kind]] || GAB["6"]; }
 export function cabNome(t) { return cabDe(t).nome; }
+
+// Cor fixa por modelo de gabinete: num painel misto dá para ver onde o gabinete muda.
+export function corGab(id) {
+  var i = GABINETES.findIndex(function (g) { return g.id === id; });
+  return "hsl(" + Math.round((Math.max(0, i) * 137.508 + 205) % 360) + ", 68%, 50%)";
+}
+export function corCab(t) { return corGab(cabDe(t).id); }

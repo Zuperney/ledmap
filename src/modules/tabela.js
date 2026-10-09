@@ -1,4 +1,4 @@
-import { cabNome } from "./gabinetes.js";
+import { cabNome, cabDe, corGab } from "./gabinetes.js";
 import { tiles, rowsEl, groups, gname, save, selected, gM, gC, res, esc, fmt, nf, set_selected } from "./core.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
 import { syncInsp } from "./gaveta.js";
@@ -11,7 +11,7 @@ export function refreshSelects() {
       var cell = rowsEl.children[idx].querySelector(".gsel");
       cell.textContent = "";
       var sel = document.createElement("select");
-      sel.setAttribute("aria-label", "Screen da tela " + t.id);
+      sel.setAttribute("aria-label", "Screen do painel " + t.id);
       var o0 = document.createElement("option");
       o0.value = ""; o0.textContent = "—";
       sel.appendChild(o0);
@@ -63,6 +63,17 @@ export function init() {
       }
       rowsEl.appendChild(tr);
     });
+  var leg = document.getElementById("legend-gab"), vistos = {};
+  tiles.forEach(function (s) {
+    var g = cabDe(s);
+    if (vistos[g.id]) return;
+    vistos[g.id] = 1;
+    var sp = document.createElement("span"), i = document.createElement("i");
+    i.style.background = corGab(g.id);
+    sp.appendChild(i);
+    sp.appendChild(document.createTextNode(g.nome + " · " + g.rx + " × " + g.ry + " px"));
+    leg.appendChild(sp);
+  });
   document.getElementById("total-cab").textContent = tiles.reduce(function (a, s) { var q = res(s); return a + q.cols * q.rows; }, 0) + " gabinetes";
   document.getElementById("total").textContent = nf(tiles.reduce(function (a, s) { return a + res(s).total; }, 0));
 }
