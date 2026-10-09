@@ -1,5 +1,6 @@
 import { ID_V1, TELAS_V1, projetoAtivo } from "./projetos.js";
 import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG } from "./core.js";
+import { eletricaState, loadEletrica } from "./eletrica.js";
 import { autoState, setAuto, sinalState, loadSinal, oc, nextP, ports, routes, cellEl, activePort, applyOc, setActivePort, ksave, set_ports, set_routes, set_nextP, set_oc, set_activePort } from "./cabeamento.js";
 import { commitAndReload } from "./telas.js";
 import { tById, pmsg, saveFile } from "./exportar.js";
@@ -21,6 +22,7 @@ export function buildProject() {
       extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy }; }),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
+      eletrica: eletricaState(),
       cabeamento: {
         sinal: sinalState().sinal,
         sinalScreens: sinalState().sinalScreens,
@@ -132,6 +134,7 @@ export function applyProject(o) {
       routes["p" + nextP] = [];
       (set_nextP(nextP + 1), nextP - 1);
     }
+    loadEletrica(o.eletrica);
     set_oc(!!cab.overclock);
     loadSinal(cab.sinal, cab.sinalScreens, cab.maxPortasScreen);
     setAuto(cab.distribuicao);

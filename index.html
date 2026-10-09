@@ -125,12 +125,18 @@
   </section>
 
   <section class="view" id="view-e" role="tabpanel" aria-labelledby="tab-e" hidden>
-    <div class="card soon">
-      <h2>Elétrica</h2>
-      <p>Consumo e distribuição de energia a partir das telas e do cabeamento.</p>
-      <ul><li>Tensão e consumo por tela (pico e típico)</li><li>Gerador mínimo e balanço entre fases</li><li>Circuitos por conector, com a regra dos 80%</li></ul>
-      <p class="note">Em breve. Esta área ainda não calcula nada.</p>
+    <div class="card">
+      <h2>Energia</h2>
+      <label class="fld">Tipo de energia <select id="e-vk" aria-label="Tipo de energia"></select></label>
+      <div class="three">
+        <label class="fld">Brilho (%) <input type="number" id="e-bri" min="0" max="100" step="1" inputmode="numeric"></label>
+        <label class="fld">Conteúdo (%) <input type="number" id="e-con" min="0" max="100" step="1" inputmode="numeric"></label>
+        <label class="fld">Margem do cabo (%) <input type="number" id="e-mar" min="50" max="100" step="1" inputmode="numeric"></label>
+      </div>
+      <p class="note">O consumo típico serve só para estimar o gerador. Cabos e gerador usam o consumo máximo. Os cabos de energia seguem as portas de sinal e a margem de 80% é a regra para carga contínua.</p>
+      <button class="btn" id="e-csv">Cabos de energia (CSV)</button>
     </div>
+    <div id="e-root" class="e-root"></div>
   </section>
 
   <section class="view" id="view-r" role="tabpanel" aria-labelledby="tab-r" hidden>

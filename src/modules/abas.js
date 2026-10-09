@@ -3,6 +3,7 @@ import { viewM, renderCabM } from "./rig-cabos.js";
 import { viewC } from "./visor.js";
 import { viewK, renderCabling } from "./cabeamento.js";
 import { atualizarResumoProjeto } from "./projeto-ui.js";
+import { renderEletrica } from "./eletrica.js";
 
 const TABS = ["p", "m", "c", "k", "n", "e", "r"];
 let HINT, curTab;
@@ -25,6 +26,7 @@ export function showTab(which) {
     document.getElementById("hint").textContent = HINT[which] || "";
     if (which === "m") { viewM.apply(); renderCabM(); }
     if (which === "c") viewC.apply();
+    if (which === "e") renderEletrica();
     if (which === "k") { renderCabling(); viewK.apply(); }
   }
 

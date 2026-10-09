@@ -101,3 +101,26 @@ input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-i
 .presets { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
 .presets button { font: 600 11px var(--font-data); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; cursor: pointer; }
 .presets button:hover { color: var(--fg); border-color: var(--muted); }
+
+/* Elétrica */
+.card .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.card .fld .nsel { width: 100%; background: var(--bg); }
+.card .note, .e-root .note { font-size: 10px; color: var(--muted); margin: 0; line-height: 1.4; }
+.e-root { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.egrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
+.ek { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
+.ek-t { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.ek-v { font: 700 18px var(--font-display); }
+.ek-s { font-size: 10px; color: var(--muted); }
+.ecab { display: flex; flex-direction: column; gap: 2px; }
+.ecab .sb { font-size: 10px; color: var(--muted); }
+.efases, .ecabos { display: flex; flex-direction: column; gap: 4px; }
+.ef, .ec { display: grid; grid-template-columns: 62px 1fr auto; align-items: center; gap: 8px; font-size: 11px; }
+.ef-v, .ec-v { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.etrack { height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; }
+.etrack i { display: block; height: 100%; background: var(--imag); }
+.ec.warn .etrack i { background: var(--cpiece); }
+.ec.over .etrack i { background: var(--bad); }
+.ec.warn .ec-v { color: var(--cpiece); }
+.ec.over .ec-v { color: var(--bad); }
+.ecabos { max-height: 320px; overflow-y: auto; padding-right: 2px; }

@@ -56,12 +56,12 @@ export function saveFile(name, data) {
     });
   }
 
-function csvCell(v) {
+export function csvCell(v) {
     var t = String(v);
     return /[;"\n\r]/.test(t) ? "\"" + t.replace(/"/g, "\"\"") + "\"" : t;
   }
 
-function csv(rows) {
+export function csv(rows) {
     return "﻿" + rows.map(function (r) { return r.map(csvCell).join(";"); }).join("\r\n") + "\r\n";
   }
 
