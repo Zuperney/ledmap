@@ -172,6 +172,12 @@ function tela(ctx, it, ox, oy, own, semSobre) {
       ctx.fillStyle = cor; ctx.fillRect(cx, cy, q.cw, q.ch);
       if (p === "branco" || p === "barras") continue;
       ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = Math.max(1, q.cw * 0.02); ctx.strokeRect(cx, cy, q.cw, q.ch);
+      if (p === "cabos" && o) {
+        // ordem do gabinete no cabo, como na aba Cabeamento (a linha da rota passa pelo centro)
+        ctx.font = "700 " + (q.ch * 0.3) + "px " + MONO; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.lineJoin = "round";
+        ctx.lineWidth = q.ch * 0.06; ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.strokeText(String(o.i + 1), cx + q.cw * 0.08, cy + q.ch * 0.06);
+        ctx.fillStyle = "#fff"; ctx.fillText(String(o.i + 1), cx + q.cw * 0.08, cy + q.ch * 0.06);
+      }
       if (p === "mapa") {
         ctx.fillStyle = cor.charAt(0) === "#" ? textOn(cor) : "#fff";
         ctx.font = "700 " + (q.ch * 0.26) + "px " + MONO; ctx.textAlign = "left"; ctx.textBaseline = "top";
