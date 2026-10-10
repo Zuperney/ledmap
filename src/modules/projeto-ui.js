@@ -19,7 +19,7 @@ function desenharResumo() {
   var box = document.getElementById("p-resumo");
   if (!box) return;
   var cab = 0, px = 0, kva = 0;
-  tiles.forEach(function (t) { var q = res(t); cab += q.cols * q.rows; px += q.total; });
+  tiles.forEach(function (t) { var q = res(t); cab += q.n; px += q.total; });
   try { kva = calcular().total.kVA; } catch (e) {}
   box.textContent = "";
   box.appendChild(bloco("Painéis", nf(tiles.length)));

@@ -64,6 +64,8 @@ export function init() {
           else if (!pend) pmsg("Painel " + pr[1] + " adicionado.");
         }
       }
+      var avisoSolto = localStorage.getItem("ledmap-msg");
+      if (avisoSolto) { localStorage.removeItem("ledmap-msg"); pmsg(avisoSolto); }
     } catch (e) {}
   clearTimeout(histT);
   set_histUndo([]);

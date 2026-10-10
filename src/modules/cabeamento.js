@@ -1,4 +1,4 @@
-import { res, tiles, groups, nf, bbox, el, text } from "./core.js";
+import { res, tiles, groups, nf, bbox, el, text, existe } from "./core.js";
 import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
@@ -343,6 +343,7 @@ export function init() {
       text(g, "klabel", q.w / 2, q.h / 2, Math.min(q.w, q.h) * 0.55, t.id);
       for (var r = 0; r < q.rows; r++) {
         for (var c = 0; c < q.cols; c++) {
+          if (!existe(q, c, r)) continue; // gabinete recortado: não existe, não entra em rota
           var key = t.id + ":" + c + ":" + r;
           var rect = el("rect", { "class": "cell", x: c * q.cw, y: r * q.ch, width: q.cw, height: q.ch, "data-key": key }, g);
           var num = text(g, "cnum", (c + 0.5) * q.cw, (r + 0.5) * q.ch, q.u * 0.34, "");

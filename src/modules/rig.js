@@ -61,6 +61,19 @@ export function desenharPaineis() {
     });
   }
 
+// gabinetes recortados: a célula é apagada (cor do fundo) e fica só um contorno tracejado
+var furosM = {};
+export function desenharFurosM(t) {
+    var gF = furosM[t.id];
+    if (!gF) return;
+    gF.textContent = "";
+    var q = res(t);
+    Object.keys(q.fora).forEach(function (k) {
+      var p = k.split(":");
+      el("rect", { "class": "furo", x: Number(p[0]) * q.mw, y: Number(p[1]) * q.mh, width: q.mw, height: q.mh }, gF);
+    });
+  }
+
 export function placeM(t) { gM[t.id].setAttribute("transform", "translate(" + t.mx + " " + (FLOOR - t.my - t.h) + ")"); }
 
 export function init() {
@@ -75,6 +88,8 @@ export function init() {
       var rs = res(s), tall = s.h >= 3;
       el("rect", { "class": "body", x: 0, y: 0, width: s.w, height: s.h }, g);
       el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.mw, rs.mh) }, g);
+      furosM[s.id] = el("g", { "class": "furos" }, g);
+      desenharFurosM(s);
       var r = tall ? 0.6 : (s.w < 2 ? 0.45 : 0.38);
       var fs = tall ? 0.85 : (s.w < 2 ? 0.6 : 0.5);
       var bx = s.w / 2, by = s.h / 2;
@@ -85,7 +100,7 @@ export function init() {
       if (s.w >= 3 && tall) {
         text(g, "dim-t", s.w / 2, s.h / 2 + 0.3, 0.5, fmt(s.w) + " × " + fmt(s.h) + " m");
         text(g, "dim-t", s.w / 2, s.h / 2 + 0.95, 0.42, rs.w + " × " + rs.h + " px");
-        text(g, "dim-t", s.w / 2, s.h / 2 + 1.5, 0.42, rs.cols + " × " + rs.rows + " gab.");
+        text(g, "dim-t", s.w / 2, s.h / 2 + 1.5, 0.42, (rs.n < rs.cols * rs.rows ? rs.n + " gab. (recortado)" : rs.cols + " × " + rs.rows + " gab."));
       } else if (s.w >= 3) {
         var lbl = fmt(s.w) + " × " + fmt(s.h) + " m · " + rs.w + "×" + rs.h;
         text(g, "dim-t", (s.w + 1.1) / 2, s.h / 2, Math.min(0.45, (s.w - 1.3) / (lbl.length * 0.62)), lbl);

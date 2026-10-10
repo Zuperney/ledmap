@@ -59,7 +59,7 @@ export function calcular() {
     if (!ts.length) return;
     var W = 0, S = 0, tS = 0, gab = 0;
     ts.forEach(function (t) {
-      var q = res(t), g = cabDe(t), n = q.cols * q.rows;
+      var q = res(t), g = cabDe(t), n = q.n;
       gab += n; W += n * g.pw; S += n * g.pw / g.fp; tS += n * typicalPerTile(g.pw, g.pb, cfg.brilho / 100, cfg.conteudo / 100) / g.fp;
     });
     var cabos = cabosDaScreen(ch.id);

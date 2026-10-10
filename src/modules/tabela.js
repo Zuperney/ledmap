@@ -51,7 +51,7 @@ export function init() {
       var tr = document.createElement("tr");
       tr.setAttribute("data-id", s.id);
       tr.innerHTML = '<td><span class="n">' + s.id + '</span></td><td>' + esc(s.name) + (s.extra ? ' <button class="xdel" type="button">Excluir</button>' : '') +
-        '</td><td class="gsel"></td><td class="r">' + fmt(s.w) + ' × ' + fmt(s.h) + '</td><td class="r">' + q.cols + ' × ' + q.rows +
+        '</td><td class="gsel"></td><td class="r">' + fmt(s.w) + ' × ' + fmt(s.h) + '</td><td class="r">' + q.cols + ' × ' + q.rows + (q.n < q.cols * q.rows ? ' − ' + (q.cols * q.rows - q.n) : '') +
         '</td><td>' + cabNome(s) + '</td><td class="r">' + q.w + ' × ' + q.h +
         '</td><td class="r">' + nf(q.total) + '</td><td class="r mpos">' + fmt(s.mx) + ' , ' + fmt(s.my) +
         '</td><td class="r cpos"></td>';
@@ -74,7 +74,7 @@ export function init() {
     sp.appendChild(document.createTextNode(g.nome + " · " + g.rx + " × " + g.ry + " px"));
     leg.appendChild(sp);
   });
-  document.getElementById("total-cab").textContent = tiles.reduce(function (a, s) { var q = res(s); return a + q.cols * q.rows; }, 0) + " gabinetes";
+  document.getElementById("total-cab").textContent = tiles.reduce(function (a, s) { var q = res(s); return a + q.n; }, 0) + " gabinetes";
   document.getElementById("total").textContent = nf(tiles.reduce(function (a, s) { return a + res(s).total; }, 0));
 }
 

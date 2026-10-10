@@ -139,6 +139,15 @@ function cablingCsv() {
     return csv(rows);
   }
 
+// gabinetes recortados: apaga a célula com a cor do fundo e deixa só um contorno tracejado
+function furos(ctx, q, x, y, cw, ch, fundo) {
+    Object.keys(q.fora).forEach(function (k) {
+      var p = k.split(":"), cx = x + Number(p[0]) * cw, cy = y + Number(p[1]) * ch;
+      ctx.fillStyle = fundo; ctx.fillRect(cx, cy, cw, ch);
+      ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 1.5; ctx.strokeRect(cx + 1, cy + 1, cw - 2, ch - 2); ctx.restore();
+    });
+  }
+
 function halo(ctx, str, x, y, fill, w) {
     ctx.lineJoin = "round";
     ctx.lineWidth = w;
@@ -195,11 +204,13 @@ function drawMap(mode, items) {
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 4;
       ctx.strokeRect(x + 2, y + 2, q.w - 4, q.h - 4);
+      furos(ctx, q, x, y, q.cw, q.ch, plain ? "#000000" : "#0d1319");
       if (mode !== "cabling") {
         var fz = Math.max(12, Math.round(q.u * 0.17));
         ctx.font = "400 " + fz + "px " + MONO;
         for (var r = 0; r < q.rows; r++) {
           for (var c = 0; c < q.cols; c++) {
+            if (q.fora[c + ":" + r]) continue;
             halo(ctx, (c + 1) + "-" + (r + 1), x + c * q.cw + 6, y + r * q.ch + fz + 4, "rgba(255,255,255,0.8)", 3);
           }
         }
@@ -353,6 +364,7 @@ function drawLayout(withCab) {
       ctx.stroke();
       ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4;
       ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+      furos(ctx, q, x, y, q.mw * S, q.mh * S, "#0d1319");
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       if (t.h >= 3 && t.w >= 3) {
         ctx.font = "700 100px " + DISP;

@@ -46,6 +46,8 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .scr rect.body { stroke-width: 1.5; vector-effect: non-scaling-stroke; fill-opacity: .28; }
 .scr rect.body { fill: var(--cor, var(--imag)); stroke: var(--cor, var(--imag)); }
 .pnlayer { pointer-events: none; }
+.furo { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; stroke-opacity: .6; }
+.scr.recorte { cursor: crosshair; }
 .pnbox { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 8 5; vector-effect: non-scaling-stroke; opacity: .8; }
 .pnbox.active { stroke: var(--fg); stroke-width: 2.5; opacity: 1; }
 .pnl { fill: var(--muted); font-family: var(--font-display); font-weight: 700; }
