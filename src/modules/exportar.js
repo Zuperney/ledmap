@@ -437,10 +437,10 @@ function drawLayout(withCab) {
   }
 
 function layoutCsv() {
-    var rows = [["painel", "nome", "pitch", "largura_m", "altura_m", "x_m", "y_chao_m", "gab_colunas", "gab_linhas", "resolucao_px", "pixels_total"]];
+    var rows = [["painel", "nome", "pitch", "largura_m", "altura_m", "x_m", "y_chao_m", "gab_colunas", "gab_linhas", "resolucao_px", "pixels_total", "recuo_m"]];
     tiles.forEach(function (t) {
       var q = res(t);
-      rows.push([t.id, t.name, cabNome(t), fmt(t.w), fmt(t.h), fmt(t.mx), fmt(t.my), q.cols, q.rows, q.w + "x" + q.h, q.total]);
+      rows.push([t.id, t.name, cabNome(t), fmt(t.w), fmt(t.h), fmt(t.mx), fmt(t.my), q.cols, q.rows, q.w + "x" + q.h, q.total, fmt(t.z || 0)]);
     });
     return csv(rows);
   }

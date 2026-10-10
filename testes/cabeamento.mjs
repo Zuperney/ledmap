@@ -7,12 +7,12 @@ const LIM = 655360;
 const G50 = { mw: 0.5, mh: 0.5, rx: 128, ry: 128 }, G100 = { mw: 0.5, mh: 1, rx: 128, ry: 256 };
 
 // painel: x0, y0 em metros (y de cima para baixo), cols × rows; fora(c, r) = true tira o gabinete
-function painel(id, g, x0, y0, cols, rows, fora) {
+function painel(id, g, x0, y0, cols, rows, fora, z) {
   const out = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     if (fora && fora(c, r, cols, rows)) continue;
     const x = +(x0 + c * g.mw).toFixed(4), y = +(y0 + r * g.mh).toFixed(4);
-    out.push({ key: id + ":" + c + ":" + r, t: { id }, x, y, w: g.mw, h: g.mh, ax: Math.round(x / g.mw * g.rx), ay: Math.round(y / g.mh * g.ry), aw: g.rx, ah: g.ry });
+    out.push({ key: id + ":" + c + ":" + r, t: { id }, x, y, z: z || 0, w: g.mw, h: g.mh, ax: Math.round(x / g.mw * g.rx), ay: Math.round(y / g.mh * g.ry), aw: g.rx, ah: g.ry });
   }
   return out;
 }
@@ -42,6 +42,9 @@ const CASOS = [
   ["Losango 6×6 m", painel("1", G50, 0, 0, 12, 12, (c, r) => Math.abs(c - 5.5) + Math.abs(r - 5.5) > 6)],
   ["Tela enorme 30×10 m (1200 gab)", painel("1", G50, 0, 0, 60, 20)],
   ["Tela enorme com vão central 30×10 m", painel("1", G50, 0, 0, 60, 20, (c, r) => c >= 20 && c < 40 && r >= 5 && r < 15)],
+  // miolo 4×1 recortado do painel e montado 0,5 m atrás, como painel separado no mesmo lugar da vista frontal
+  ["Miolo recuado 0,5 m (8×3,5 + 4×1 atrás), salto 0", [...painel("1", G50, 0, 0, 16, 7, (c, r) => c >= 4 && c < 12 && r >= 3 && r < 5), ...painel("2", G50, 2, 1.5, 8, 2, null, 0.5)]],
+  ["Miolo recuado 0,5 m, salto 0,5 m", [...painel("1", G50, 0, 0, 16, 7, (c, r) => c >= 4 && c < 12 && r >= 3 && r < 5), ...painel("2", G50, 2, 1.5, 8, 2, null, 0.5)], 0.5],
 ];
 
 function medir(nome, chunks, cells) {

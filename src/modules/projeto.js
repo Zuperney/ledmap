@@ -22,7 +22,7 @@ export function buildProject() {
       projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "", obs: a.obs || "" }; })(),
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
       paineis: paineis.map(function (p) { return { id: p.id, nome: p.name }; }),
-      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [] }; }),
+      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0 }; }),
       gabinetes: gabsUsados(EXTRAS),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
@@ -77,9 +77,9 @@ export function applyProject(o) {
     garantirGabs(o.gabinetes);
     if (Array.isArray(o.extras)) {
       var ne = cleanExtras(o.extras.map(function (x) {
-        return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes } : null;
+        return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes, z: x.profundidade } : null;
       }));
-      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(",")]; })); };
+      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(","), e.z || 0]; })); };
       if (sig(ne) !== sig(EXTRAS)) {
         var prevEx = EXTRAS;
         set_EXTRAS(ne);

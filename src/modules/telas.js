@@ -58,6 +58,8 @@ export function openAdd(id) {
     document.getElementById("a-ok").textContent = e ? "Salvar" : "Adicionar";
     aName.value = e ? e.name : "Painel " + nextExtraId();
     if (e) { aW.value = e.w; aH.value = e.h; preencherCabs(e.cab); }
+    document.getElementById("a-z-fld").hidden = !e;
+    document.getElementById("a-z").value = e && e.z ? e.z : "";
     aErr.textContent = "";
     updatePrev();
     addModal.hidden = false;
@@ -146,7 +148,7 @@ function salvarEdicao() {
     if (i < 0) { closeAdd(); return; }
     var antes = EXTRAS[i], t = tiles.filter(function (x) { return x.id === editando; })[0] || antes;
     // recortes: com outro gabinete a grade é outra, então saem; mudando só o tamanho, ficam os que ainda cabem
-    var c = cleanExtra(Object.assign({}, antes, { name: aName.value, cab: aCab.value, w: Number(aW.value), h: Number(aH.value), mx: t.mx, my: t.my, cx: t.cx, cy: t.cy, off: antes.cab !== aCab.value ? [] : antes.off }));
+    var c = cleanExtra(Object.assign({}, antes, { name: aName.value, cab: aCab.value, w: Number(aW.value), h: Number(aH.value), mx: t.mx, my: t.my, cx: t.cx, cy: t.cy, off: antes.cab !== aCab.value ? [] : antes.off, z: document.getElementById("a-z").value }));
     if (!c) { aErr.textContent = "Dimensões fora do limite (até 30 m de largura e altura)."; return; }
     var qa = res(antes), qn = res(c), mudouGrade = antes.cab !== c.cab || qa.cols !== qn.cols || qa.rows !== qn.rows;
     EXTRAS[i] = c;
@@ -175,7 +177,7 @@ export function duplicarPainel(id) {
     if (orig) { novoG = novoPainel(); novoG.name = (pnome(orig) + " cópia").slice(0, 40); }
     var falhou = mem.some(function (m, i) {
       var nid = String(base + i), mx = Math.round((m.mx + dx) * 100) / 100, my = Math.round((m.my + dy) * 100) / 100;
-      var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "", off: m.off });
+      var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "", off: m.off, z: m.z });
       if (!c) return true;
       EXTRAS.push(c);
       // entra também em tiles para o save() gravar a posição exata e o grupo antes de recarregar

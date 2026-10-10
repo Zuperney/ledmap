@@ -37,7 +37,7 @@ export function cleanExtra(x) {
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), extra: true };
+    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), extra: true };
   }
 
 export function cleanExtras(list) {
@@ -97,6 +97,30 @@ export function res(s) {
 
 // o gabinete (coluna c, linha r, a partir de cima à esquerda) existe neste painel?
 export function existe(q, c, r) { return !q.fora[c + ":" + r]; }
+
+// profundidade do painel em metros: 0 = no plano da montagem; positivo = recuado (para trás); negativo = avançado
+export function profundidade(v) { v = Number(v); return isFinite(v) && Math.abs(v) <= 20 ? Math.round(v * 100) / 100 : 0; }
+
+// retângulos (m, y do chão para cima) dos gabinetes que existem num painel
+export function gabinetesFisicos(t) {
+    var q = res(t), out = [];
+    for (var r = 0; r < q.rows; r++) for (var c = 0; c < q.cols; c++) {
+      if (q.fora[c + ":" + r]) continue;
+      out.push({ x: t.mx + c * q.mw, y: t.my + (q.rows - 1 - r) * q.mh, w: q.mw, h: q.mh });
+    }
+    return out;
+  }
+
+// dois painéis se sobrepõem de verdade se algum gabinete de um cai em cima de um gabinete do outro
+// (um painel pode ocupar o recorte do outro: miolo recuado, janela, moldura com conteúdo atrás)
+export function sobrepoem(a, b) {
+    var e = 0.001;
+    if (!(a.mx < b.mx + b.w - e && b.mx < a.mx + a.w - e && a.my < b.my + b.h - e && b.my < a.my + a.h - e)) return false;
+    var gb = gabinetesFisicos(b);
+    return gabinetesFisicos(a).some(function (p) {
+      return gb.some(function (o) { return p.x < o.x + o.w - e && o.x < p.x + p.w - e && p.y < o.y + o.h - e && o.y < p.y + p.h - e; });
+    });
+  }
 
 function limpaOff(l) {
     var out = [], seen = {};
