@@ -5,7 +5,7 @@ import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
 import { pmsg } from "./exportar.js";
 
-let KEY_REOPEN, KEY_PEND, addModal, aName, aW, aH, aPrev, aErr;
+let KEY_REOPEN, KEY_PEND, addModal, aName, aW, aH, aPrev, aErr, editando = null;
 
 export function commitAndReload(reopen, pending) {
     save(); ksave();
@@ -30,6 +30,7 @@ function mult(v) { v = Number(v); return isFinite(v) && v > 0 && v <= 30; }
 let aCab;
 
 function updatePrev() {
+    if (!GAB[aCab.value]) { aPrev.textContent = "A biblioteca está vazia: crie um gabinete primeiro."; return; }
     if (!mult(aW.value) || !mult(aH.value)) { aPrev.textContent = "Informe largura e altura entre 0,1 e 30 m."; return; }
     var g = GAB[aCab.value], q = res({ w: Number(aW.value), h: Number(aH.value), kind: "imag", cab: aCab.value });
     aPrev.textContent = "Gabinete " + fmt(g.mw * 100) + " × " + fmt(g.mh * 100) + " cm · painel final " +fmt(q.cols * g.mw) + " × " + fmt(q.rows * g.mh) + " m · " + q.cols + " × " + q.rows + " gabinetes (" + (q.cols * q.rows) + ") · " + q.w + " × " + q.h + " px · " + nf(q.total) + " px no total";
@@ -49,8 +50,14 @@ export function freeC(t) {
     return hit ? (freeSpot(q.w, q.h, all) || freeSpot(q.w, q.h, BASE) || p) : p;
   }
 
-function openAdd() {
-    aName.value = "Painel " + nextExtraId();
+// sem id: adicionar painel; com id: editar nome, tamanho e gabinete de um painel que já existe
+export function openAdd(id) {
+    var e = typeof id === "string" ? EXTRAS.filter(function (x) { return x.id === id; })[0] : null;
+    editando = e ? e.id : null;
+    document.getElementById("add-title").textContent = e ? "Editar painel " + e.id : "Adicionar painel";
+    document.getElementById("a-ok").textContent = e ? "Salvar" : "Adicionar";
+    aName.value = e ? e.name : "Painel " + nextExtraId();
+    if (e) { aW.value = e.w; aH.value = e.h; preencherCabs(e.cab); }
     aErr.textContent = "";
     updatePrev();
     addModal.hidden = false;
@@ -69,7 +76,8 @@ export function preencherCabs(valor) {
       o.textContent = g.nome + " · " + g.rx + "×" + g.ry + " px · " + Math.round(g.mw * 1000) / 10 + "×" + Math.round(g.mh * 1000) / 10 + " cm";
       aCab.appendChild(o);
     });
-    aCab.value = GAB[v] ? v : gabPadrao().id;
+    var pd = gabPadrao();
+    aCab.value = GAB[v] ? v : (pd ? pd.id : "");
     if (!addModal.hidden) updatePrev();
   }
 
@@ -97,10 +105,10 @@ export function init() {
   aPrev = document.getElementById("a-prev");
   aErr = document.getElementById("a-err");
   aCab = document.getElementById("a-cab");
-  preencherCabs(gabPadrao().id);
+  preencherCabs((gabPadrao() || {}).id);
   [aCab, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
-  document.getElementById("add-open").addEventListener("click", openAdd);
-  document.getElementById("add-open2").addEventListener("click", openAdd);
+  document.getElementById("add-open").addEventListener("click", function () { openAdd(); });
+  document.getElementById("add-open2").addEventListener("click", function () { openAdd(); });
   document.getElementById("a-cancel").addEventListener("click", closeAdd);
   addModal.addEventListener("click", function (e) { if (e.target === addModal) closeAdd(); });
   document.addEventListener("keydown", function (e) {
@@ -110,6 +118,8 @@ export function init() {
     });
   document.getElementById("a-ok").addEventListener("click", function () {
       aErr.textContent = "";
+      if (!GAB[aCab.value]) { aErr.textContent = "Escolha um gabinete (a biblioteca está vazia: crie um em Criar ou editar gabinetes)."; return; }
+      if (editando) { salvarEdicao(); return; }
       if (EXTRAS.length >= EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " painéis."; return; }
       if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Informe largura e altura válidas (até 30 m)."; return; }
       var id = nextExtraId();
@@ -127,5 +137,22 @@ export function init() {
       }
     });
 }
+
+// grava nome, tamanho e gabinete; a posição (Rig e Screen), a Screen e o grupo ficam como estão.
+// Se a grade de gabinetes muda, as rotas de cabo que passavam por este painel saem (as células mudaram).
+function salvarEdicao() {
+    if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Informe largura e altura válidas (até 30 m)."; return; }
+    var i = EXTRAS.findIndex(function (x) { return x.id === editando; });
+    if (i < 0) { closeAdd(); return; }
+    var antes = EXTRAS[i], t = tiles.filter(function (x) { return x.id === editando; })[0] || antes;
+    var c = cleanExtra(Object.assign({}, antes, { name: aName.value, cab: aCab.value, w: Number(aW.value), h: Number(aH.value), mx: t.mx, my: t.my, cx: t.cx, cy: t.cy }));
+    if (!c) { aErr.textContent = "Dimensões fora do limite (até 30 m de largura e altura)."; return; }
+    var qa = res(antes), qn = res(c), mudouGrade = antes.cab !== c.cab || qa.cols !== qn.cols || qa.rows !== qn.rows;
+    EXTRAS[i] = c;
+    var tirou = 0;
+    if (mudouGrade) Object.keys(routes).forEach(function (pid) { var n0 = routes[pid].length; routes[pid] = routes[pid].filter(function (k) { return k.split(":")[0] !== c.id; }); tirou += n0 - routes[pid].length; });
+    try { localStorage.setItem("ledmap-msg", tirou ? "Painel " + c.id + " atualizado. As rotas de cabo dele foram limpas: refaça o cabeamento." : "Painel " + c.id + " atualizado."); } catch (e) {}
+    if (!commitAndReload(curTab + ":" + c.id)) { EXTRAS[i] = antes; try { localStorage.removeItem("ledmap-msg"); } catch (e) {} aErr.textContent = "Não consegui salvar neste navegador."; }
+  }
 
 export { KEY_PEND, KEY_REOPEN };

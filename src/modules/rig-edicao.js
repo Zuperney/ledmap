@@ -6,7 +6,7 @@ import { tById, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep } from "./cabeamento.js";
-import { excluirPaineis } from "./telas.js";
+import { excluirPaineis, openAdd } from "./telas.js";
 
 let editM, dragM, magnetM, btnMagM;
 
@@ -35,6 +35,7 @@ export function syncMPanel() {
     var ix = document.getElementById("m-x"), iy = document.getElementById("m-y");
     ix.disabled = iy.disabled = !t;
     ix.value = t ? t.mx : ""; iy.value = t ? t.my : "";
+    document.getElementById("m-prop").disabled = !t;
     syncGrupo();
     desenharPaineis();
   }
@@ -190,6 +191,7 @@ export function init() {
       });
     });
   document.getElementById("m-grp").addEventListener("click", clicarGrupo);
+  document.getElementById("m-prop").addEventListener("click", function () { if (selected && tById[selected]) openAdd(selected); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modoSel) sairModoSel(); });
   syncGrupo();
   twoStep(document.getElementById("m-del"), "Excluir", "Confirmar?", function () { excluirPaineis(selecaoM()); });

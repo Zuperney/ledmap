@@ -1,5 +1,5 @@
 // Biblioteca de gabinetes: lista, criar, editar, duplicar e excluir.
-import { GABINETES, GAB, salvarGab, removerGab, novoIdGab, corGab, pitchMm, cabDe } from "./gabinetes.js";
+import { GABINETES, GAB, salvarGab, removerGab, novoIdGab, corGab, pitchMm, cabDe, limparGabs, restaurarFabrica } from "./gabinetes.js";
 import { tiles, fmt, nf } from "./core.js";
 import { twoStep } from "./cabeamento.js";
 import { pmsg } from "./exportar.js";
@@ -30,7 +30,7 @@ function lista() {
     b.addEventListener("click", function () { editar(g); });
     box.appendChild(b);
   });
-  if (!box.children.length) { var p = document.createElement("p"); p.className = "empty"; p.textContent = "Nenhum gabinete encontrado."; box.appendChild(p); }
+  if (!box.children.length) { var p = document.createElement("p"); p.className = "empty"; p.textContent = GABINETES.length ? "Nenhum gabinete encontrado." : "A biblioteca está vazia. Crie um gabinete ou restaure os de fábrica."; box.appendChild(p); }
 }
 
 function lerForm() {
@@ -103,10 +103,22 @@ export function init() {
   twoStep($("g-del"), "Excluir", "Confirmar?", function () {
     if (!atual) return;
     if (emUso(atual.id)) { $("g-err").textContent = "Este gabinete está em uso neste projeto. Troque o gabinete desses painéis antes de excluir."; return; }
-    if (!removerGab(atual.id)) { $("g-err").textContent = "Mantenha pelo menos um gabinete."; return; }
+    if (!removerGab(atual.id)) return;
     pmsg("Gabinete excluído.");
     preencherCabs(null);
     atual = null; vista(false); lista();
+  });
+  twoStep($("gab-limpar"), "Limpar biblioteca", "Confirmar?", function () {
+    var manter = {};
+    tiles.forEach(function (t) { manter[cabDe(t).id] = 1; });
+    var n = limparGabs(manter);
+    preencherCabs(null); lista();
+    pmsg(n ? n + (n === 1 ? " gabinete removido" : " gabinetes removidos") + " da biblioteca" + (Object.keys(manter).length ? ". Ficaram os usados neste projeto." : ".") : "Nada para limpar: todos os gabinetes estão em uso neste projeto.");
+  });
+  $("gab-fabrica").addEventListener("click", function () {
+    var n = restaurarFabrica();
+    preencherCabs(null); lista();
+    pmsg(n ? n + (n === 1 ? " gabinete de fábrica voltou" : " gabinetes de fábrica voltaram") + " para a biblioteca." : "Os gabinetes de fábrica já estão todos na biblioteca.");
   });
   Object.keys(CAMPOS).forEach(function (k) { $(CAMPOS[k]).addEventListener("input", prev); });
   modal.addEventListener("click", function (e) { if (e.target === modal) fechar(); });

@@ -45,6 +45,9 @@
       <input type="text" id="gab-busca" placeholder="Buscar por nome ou marca" autocomplete="off" aria-label="Buscar gabinete">
       <div class="glist" id="gab-lista"></div>
       <div class="acts">
+        <button class="btn" id="gab-limpar" title="Remove da biblioteca os gabinetes que este projeto não usa">Limpar biblioteca</button>
+        <button class="btn" id="gab-fabrica" title="Devolve os gabinetes de fábrica que faltam">Restaurar de fábrica</button>
+        <span class="sp"></span>
         <button class="btn" id="gab-fechar">Fechar</button>
         <button class="btn" id="gab-novo" aria-pressed="true">+ Novo gabinete</button>
       </div>
@@ -228,6 +231,7 @@
     </div>
     <div class="medit" id="m-edit-panel" hidden>
       <span class="who" id="m-who">Toque num painel para movê-lo</span>
+      <button class="btn" id="m-prop" disabled>Editar painel</button>
       <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
       <label>Y do chão (m) <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
       <label>Passo

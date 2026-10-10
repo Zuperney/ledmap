@@ -59,7 +59,9 @@ export function init() {
         if (/^[pmckner]$/.test(pr[0])) showTab(pr[0]);
         if (pr[1] && tById[pr[1]]) {
           select(pr[1]);
-          if (!pend) pmsg("Painel " + pr[1] + " adicionado.");
+          var avisoUi = localStorage.getItem("ledmap-msg");
+          if (avisoUi) { localStorage.removeItem("ledmap-msg"); pmsg(avisoUi); }
+          else if (!pend) pmsg("Painel " + pr[1] + " adicionado.");
         }
       }
     } catch (e) {}

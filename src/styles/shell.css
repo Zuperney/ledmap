@@ -135,7 +135,7 @@ input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-i
 .grow > i { flex: none; width: 12px; height: 12px; border-radius: 2px; }
 .grow .nm { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
 .grow .sb { display: block; font-weight: 400; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#gab-v-form .acts .sp { flex: 1; }
+#gab-v-form .acts .sp, #gab-v-lista .acts .sp { flex: 1; }
 .btn.lnk { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--imag); text-decoration: underline; cursor: pointer; font-size: 12px; }
 
 /* Composição */

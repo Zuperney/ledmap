@@ -46,7 +46,7 @@ export function limpaGab(g) {
 function carregar() {
   try {
     var l = JSON.parse(localStorage.getItem(LSTORE) || "null");
-    if (Array.isArray(l)) { var out = l.map(limpaGab).filter(Boolean); if (out.length) return out; }
+    if (Array.isArray(l)) return l.map(limpaGab).filter(Boolean); // lista vazia vale: a biblioteca pode ter sido limpa
   } catch (e) {}
   return SEMENTE.map(function (g) { return Object.assign({}, g); });
 }
@@ -69,12 +69,28 @@ export function salvarGab(g) {
 }
 
 export function removerGab(id) {
-  if (GABINETES.length <= 1) return false;
   var i = GABINETES.findIndex(function (x) { return x.id === id; });
   if (i < 0) return false;
   GABINETES.splice(i, 1);
   reindexar(); gravar();
   return true;
+}
+
+// tira da biblioteca todos os gabinetes fora de "manter" (os usados no projeto aberto); devolve quantos saíram
+export function limparGabs(manter) {
+  var antes = GABINETES.length, fica = GABINETES.filter(function (g) { return manter[g.id]; });
+  GABINETES.length = 0;
+  fica.forEach(function (g) { GABINETES.push(g); });
+  reindexar(); gravar();
+  return antes - fica.length;
+}
+
+// devolve os gabinetes de fábrica que faltam (os que você editou ficam como estão); devolve quantos voltaram
+export function restaurarFabrica() {
+  var n = 0;
+  SEMENTE.forEach(function (g) { if (!GAB[g.id]) { GABINETES.push(Object.assign({}, g)); n++; } });
+  if (n) { reindexar(); gravar(); }
+  return n;
 }
 
 export function novoIdGab() { return "u" + Date.now().toString(36); }
@@ -93,7 +109,8 @@ export function garantirGabs(lista) {
 // Gabinete padrão por tipo de painel (projetos antigos e painéis sem gabinete escolhido).
 export const CAB_PADRAO = { imag: "6", up: "6", c: "5" };
 
-export function gabPadrao() { return GAB["5"] || GABINETES[0]; }
+// com a biblioteca vazia, um painel sem gabinete conhecido usa a semente (e o projeto passa a guardá-la)
+export function gabPadrao() { return GAB["5"] || GABINETES[0] || SEMENTE[4]; }
 export function cabDe(t) { return GAB[t.cab] || GAB[CAB_PADRAO[t.kind]] || gabPadrao(); }
 export function cabNome(t) { return cabDe(t).nome; }
 
