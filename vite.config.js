@@ -21,4 +21,4 @@ function cssNoHtml() {
   };
 }
 
-export default defineConfig({ base: "./", plugins: [cssNoHtml()], build: { outDir: "dist", assetsInlineLimit: 0 } });
+export default defineConfig({ base: "./", plugins: [cssNoHtml()], build: { outDir: "dist", assetsInlineLimit: 0, chunkSizeWarningLimit: 600 /* o pedaço da Vista 3D (three.js) é grande, mas só baixa quando abre */ } });

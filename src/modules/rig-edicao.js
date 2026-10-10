@@ -197,6 +197,11 @@ export function init() {
   dragM = null;
   magnetM = true;
   document.getElementById("m-edit").addEventListener("click", function () { setEditM(!editM); });
+  // a Vista 3D só é baixada quando alguém abre (three.js fica num pedaço à parte)
+  document.getElementById("m-3d").addEventListener("click", function () {
+    if (editM) setEditM(false);
+    import("./vista3d.js").then(function (m) { m.abrir3D(); }).catch(function () { pmsg("Não consegui carregar a Vista 3D. Confira a conexão e tente de novo."); });
+  });
   svgM.addEventListener("pointermove", function (e) {
       if (pintar) { var cel = celulaEm(pintar.t, e); if (cel) aplicarRecorte(pintar.t, cel, pintar.tirar); return; }
       if (!dragM) return;

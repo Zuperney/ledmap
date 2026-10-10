@@ -93,7 +93,7 @@ function chaveCor(t) { return t.pn && painelById(t.pn) ? "a:" + t.pn : "p:" + t.
 export function corDe(t) {
   var k = chaveCor(t);
   if (cfg.cores[k]) return cfg.cores[k];
-  var n = parseInt(k.slice(3), 10) || 0, base = k.charAt(0) === "a" ? 7 : 0;
+  var n = parseInt(k.replace(/^\D+/, ""), 10) || 0, base = k.charAt(0) === "a" ? 7 : 0;
   return PALETA[(n - 1 + base + PALETA.length * 4) % PALETA.length];
 }
 
@@ -252,6 +252,22 @@ function desenhar(cv, k) {
   us.forEach(function (u) { sobreGrupo(ctx, u, b.x, b.y); });
   if (cfg.preset === "cabos") rotasDeCabo(ctx, b.x, b.y, noEscopo);
   return b;
+}
+
+// imagem da Montagem (entrada) com um test card, para a Vista 3D colar nos painéis — como o UV map do disguise.
+// Não muda a configuração da aba. rects = recorte de cada painel nessa imagem, em px da imagem.
+export function imagemMontagem(preset, maxLado) {
+  var salvo = { modo: cfg.modo, escopo: cfg.escopo, preset: cfg.preset };
+  cfg.modo = "mont"; cfg.escopo = "";
+  if (preset && PRESETS[preset]) cfg.preset = preset;
+  try {
+    var items = itensDoEscopo();
+    if (!items.length) return null;
+    var b = caixa(items), k = Math.min(1, (maxLado || 4096) / Math.max(b.w, b.h)), cv = document.createElement("canvas"), rects = {};
+    desenhar(cv, k);
+    items.forEach(function (it) { rects[it.t.id] = { x: (it.x - b.x) * k, y: (it.y - b.y) * k, w: it.w * k, h: it.h * k }; });
+    return { canvas: cv, rects: rects };
+  } finally { cfg.modo = salvo.modo; cfg.escopo = salvo.escopo; cfg.preset = salvo.preset; }
 }
 
 function h(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
