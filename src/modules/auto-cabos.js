@@ -209,3 +209,260 @@ export function ordemPortas(portas, esquema) {
     return r || (d2 === "lr" ? a.minX - b.minX : b.minX - a.minX);
   });
 }
+
+// ======================================================================================
+// Planejador do modo Contínuo (formas livres: recortes, anéis, L, T, escadas, painéis encostados)
+// Para cada região de gabinetes ligados testa vários percursos (serpentinas nas 8 combinações de
+// sentido e canto, e caminhadas que contornam vãos), corta cada um por área e fica com o melhor:
+// menos portas → menos portas pequenas → menos saltos → menos trocas de painel → mais equilíbrio.
+// opts: { routing, corner } = preferência do usuário (vence empates); salto = vão máximo (m) que um
+//       cabo pode atravessar na mesma linha/coluna (0 = só gabinetes que se encostam).
+// ======================================================================================
+
+var EPS = 0.02;
+
+function chaveXY(x, y) { return Math.round(x * 100) + "|" + Math.round(y * 100); }
+
+// vizinhos de cada célula: os que encostam (lado com lado) e, se salto > 0, os alinhados depois de um vão curto
+function grafo(cells, salto) {
+  var mapa = {}, viz = cells.map(function () { return []; });
+  cells.forEach(function (c, i) { mapa[chaveXY(c.x, c.y)] = i; });
+  cells.forEach(function (c, i) {
+    [[c.w, 0], [-c.w, 0], [0, c.h], [0, -c.h]].forEach(function (d) {
+      var j = mapa[chaveXY(c.x + d[0], c.y + d[1])];
+      if (j !== undefined) viz[i].push({ j: j, salto: 0 });
+    });
+  });
+  if (salto > EPS) {
+    var porLinha = {}, porColuna = {};
+    cells.forEach(function (c, i) {
+      (porLinha[Math.round(c.y * 100)] = porLinha[Math.round(c.y * 100)] || []).push(i);
+      (porColuna[Math.round(c.x * 100)] = porColuna[Math.round(c.x * 100)] || []).push(i);
+    });
+    var liga = function (lista, eixo, tam) {
+      lista.sort(function (a, b) { return cells[a][eixo] - cells[b][eixo]; });
+      for (var k = 1; k < lista.length; k++) {
+        var a = cells[lista[k - 1]], b = cells[lista[k]], vao = b[eixo] - (a[eixo] + a[tam]);
+        if (vao > EPS && vao <= salto + EPS) { viz[lista[k - 1]].push({ j: lista[k], salto: vao }); viz[lista[k]].push({ j: lista[k - 1], salto: vao }); }
+      }
+    };
+    Object.keys(porLinha).forEach(function (k) { liga(porLinha[k], "x", "w"); });
+    Object.keys(porColuna).forEach(function (k) { liga(porColuna[k], "y", "h"); });
+  }
+  return viz;
+}
+
+function componentes(cells, viz) {
+  var comp = cells.map(function () { return -1; }), out = [];
+  cells.forEach(function (_, s) {
+    if (comp[s] >= 0) return;
+    var fila = [s], lista = [];
+    comp[s] = out.length;
+    while (fila.length) {
+      var i = fila.pop(); lista.push(i);
+      viz[i].forEach(function (v) { if (comp[v.j] < 0) { comp[v.j] = out.length; fila.push(v.j); } });
+    }
+    out.push(lista);
+  });
+  return out;
+}
+
+// caminhada que prefere o vizinho com menos saídas livres (contorna vãos e não deixa ilhas para trás),
+// desempatando por seguir reto e depois pelo eixo pedido. Quando trava, recomeça do canto livre mais próximo.
+function caminhada(idx, cells, viz, inicio, eixoPref) {
+  var livre = {}, n = 0;
+  idx.forEach(function (i) { livre[i] = true; n++; });
+  var saidas = function (i) { return viz[i].reduce(function (a, v) { return a + (livre[v.j] && !v.salto ? 1 : 0); }, 0); };
+  var path = [], cur = inicio, dir = null;
+  while (n > 0) {
+    if (cur === null) {
+      var ult = path.length ? cells[path[path.length - 1]] : null, m = null;
+      idx.forEach(function (i) {
+        if (!livre[i]) return;
+        var s = saidas(i), d = ult ? Math.abs(cells[i].x - ult.x) + Math.abs(cells[i].y - ult.y) : 0;
+        if (!m || s < m.s || (s === m.s && d < m.d)) m = { i: i, s: s, d: d };
+      });
+      cur = m.i; dir = null;
+    }
+    livre[cur] = false; n--; path.push(cur);
+    var c = cells[cur], cand = viz[cur].filter(function (v) { return livre[v.j]; });
+    if (!cand.length) { cur = null; continue; }
+    cand.sort(function (A, B) {
+      if (!!A.salto !== !!B.salto) return A.salto ? 1 : -1;
+      var sa = saidas(A.j), sb = saidas(B.j);
+      if (sa !== sb) return sa - sb;
+      var da = Math.sign(cells[A.j].x - c.x) + "," + Math.sign(cells[A.j].y - c.y), db = Math.sign(cells[B.j].x - c.x) + "," + Math.sign(cells[B.j].y - c.y);
+      if (dir && (da === dir) !== (db === dir)) return da === dir ? -1 : 1;
+      var ea = cells[A.j][eixoPref] !== c[eixoPref] ? 1 : 0, eb = cells[B.j][eixoPref] !== c[eixoPref] ? 1 : 0;
+      return ea - eb;
+    });
+    var prox = cand[0].j;
+    dir = Math.sign(cells[prox].x - c.x) + "," + Math.sign(cells[prox].y - c.y);
+    cur = prox;
+  }
+  return path;
+}
+
+// quebra um percurso onde dois gabinetes seguidos não são vizinhos (nem por salto permitido)
+function trechosPorGrafo(path, viz) {
+  var out = [], cur = [];
+  path.forEach(function (i) {
+    if (cur.length && !viz[cur[cur.length - 1]].some(function (v) { return v.j === i; })) { out.push(cur); cur = []; }
+    cur.push(i);
+  });
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+export function limitePequena(cap) { return Math.max(2, Math.min(4, Math.floor(cap / 4))); }
+
+function avaliar(chunks, cap, cells, viz) {
+  var pequenas = 0, saltos = 0, trocas = 0, tam = chunks.map(function (c) { return c.length; });
+  var media = tam.reduce(function (a, b) { return a + b; }, 0) / Math.max(1, chunks.length), desvio = 0;
+  chunks.forEach(function (ch) {
+    if (ch.length < limitePequena(cap)) pequenas++;
+    for (var k = 1; k < ch.length; k++) {
+      var v = viz[ch[k - 1]].filter(function (x) { return x.j === ch[k]; })[0];
+      if (v && v.salto) saltos++;
+      if (cells[ch[k]].t && cells[ch[k - 1]].t && cells[ch[k]].t.id !== cells[ch[k - 1]].t.id) trocas++;
+    }
+    desvio += Math.abs(ch.length - media);
+  });
+  return [chunks.length, pequenas, saltos, trocas, desvio];
+}
+
+function antes(a, b) { for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i]; return false; }
+
+// caminho que passa por todas as células do conjunto, uma vez cada (busca em profundidade com Warnsdorff
+// e orçamento de passos). null se não achar: o chamador usa a caminhada, que aceita recomeços.
+function caminhoCompleto(idx, cells, viz) {
+  var dentro = {}, n = idx.length;
+  idx.forEach(function (i) { dentro[i] = true; });
+  var deg = function (i, usado) { return viz[i].reduce(function (a, v) { return a + (dentro[v.j] && !v.salto && !usado[v.j] ? 1 : 0); }, 0); };
+  var inicios = idx.slice().sort(function (a, b) { return deg(a, {}) - deg(b, {}); }).slice(0, 4), orc;
+  function dfs(cur, usado, path) {
+    if (path.length === n) return path;
+    if (--orc < 0) return null;
+    var cand = viz[cur].filter(function (v) { return dentro[v.j] && !v.salto && !usado[v.j]; }).map(function (v) { return v.j; });
+    cand.sort(function (a, b) { return deg(a, usado) - deg(b, usado); });
+    for (var k = 0; k < cand.length; k++) {
+      usado[cand[k]] = true; path.push(cand[k]);
+      var r = dfs(cand[k], usado, path);
+      if (r) return r;
+      usado[cand[k]] = false; path.pop();
+    }
+    return null;
+  }
+  for (var s = 0; s < inicios.length; s++) {
+    orc = 4000;
+    var u = {}; u[inicios[s]] = true;
+    var r = dfs(inicios[s], u, [inicios[s]]);
+    if (r) return r;
+  }
+  return null;
+}
+
+// divide a região em faixas de colunas (eixo "x") ou de linhas ("y") cujo retângulo cabe na porta.
+// equil = faixas de tamanhos parecidos; senão, cada faixa pega o máximo que cabe.
+function faixasLivres(idx, cells, viz, lim, oc, eixo, equil) {
+  var lanes = {}, keys;
+  idx.forEach(function (i) { var k = Math.round(cells[i][eixo] * 100); (lanes[k] = lanes[k] || []).push(i); });
+  keys = Object.keys(lanes).map(Number).sort(function (a, b) { return a - b; });
+  var cabe = function (a, b) { var cs = []; for (var k = a; k <= b; k++) lanes[keys[k]].forEach(function (i) { cs.push(cells[i]); }); return areaRet(cs) <= lim; };
+  var cortes = [], a = 0;
+  while (a < keys.length) { var b = a; while (b + 1 < keys.length && cabe(a, b + 1)) b++; cortes.push([a, b]); a = b + 1; }
+  if (equil && cortes.length > 1) {
+    // mesmo número de faixas, larguras repartidas por igual, se todas couberem
+    var n = cortes.length, base = Math.floor(keys.length / n), extra = keys.length - base * n, eq = [], p = 0;
+    for (var f = 0; f < n; f++) { var w = base + (f < extra ? 1 : 0); eq.push([p, p + w - 1]); p += w; }
+    if (eq.every(function (c) { return cabe(c[0], c[1]); })) cortes = eq;
+  }
+  var chunks = [];
+  cortes.forEach(function (c) {
+    var faixa = [];
+    for (var k = c[0]; k <= c[1]; k++) faixa = faixa.concat(lanes[keys[k]]);
+    // dentro da faixa, cada pedaço ligado vira uma porta (ou mais, se o caminho precisar recomeçar)
+    var dentro = {}; faixa.forEach(function (i) { dentro[i] = true; });
+    var sub = faixa.map(function (i) { return cells[i]; }), vizF = faixa.map(function (i) { return viz[i].filter(function (v) { return dentro[v.j]; }); });
+    var mapa = {}; faixa.forEach(function (i, k) { mapa[i] = k; });
+    var vizL = vizF.map(function (l) { return l.map(function (v) { return { j: mapa[v.j], salto: v.salto }; }); });
+    componentes(sub, vizL).forEach(function (comp) {
+      var glob = comp.map(function (k) { return faixa[k]; });
+      var path = caminhoCompleto(glob, cells, viz) || caminhada(glob, cells, viz, glob[0], eixo === "x" ? "y" : "x");
+      trechosPorGrafo(path, viz).forEach(function (tr) {
+        var volta = new Map(tr.map(function (i) { return [cells[i], i]; }));
+        cortarTrecho(tr.map(function (i) { return cells[i]; }), lim, oc).forEach(function (ch) { chunks.push(ch.map(function (cc) { return volta.get(cc); })); });
+      });
+    });
+  });
+  return chunks;
+}
+
+// com overclock o corte pode passar um gabinete do limite; mas um plano sem overclock às vezes sai
+// melhor (cortes mais limpos). Testa os dois e fica com o de menos portas; overclock nunca piora.
+export function planejar(cells, lim, oc, opts) {
+  if (!oc) return planejarCom(cells, lim, false, opts);
+  var a = planejarCom(cells, lim, true, opts), b = planejarCom(cells, lim, false, opts);
+  return b.length < a.length ? b : a;
+}
+
+function planejarCom(cells, lim, oc, opts) {
+  opts = opts || {};
+  if (!cells.length) return [];
+  var viz = grafo(cells, Number(opts.salto) || 0), cap = Math.max(1, Math.floor(lim / (cells[0].aw * cells[0].ah)));
+  var resultado = [];
+  componentes(cells, viz).forEach(function (idx) {
+    var sub = idx.map(function (i) { return cells[i]; }), pos = new Map();
+    sub.forEach(function (c, k) { pos.set(c, idx[k]); });
+    var candidatos = [];
+    // 1) serpentinas: a preferência do usuário primeiro (vence empate), depois as outras 7
+    var c0 = opts.corner || "bl", r0 = opts.routing || "updown";
+    [r0, r0 === "zigzag" ? "updown" : "zigzag"].forEach(function (ro) {
+      [c0].concat(["bl", "br", "tl", "tr"].filter(function (k) { return k !== c0; })).forEach(function (co) {
+        candidatos.push(snakePorTela(sub, ro, co).map(function (c) { return pos.get(c); }));
+      });
+    });
+    // 2) caminhadas a partir dos cantos da região e das pontas (células com 1 vizinho)
+    var inicios = {}, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    idx.forEach(function (i) { var c = cells[i]; x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y); });
+    [[x0, y1], [x1, y1], [x0, y0], [x1, y0]].forEach(function (p) {
+      var m = null;
+      idx.forEach(function (i) { var d = Math.abs(cells[i].x - p[0]) + Math.abs(cells[i].y - p[1]); if (!m || d < m.d) m = { i: i, d: d }; });
+      inicios[m.i] = 1;
+    });
+    idx.filter(function (i) { return viz[i].filter(function (v) { return !v.salto; }).length <= 1; }).slice(0, 6).forEach(function (i) { inicios[i] = 1; });
+    Object.keys(inicios).forEach(function (s) { ["x", "y"].forEach(function (e) { candidatos.push(caminhada(idx, cells, viz, Number(s), e)); }); });
+    var best = null;
+    var considerar = function (chunks) {
+      var nota = avaliar(chunks, cap, cells, viz);
+      if (!best || antes(nota, best.nota)) best = { nota: nota, chunks: chunks };
+    };
+    var cortarCaminho = function (path) {
+      var chunks = [];
+      trechosPorGrafo(path, viz).forEach(function (tr) {
+        cortarTrecho(tr.map(function (i) { return cells[i]; }), lim, oc).forEach(function (ch) { chunks.push(ch.map(function (c) { return pos.get(c); })); });
+      });
+      return chunks;
+    };
+    candidatos.forEach(function (path) {
+      considerar(cortarCaminho(path));
+      // percurso fechado (a ponta encosta no começo): o ponto de partida decide onde caem os cortes; testa vários
+      var L = path.length;
+      if (L > 3 && viz[path[L - 1]].some(function (v) { return v.j === path[0] && !v.salto; })) {
+        var passo = Math.max(1, Math.floor(L / 48));
+        for (var s = passo; s < L; s += passo) considerar(cortarCaminho(path.slice(s).concat(path.slice(0, s))));
+      }
+    });
+    // 3) faixas de colunas (ou linhas) que cabem na porta, com um caminho contínuo dentro de cada uma
+    ["x", "y"].forEach(function (eixo) { [false, true].forEach(function (equil) { considerar(faixasLivres(idx, cells, viz, lim, oc, eixo, equil)); }); });
+    best.chunks.forEach(function (ch) { resultado.push(ch.map(function (i) { return cells[i]; })); });
+  });
+  return resultado;
+}
+
+// diagnóstico de uma rota pronta: saltos (gabinetes seguidos que não se encostam) e se é pequena
+export function diagnostico(cellsRota, cap) {
+  var saltos = 0;
+  for (var k = 1; k < cellsRota.length; k++) if (!encostam(cellsRota[k - 1], cellsRota[k], EPS)) saltos++;
+  return { saltos: saltos, pequena: cellsRota.length > 0 && cellsRota.length < limitePequena(cap) };
+}

@@ -35,7 +35,7 @@ export function buildProject() {
         distribuicao: autoState(),
         overclock: oc,
         proximaPorta: nextP,
-        portas: ports.map(function (pt) { return { id: pt.id, n: pt.n, nome: pt.name }; }),
+        portas: ports.map(function (pt) { return { id: pt.id, n: pt.n, nome: pt.name, travada: !!pt.fixa }; }),
         rotas: routes
       }
     };
@@ -108,7 +108,7 @@ export function applyProject(o) {
     (Array.isArray(cab.portas) ? cab.portas : []).forEach(function (pt) {
       if (pt && typeof pt.id === "string" && /^p\d{1,6}$/.test(pt.id) && !pseen[pt.id] && typeof pt.nome === "string" && Number(pt.n) >= 1) {
         pseen[pt.id] = 1;
-        np.push({ id: pt.id, n: Math.floor(Number(pt.n)), name: pt.nome.slice(0, 24) });
+        np.push({ id: pt.id, n: Math.floor(Number(pt.n)), name: pt.nome.slice(0, 24), fixa: !!pt.travada });
       }
     });
     var nr = {}, used = {}, nCab = 0;

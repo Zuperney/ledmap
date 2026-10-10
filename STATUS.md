@@ -53,6 +53,16 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 - Projeto: pico, típico (informativo), gerador mínimo = pico × 1,25 e ocupação típica.
 - CSV dos cabos; configuração salva por projeto e incluída no JSON.
 
+## Regras de cabeamento (testadas com `npm run testar`)
+1. Carga da porta = área do retângulo que envolve os gabinetes dela, no canvas do processador.
+2. Ordem e vizinhança seguem a montagem (Rig): um cabo só passa para um gabinete que encosta lado com lado no anterior. Opção "Cabo pode pular vão de até (m)" libera saltos curtos na mesma linha/coluna (padrão 0).
+3. Cada painel é um reino: entre painéis o cabo só passa onde eles se tocam.
+4. O Contínuo testa, por região ligada: as 8 serpentinas (a preferência do usuário vence empate), caminhadas que contornam vãos (com vários pontos de partida em percursos fechados) e faixas de colunas/linhas que cabem na porta com um caminho contínuo dentro de cada uma. Fica com o plano de menos portas → menos portas pequenas → menos saltos → menos trocas de painel → mais equilíbrio. Com overclock, compara com o plano sem overclock e nunca piora.
+5. Limites que nenhum algoritmo vence: área (retângulo) e a "regra do xadrez" — um cabo entre vizinhos alterna as cores do tabuleiro, então formas com muito mais gabinetes de uma cor (triângulos, escadas) exigem portas extras e às vezes uma porta pequena. Nesses casos o app avisa e a decisão final é do técnico.
+6. Ferramentas para decidir: travar porta (a distribuição não mexe nela), distribuir só um painel, juntar portas (só se couber no limite, na ordem em que as pontas se encostam), avisos de porta com poucos gabinetes e de salto de vão.
+
+Resultado na bancada (antes → agora): anel 10 → 3 portas, moldura 19 → 4, seu layout 20 (14 pequenas) → 6 (mínimo 5), tela com vão central 58 → 25 (mínimo), retângulos iguais ou melhores; até 1.200 gabinetes em ~20 ms.
+
 ## Testado
 - Build e fluxo no Chromium em tela de celular (sinal, distribuição automática, seletores, PWA, Elétrica: totais, troca de tensão/margem, CSV, persistência, JSON ida e volta). Sem erros de JavaScript.
 
