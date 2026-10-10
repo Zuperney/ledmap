@@ -3,7 +3,7 @@ import { fitM } from "./rig.js";
 import { clearMulti } from "./canvas-edicao.js";
 import { pmsg, tById } from "./exportar.js";
 import { selected, EXTRAS, EXTRA_MAX, cleanExtra } from "./core.js";
-import { nextExtraId, freeM, freeC, commitAndReload } from "./telas.js";
+import { duplicarPainel } from "./telas.js";
 import { curTab } from "./abas.js";
 
 let histUndo, histRedo, histCur, histT, histBusy, HIST_MAX;
@@ -42,20 +42,7 @@ function histGo(dir) {
     histBusy = false; histBtns();
   }
 
-export function duplicateSel() {
-    var t = selected && tById[selected];
-    if (!t) return;
-    if (EXTRAS.length >= EXTRA_MAX) { pmsg("Limite de " + EXTRA_MAX + " painéis."); return; }
-    var id = nextExtraId();
-    if (Number(id) > 999) { pmsg("Numeração esgotada."); return; }
-    var fm = freeM(t.w, t.h) || { x: t.mx + t.w, y: t.my };
-    var tmp = { w: t.w, h: t.h, kind: t.kind, mx: fm.x, my: fm.y };
-    var fc = freeC(tmp);
-    var c = cleanExtra({ id: id, name: (t.name + " cópia").slice(0, 30), kind: t.kind, cab: t.cab, w: t.w, h: t.h, mx: fm.x, my: fm.y, cx: fc.x, cy: fc.y, grp: t.grp || "" });
-    if (!c) { pmsg("Não foi possível duplicar."); return; }
-    EXTRAS.push(c);
-    if (!commitAndReload(curTab + ":" + id)) { EXTRAS.pop(); pmsg("Não consegui salvar neste navegador."); }
-  }
+export function duplicateSel() { if (selected && tById[selected]) duplicarPainel(selected); }
 
 export function init() {
   histUndo = [];

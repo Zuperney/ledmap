@@ -1,5 +1,5 @@
 import { GABINETES, GAB, gabPadrao } from "./gabinetes.js";
-import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS } from "./core.js";
+import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS, bbox, membrosPainel, novoPainel, painelById, pnome, paineis, set_paineis } from "./core.js";
 import { ksave, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
@@ -153,6 +153,38 @@ function salvarEdicao() {
     if (mudouGrade) Object.keys(routes).forEach(function (pid) { var n0 = routes[pid].length; routes[pid] = routes[pid].filter(function (k) { return k.split(":")[0] !== c.id; }); tirou += n0 - routes[pid].length; });
     try { localStorage.setItem("ledmap-msg", tirou ? "Painel " + c.id + " atualizado. As rotas de cabo dele foram limpas: refaça o cabeamento." : "Painel " + c.id + " atualizado."); } catch (e) {}
     if (!commitAndReload(curTab + ":" + c.id)) { EXTRAS[i] = antes; try { localStorage.removeItem("ledmap-msg"); } catch (e) {} aErr.textContent = "Não consegui salvar neste navegador."; }
+  }
+
+// duplica o painel; se ele estiver num grupo, duplica o grupo inteiro (mesma arrumação, grupo novo "… cópia").
+// A cópia vai para o primeiro espaço livre no Rig e na Screen; Screen, gabinete e tamanho são os mesmos.
+export function duplicarPainel(id) {
+    var t = tiles.filter(function (x) { return x.id === id; })[0];
+    if (!t) return;
+    var orig = t.pn && painelById(t.pn), mem = orig ? membrosPainel(t.pn) : [t];
+    if (EXTRAS.length + mem.length > EXTRA_MAX) { pmsg("Limite de " + EXTRA_MAX + " painéis."); return; }
+    var base = Number(nextExtraId());
+    if (base + mem.length - 1 > 999) { pmsg("Numeração esgotada."); return; }
+    var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    mem.forEach(function (m) { x0 = Math.min(x0, m.mx); x1 = Math.max(x1, m.mx + m.w); y0 = Math.min(y0, m.my); y1 = Math.max(y1, m.my + m.h); });
+    var fm = freeM(x1 - x0, y1 - y0);
+    if (!fm) { pmsg("Sem espaço livre na montagem para a cópia."); return; }
+    var cb = bbox(mem), fc = freeSpot(cb.w, cb.h, tiles.concat(BASE)) || { x: cb.x, y: cb.y };
+    var dx = fm.x - x0, dy = fm.y - y0, dcx = fc.x - cb.x, dcy = fc.y - cb.y;
+    var antesEx = EXTRAS.length, antesT = tiles.length, antesP = paineis.slice(), novoG = null;
+    if (orig) { novoG = novoPainel(); novoG.name = (pnome(orig) + " cópia").slice(0, 40); }
+    var falhou = mem.some(function (m, i) {
+      var nid = String(base + i), mx = Math.round((m.mx + dx) * 100) / 100, my = Math.round((m.my + dy) * 100) / 100;
+      var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "" });
+      if (!c) return true;
+      EXTRAS.push(c);
+      // entra também em tiles para o save() gravar a posição exata e o grupo antes de recarregar
+      tiles.push(Object.assign({}, c, { mx: mx, my: my, pn: novoG ? novoG.id : "" }));
+      return false;
+    });
+    var desfaz = function (msg) { EXTRAS.length = antesEx; tiles.length = antesT; set_paineis(antesP); pmsg(msg); };
+    if (falhou) { desfaz("Não foi possível duplicar."); return; }
+    try { localStorage.setItem("ledmap-msg", orig ? pnome(orig) + " duplicado: " + mem.length + " painéis em " + pnome(novoG) + "." : "Painel " + t.id + " duplicado."); } catch (e) {}
+    if (!commitAndReload(curTab + ":" + base)) { try { localStorage.removeItem("ledmap-msg"); } catch (e) {} desfaz("Não consegui salvar neste navegador."); }
   }
 
 export { KEY_PEND, KEY_REOPEN };

@@ -6,7 +6,7 @@ import { tById, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep } from "./cabeamento.js";
-import { excluirPaineis, openAdd } from "./telas.js";
+import { excluirPaineis, openAdd, duplicarPainel } from "./telas.js";
 
 let editM, dragM, magnetM, btnMagM;
 
@@ -68,6 +68,8 @@ function syncGrupo() {
     var b = document.getElementById("m-grp");
     if (!b) return;
     var del = document.getElementById("m-del");
+    var dup = document.getElementById("m-dup"), ts = selected && tById[selected];
+    if (dup) { dup.disabled = !ts; dup.textContent = ts && ts.pn ? "Duplicar grupo" : "Duplicar"; }
     if (del) { var n = selecaoM().length; del.disabled = !n; del.title = n > 1 ? "Excluir " + n + " painéis" : "Excluir o painel selecionado"; }
     var t = selected && tById[selected];
     b.setAttribute("aria-pressed", String(modoSel));
@@ -191,6 +193,7 @@ export function init() {
       });
     });
   document.getElementById("m-grp").addEventListener("click", clicarGrupo);
+  document.getElementById("m-dup").addEventListener("click", function () { if (selected && tById[selected]) duplicarPainel(selected); });
   document.getElementById("m-prop").addEventListener("click", function () { if (selected && tById[selected]) openAdd(selected); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modoSel) sairModoSel(); });
   syncGrupo();
