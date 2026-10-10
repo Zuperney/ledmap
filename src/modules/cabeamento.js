@@ -1,9 +1,9 @@
-import { res, tiles, groups, nf, bbox, el, text } from "./core.js";
+import { res, tiles, groups, nf, bbox, el, text, existe } from "./core.js";
 import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { makeViewer } from "./visor.js";
-import { snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas, areaRet, cortarPorArea, cabeNaPorta } from "./auto-cabos.js";
+import { snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas, areaRet, cortarPorArea, cabeNaPorta, planejar, diagnostico } from "./auto-cabos.js";
 
 function m4(v) { return Math.round(v * 10000) / 10000; }
 import { SINAL_PADRAO, MAX_PORTAS_PADRAO, limpaSinal, limitePx, limpaMax } from "./sinal.js";
@@ -61,17 +61,22 @@ function limpaAuto(c) {
       corner: ["bl", "br", "tl", "tr"].indexOf(c.corner) >= 0 ? c.corner : "bl",
       routing: c.routing === "zigzag" ? "zigzag" : "updown",
       estrategia: ["continuo", "linha", "coluna", "bloco"].indexOf(c.estrategia) >= 0 ? c.estrategia : "continuo",
-      ordem: ["row", "row-serp", "col", "col-serp"].indexOf(c.ordem) >= 0 ? c.ordem : "row"
+      ordem: ["row", "row-serp", "col", "col-serp"].indexOf(c.ordem) >= 0 ? c.ordem : "row",
+      // vão máximo (m) que um cabo pode atravessar na mesma linha ou coluna; 0 = só gabinetes que se encostam
+      salto: (function (v) { v = Number(v); return isFinite(v) && v > 0 ? Math.min(3, Math.round(v * 20) / 20) : 0; })(c.salto)
     };
   }
 
 export function setAuto(c) { autoCfg = limpaAuto(c); ksave(); }
 
-// Distribui os gabinetes das telas do escopo ("*" = todas, "_" = sem Screen, ou id da Screen) em portas automáticas.
+// Distribui os gabinetes do escopo ("*" = todos, "_" = sem Screen, "t:<id>" = um painel, ou id da Screen) em portas automáticas.
+// Portas travadas ficam como estão: os gabinetes delas não entram na distribuição.
 export function distribuirAuto(escopo) {
-    var alvo = {}, cels = [];
-    tiles.forEach(function (t) { if (escopo === "*" || (escopo === "_" ? !t.grp : t.grp === escopo)) alvo[t.id] = 1; });
+    var alvo = {}, cels = [], travado = {};
+    tiles.forEach(function (t) { if (escopo === "*" || (escopo === "_" ? !t.grp : escopo.indexOf("t:") === 0 ? "t:" + t.id === escopo : t.grp === escopo)) alvo[t.id] = 1; });
+    ports.forEach(function (p) { if (p.fixa) (routes[p.id] || []).forEach(function (k) { travado[k] = 1; }); });
     Object.keys(cellEl).forEach(function (k) {
+      if (travado[k]) return;
       var c = cellEl[k], q = res(c.t);
       // x, y, w, h = montagem (m, y de cima para baixo): ordem e vizinhança do cabo; ax.. = canvas (px): área da porta
       if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(c.t.mx + c.c * q.mw), y: m4(-(c.t.my + c.t.h) + c.r * q.mh), w: q.mw, h: q.mh, ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch });
@@ -89,7 +94,7 @@ export function distribuirAuto(escopo) {
       var budget = Math.max(1, oc ? Math.ceil(lim / px) : Math.floor(lim / px));
       var lista = [];
       if (autoCfg.estrategia === "continuo") {
-        lista = cortarPorArea(snakePorTela(g, autoCfg.routing, autoCfg.corner), lim, oc);
+        lista = planejar(g, lim, oc, { routing: autoCfg.routing, corner: autoCfg.corner, salto: autoCfg.salto });
       } else {
         var vistos = {}, telasG = [];
         g.forEach(function (c) {
@@ -104,7 +109,7 @@ export function distribuirAuto(escopo) {
           var pb = portasPorBloco(cs, q0.mw, q0.mh, budget, autoCfg.estrategia, autoCfg.routing, autoCfg.corner);
           // o bloco é montado na grade da montagem; se no canvas o retângulo passar do limite, volta para o contínuo
           if (pb && !pb.every(function (p) { return cabeNaPorta(p, lim, oc); })) pb = null;
-          lista = lista.concat(pb || cortarPorArea(snakePorTela(cs, autoCfg.routing, autoCfg.corner), lim, oc));
+          lista = lista.concat(pb || planejar(cs, lim, oc, { routing: autoCfg.routing, corner: autoCfg.corner, salto: autoCfg.salto }));
         });
       }
       lista.forEach(function (ch) { (porScreen[scr] = porScreen[scr] || []).push(ch); });
@@ -116,7 +121,7 @@ export function distribuirAuto(escopo) {
       ordemPortas(porScreen[g], esquemaDe(eixo, serp, autoCfg.corner)).forEach(function (cs) { final.push({ grp: g, cells: cs }); });
     });
     // tira os gabinetes do escopo das rotas atuais e descarta portas que ficaram vazias
-    ports.forEach(function (p) { routes[p.id] = (routes[p.id] || []).filter(function (k) { return !alvo[cellEl[k] && cellEl[k].t.id]; }); });
+    ports.forEach(function (p) { if (!p.fixa) routes[p.id] = (routes[p.id] || []).filter(function (k) { return !alvo[cellEl[k] && cellEl[k].t.id]; }); });
     ports = ports.filter(function (p) { if (routes[p.id].length) return true; delete routes[p.id]; return false; });
     if (!ports.length) nextP = 1;
     final.forEach(function (f) {
@@ -127,8 +132,9 @@ export function distribuirAuto(escopo) {
     });
     setActivePort(final.length ? "p" + (nextP - final.length) : (ports.length ? ports[0].id : null));
     ksave();
-    var estouro = resumoScreens(groups).filter(function (x) { return x.usadas > maxPortas; });
-    return { portas: final.length, gabinetes: cels.length, aviso: estouro.length ? "Passou de " + maxPortas + " portas em: " + estouro.map(function (x) { return x.nome + " (" + x.usadas + ")"; }).join(", ") + "." : "" };
+    var estouro = resumoScreens(groups).filter(function (x) { return x.usadas > maxPortas; }), peq = 0, sal = 0;
+    final.forEach(function (f) { var d = diagRota(f.cells.map(function (c) { return c.key; })); if (d.pequena) peq++; sal += d.saltos; });
+    return { portas: final.length, gabinetes: cels.length, pequenas: peq, saltos: sal, travadas: ports.filter(function (p) { return p.fixa; }).length, aviso: estouro.length ? "Passou de " + maxPortas + " portas em: " + estouro.map(function (x) { return x.nome + " (" + x.usadas + ")"; }).join(", ") + "." : "" };
   }
 
 export function sinalState() { return { sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas }; }
@@ -163,6 +169,42 @@ export function owners() {
 function cellRet(k) { var c = cellEl[k], q = res(c.t); return { ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch }; }
 function routeLoad(route) { return areaRet(route.map(cellRet)); }
 
+// posição do gabinete na montagem (m, y de cima para baixo) e no canvas: para diagnóstico e área
+function cellFis(k) {
+    var c = cellEl[k], t = c.t, q = res(t), a = cellRet(k);
+    return { x: t.mx + c.c * q.mw, y: -(t.my + t.h) + c.r * q.mh, w: q.mw, h: q.mh, ax: a.ax, ay: a.ay, aw: a.aw, ah: a.ah };
+  }
+
+// rota com poucos gabinetes ou com cabo atravessando vão (gabinetes seguidos que não se encostam na montagem)
+export function diagRota(route) {
+    if (!route.length) return { saltos: 0, pequena: false };
+    var t = cellEl[route[0]].t, cap = Math.max(1, Math.floor(limiteRota(route) / cabPx(t)));
+    return diagnostico(route.map(cellFis), cap);
+  }
+
+// junta outra porta na porta ativa, na ordem em que as pontas se encostam (se couber no limite)
+export function juntarPortas(outra) {
+    var a = routes[activePort] || [], b = routes[outra] || [];
+    if (!a.length || !b.length || outra === activePort) return "Escolha uma porta com gabinetes.";
+    var opcoes = [a.concat(b), a.concat(b.slice().reverse()), a.slice().reverse().concat(b), b.concat(a)];
+    var lim = limiteRota(a.concat(b));
+    if (!cabeNaPorta(opcoes[0].map(cellRet), lim, oc)) return "Não cabe: juntas passariam de " + nf(lim) + " px no retângulo.";
+    var nota = function (r) { return diagRota(r).saltos; };
+    var melhor = opcoes.sort(function (x, y) { return nota(x) - nota(y); })[0];
+    routes[activePort] = melhor;
+    ports = ports.filter(function (p) { return p.id !== outra; });
+    delete routes[outra];
+    ksave(); setActivePort(activePort);
+    return "";
+  }
+
+export function travarPorta() {
+    var p = portById(activePort);
+    if (!p) return;
+    p.fixa = !p.fixa;
+    ksave(); setActivePort(activePort);
+  }
+
 export function portState(route) {
     if (!route.length) return { cls: "", txt: "Vazia", load: 0 };
     var load = routeLoad(route), LIMIT = limiteRota(route);
@@ -189,7 +231,7 @@ function capsText() {
   }
 
 export function renderCabling() {
-    var bb = bbox(tiles);
+    var bb = tiles.length ? bbox(tiles) : { x: 0, y: 0, w: 2000, h: 1000 }; // projeto sem painel: vista vazia
     svgK.setAttribute("viewBox", [bb.x - 100, bb.y - 100, bb.w + 200, bb.h + 200].join(" "));
     tiles.forEach(function (t) { gK[t.id].setAttribute("transform", "translate(" + t.cx + " " + t.cy + ")"); });
     var o = owners(), assigned = 0;
@@ -242,8 +284,10 @@ function renderPorts() {
       var sw = document.createElement("span"); sw.className = "sw"; sw.style.background = pcolor(p);
       var nm = document.createElement("span"); nm.className = "nm"; nm.textContent = pname(p);
       var pill = document.createElement("span"); pill.className = "pill " + st.cls; pill.textContent = st.txt;
-      var mt = document.createElement("span"); mt.className = "mt";
-      mt.textContent = route.length + (route.length === 1 ? " gabinete" : " gabinetes") + " · " + nf(st.load) + " / " + nf(LIMIT) + " px";
+      var mt = document.createElement("span"), dg = diagRota(route); mt.className = "mt";
+      mt.textContent = (p.fixa ? "🔒 " : "") + route.length + (route.length === 1 ? " gabinete" : " gabinetes") + " · " + nf(st.load) + " / " + nf(LIMIT) + " px" +
+        (dg.saltos ? " · " + dg.saltos + (dg.saltos === 1 ? " salto" : " saltos") : "") + (dg.pequena ? " · poucos gabinetes" : "");
+      if (dg.saltos || dg.pequena) b.classList.add("aviso");
       var bar = document.createElement("span"); bar.className = "bar";
       var fill = document.createElement("i");
       fill.style.width = Math.min(100, st.load / LIMIT * 100) + "%";
@@ -259,15 +303,23 @@ export function setActivePort(id) {
     activePort = id;
     var p = portById(id);
     document.getElementById("k-detail").hidden = !p;
-    if (p) document.getElementById("k-name").value = p.name;
+    if (p) {
+      document.getElementById("k-name").value = p.name;
+      var lk = document.getElementById("k-lock");
+      lk.textContent = p.fixa ? "Destravar" : "Travar"; lk.setAttribute("aria-pressed", String(!!p.fixa));
+      var js = document.getElementById("k-join");
+      js.textContent = "";
+      ports.filter(function (o) { return o.id !== p.id && (routes[o.id] || []).length; }).forEach(function (o) { var op = document.createElement("option"); op.value = o.id; op.textContent = pname(o); js.appendChild(op); });
+      document.getElementById("k-join-go").disabled = !js.options.length;
+    }
     kmsg("");
     renderCabling();
   }
 
 function tryAppend(key) {
     var route = routes[activePort];
-    var load = routeLoad(route), add = cabPx(cellEl[key].t), LIMIT = Math.min(limiteRota(route.concat([key])), 1e12);
-    var ok = oc ? load < LIMIT : load + add <= LIMIT;
+    var load = routeLoad(route), LIMIT = Math.min(limiteRota(route.concat([key])), 1e12);
+    var ok = cabeNaPorta(route.concat([key]).map(cellRet), LIMIT, oc); // retângulo que envolve a rota com o gabinete novo
     if (!ok) {
       if (!oc && load < LIMIT) kmsg("Porta cheia: " + nf(load) + " de " + nf(LIMIT) + " px. Ative o overclock para encaixar mais um gabinete.");
       else if (oc) kmsg("Porta cheia, mesmo com overclock. Use outra porta.");
@@ -343,6 +395,7 @@ export function init() {
       text(g, "klabel", q.w / 2, q.h / 2, Math.min(q.w, q.h) * 0.55, t.id);
       for (var r = 0; r < q.rows; r++) {
         for (var c = 0; c < q.cols; c++) {
+          if (!existe(q, c, r)) continue; // gabinete recortado: não existe, não entra em rota
           var key = t.id + ":" + c + ":" + r;
           var rect = el("rect", { "class": "cell", x: c * q.cw, y: r * q.ch, width: q.cw, height: q.ch, "data-key": key }, g);
           var num = text(g, "cnum", (c + 0.5) * q.cw, (r + 0.5) * q.ch, q.u * 0.34, "");
@@ -421,6 +474,8 @@ export function init() {
       renderCabling();
       ksave();
     });
+  document.getElementById("k-lock").addEventListener("click", travarPorta);
+  document.getElementById("k-join-go").addEventListener("click", function () { var m = juntarPortas(document.getElementById("k-join").value); kmsg(m || "Portas juntadas."); });
   twoStep(document.getElementById("k-clear"), "Limpar rota", "Confirmar limpeza", function () {
       if (!activePort) return;
       routes[activePort] = [];

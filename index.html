@@ -45,6 +45,9 @@
       <input type="text" id="gab-busca" placeholder="Buscar por nome ou marca" autocomplete="off" aria-label="Buscar gabinete">
       <div class="glist" id="gab-lista"></div>
       <div class="acts">
+        <button class="btn" id="gab-limpar" title="Remove da biblioteca os gabinetes que este projeto não usa">Limpar biblioteca</button>
+        <button class="btn" id="gab-fabrica" title="Devolve os gabinetes de fábrica que faltam">Restaurar de fábrica</button>
+        <span class="sp"></span>
         <button class="btn" id="gab-fechar">Fechar</button>
         <button class="btn" id="gab-novo" aria-pressed="true">+ Novo gabinete</button>
       </div>
@@ -197,6 +200,7 @@
       <button class="btn" id="add-open">+ Painel</button>
       <button class="btn" id="m-edit" aria-pressed="false">Editar</button>
       <button class="btn" id="m-grp" title="Toque em Grupo, depois nos painéis, e em Agrupar (no computador também dá Shift + clique)" aria-pressed="false" disabled>Grupo</button>
+      <button class="btn" id="m-dup" disabled title="Duplica o painel selecionado; se ele estiver num grupo, duplica o grupo">Duplicar</button>
       <button class="btn" id="m-del" disabled>Excluir</button>
       <div class="dd">
         <button class="btn dd-b">Visão ▾</button>
@@ -228,6 +232,8 @@
     </div>
     <div class="medit" id="m-edit-panel" hidden>
       <span class="who" id="m-who">Toque num painel para movê-lo</span>
+      <button class="btn" id="m-prop" disabled>Editar painel</button>
+      <button class="btn" id="m-rec" aria-pressed="false" title="Tirar ou devolver gabinetes do painel (para triângulos, escadas, vãos)">Recortar</button>
       <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
       <label>Y do chão (m) <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
       <label>Passo
@@ -366,6 +372,7 @@
               <option value="col-serp">Empilhado (por coluna), sobe e desce</option>
             </select>
           </label>
+          <label class="fld">Cabo pode pular vão de até (m) <input type="number" id="ka-salto" min="0" max="3" step="0.05" inputmode="decimal" placeholder="0 = só gabinetes que se encostam"></label>
           <p class="hint">A carga de cada porta é a área do retângulo que envolve os gabinetes dela (o processador reserva o retângulo inteiro), e nenhuma estratégia passa do limite de px por porta (ou do overclock, se ligado). Em bloco, painéis encostados contam como uma área só. Substitui as rotas do escopo escolhido.</p>
           <button class="btn" id="ka-go">Distribuir</button>
         </div>
@@ -377,6 +384,9 @@
         <button class="btn" id="k-undo">Desfazer último</button>
         <button class="btn" id="k-clear">Limpar rota</button>
         <button class="btn" id="k-del">Excluir porta</button>
+        <button class="btn" id="k-lock" aria-pressed="false" title="Porta travada não muda na distribuição automática">Travar</button>
+        <label class="snap">Juntar com <select id="k-join" aria-label="Porta para juntar"></select></label>
+        <button class="btn" id="k-join-go">Juntar</button>
       </div>
     </div>
   </section>

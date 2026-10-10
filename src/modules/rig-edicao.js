@@ -1,12 +1,13 @@
-import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis } from "./core.js";
+import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis, res, existe, EXTRAS } from "./core.js";
 import { updInsp } from "./gaveta.js";
-import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis } from "./rig.js";
+import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis, desenharFurosM } from "./rig.js";
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
 import { tById, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { best } from "./canvas-edicao.js";
-import { twoStep } from "./cabeamento.js";
-import { excluirPaineis } from "./telas.js";
+import { twoStep, routes } from "./cabeamento.js";
+import { curTab } from "./abas.js";
+import { excluirPaineis, openAdd, duplicarPainel, commitAndReload } from "./telas.js";
 
 let editM, dragM, magnetM, btnMagM;
 
@@ -35,6 +36,7 @@ export function syncMPanel() {
     var ix = document.getElementById("m-x"), iy = document.getElementById("m-y");
     ix.disabled = iy.disabled = !t;
     ix.value = t ? t.mx : ""; iy.value = t ? t.my : "";
+    document.getElementById("m-prop").disabled = !t;
     syncGrupo();
     desenharPaineis();
   }
@@ -67,6 +69,8 @@ function syncGrupo() {
     var b = document.getElementById("m-grp");
     if (!b) return;
     var del = document.getElementById("m-del");
+    var dup = document.getElementById("m-dup"), ts = selected && tById[selected];
+    if (dup) { dup.disabled = !ts; dup.textContent = ts && ts.pn ? "Duplicar grupo" : "Duplicar"; }
     if (del) { var n = selecaoM().length; del.disabled = !n; del.title = n > 1 ? "Excluir " + n + " painéis" : "Excluir o painel selecionado"; }
     var t = selected && tById[selected];
     b.setAttribute("aria-pressed", String(modoSel));
@@ -102,7 +106,53 @@ function clicarGrupo() {
     }
   }
 
+// ---- Recortar: tirar ou devolver gabinetes de um painel (triângulo, escada, vão...) ----
+// Cada toque alterna o gabinete; arrastando, repete a mesma ação nos gabinetes por onde passa.
+// Ao desligar (ou sair de Editar) grava e recarrega: cabeamento, elétrica e composição passam a ignorar os recortados.
+var recorte = false, pintar = null, mudou = false;
+
+function celulaEm(t, e) {
+    var w = toWorldM(e), q = res(t), topo = FLOOR - t.my - t.h;
+    var c = Math.floor((w.x - t.mx) / q.mw), r = Math.floor((w.y - topo) / q.mh);
+    return c >= 0 && r >= 0 && c < q.cols && r < q.rows ? { c: c, r: r, q: q } : null;
+  }
+
+function aplicarRecorte(t, cel, tirar) {
+    var k = cel.c + ":" + cel.r, off = Array.isArray(t.off) ? t.off.slice() : [];
+    if (tirar === !existe(cel.q, cel.c, cel.r)) return; // já está como o gesto quer
+    if (tirar) {
+      if (cel.q.n <= 1) { pmsg("O painel precisa de pelo menos um gabinete."); return; }
+      off.push(k);
+    } else off = off.filter(function (x) { return x !== k; });
+    t.off = off;
+    EXTRAS.forEach(function (x) { if (x.id === t.id) x.off = off.slice(); });
+    desenharFurosM(t);
+    mudou = true;
+  }
+
+function concluirRecorte() {
+    // rotas de cabo não podem passar por gabinete que não existe mais
+    Object.keys(routes).forEach(function (pid) {
+      routes[pid] = routes[pid].filter(function (k) {
+        var p = k.split(":"), t = tById[p[0]];
+        return !t || existe(res(t), +p[1], +p[2]);
+      });
+    });
+    try { localStorage.setItem("ledmap-msg", "Recorte salvo."); } catch (e) {}
+    if (!commitAndReload((curTab || "m") + (selected ? ":" + selected : ""))) { try { localStorage.removeItem("ledmap-msg"); } catch (e) {} pmsg("Não consegui salvar o recorte neste navegador."); }
+  }
+
+function setRecorte(on) {
+    recorte = on;
+    var b = document.getElementById("m-rec");
+    b.setAttribute("aria-pressed", String(on));
+    tiles.forEach(function (t) { gM[t.id].classList.toggle("recorte", on); });
+    if (on) { mudou = false; pmsg("Toque nos gabinetes para tirar ou devolver; arraste para vários. Toque em Recortar de novo para salvar."); }
+    else if (mudou) { mudou = false; concluirRecorte(); }
+  }
+
 export function setEditM(on) {
+    if (!on && recorte) setRecorte(false);
     editM = on;
     document.getElementById("m-edit").setAttribute("aria-pressed", String(on));
     document.getElementById("m-edit-panel").hidden = !on;
@@ -113,6 +163,16 @@ export function setEditM(on) {
   }
 
 export function onDownM(e, t) {
+    if (editM && recorte) {
+      var cel = celulaEm(t, e);
+      if (!cel) return;
+      if (selected !== t.id) select(t.id);
+      pintar = { t: t, tirar: existe(cel.q, cel.c, cel.r) };
+      aplicarRecorte(t, cel, pintar.tirar);
+      gM[t.id].setPointerCapture(e.pointerId);
+      e.preventDefault();
+      return;
+    }
     if (!editM || modoSel || e.shiftKey || e.ctrlKey || e.metaKey) return;
     limparMselM();
     select(t.id);
@@ -124,6 +184,7 @@ export function onDownM(e, t) {
   }
 
 function endDragM() {
+    pintar = null;
     var was = !!dragM;
     dragM = null;
     guideMV.classList.add("off");
@@ -137,6 +198,7 @@ export function init() {
   magnetM = true;
   document.getElementById("m-edit").addEventListener("click", function () { setEditM(!editM); });
   svgM.addEventListener("pointermove", function (e) {
+      if (pintar) { var cel = celulaEm(pintar.t, e); if (cel) aplicarRecorte(pintar.t, cel, pintar.tirar); return; }
       if (!dragM) return;
       var t = dragM.t, step = Number(document.getElementById("m-snap").value) || 0.5;
       var w = toWorldM(e);
@@ -190,6 +252,9 @@ export function init() {
       });
     });
   document.getElementById("m-grp").addEventListener("click", clicarGrupo);
+  document.getElementById("m-rec").addEventListener("click", function () { setRecorte(!recorte); });
+  document.getElementById("m-dup").addEventListener("click", function () { if (selected && tById[selected]) duplicarPainel(selected); });
+  document.getElementById("m-prop").addEventListener("click", function () { if (selected && tById[selected]) openAdd(selected); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modoSel) sairModoSel(); });
   syncGrupo();
   twoStep(document.getElementById("m-del"), "Excluir", "Confirmar?", function () { excluirPaineis(selecaoM()); });

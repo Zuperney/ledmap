@@ -1,5 +1,6 @@
 import { groups, gname } from "./core.js";
 import { sinalState, setSinal, setMaxPortas, resumoScreens, limiteTxt, onSinal, autoState, setAuto, distribuirAuto, kmsg, twoStep } from "./cabeamento.js";
+import { tiles } from "./core.js";
 import { capSugerida, limitePx, limpaSinal } from "./sinal.js";
 import { nf } from "./core.js";
 
@@ -11,7 +12,7 @@ function cfgEscopo() { var st = sinalState(); return escopo ? (st.sinalScreens[e
 function preencherAuto() {
     var sel = $("ka-escopo"), v = sel.value || "*";
     sel.textContent = "";
-    [["*", "Todos os painéis"]].concat(groups.map(function (g) { return [g.id, gname(g)]; })).concat([["_", "Painéis sem Screen"]]).forEach(function (a) {
+    [["*", "Todos os painéis"]].concat(groups.map(function (g) { return [g.id, "Screen: " + gname(g)]; })).concat([["_", "Painéis sem Screen"]], tiles.map(function (t) { return ["t:" + t.id, "Só o painel " + t.id + " · " + t.name]; })).forEach(function (a) {
       var o = document.createElement("option"); o.value = a[0]; o.textContent = a[1]; sel.appendChild(o);
     });
     sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === v; }) ? v : "*";
@@ -19,6 +20,7 @@ function preencherAuto() {
     $("ka-sentido").value = autoState().routing;
     $("ka-estrategia").value = autoState().estrategia;
     $("ka-ordem").value = autoState().ordem;
+    if (document.activeElement !== $("ka-salto")) $("ka-salto").value = autoState().salto;
   }
 
 function preencherEscopo() {
@@ -71,10 +73,13 @@ export function init() {
     });
   $("ks-max").addEventListener("change", function (e) { setMaxPortas(e.target.value); });
   $("ks-padrao").addEventListener("click", function () { setSinal(escopo, null); });
-  ["ka-canto", "ka-sentido", "ka-estrategia", "ka-ordem"].forEach(function (id) { $(id).addEventListener("change", function () { setAuto({ corner: $("ka-canto").value, routing: $("ka-sentido").value, estrategia: $("ka-estrategia").value, ordem: $("ka-ordem").value }); }); });
+  ["ka-canto", "ka-sentido", "ka-estrategia", "ka-ordem", "ka-salto"].forEach(function (id) { $(id).addEventListener("change", function () { setAuto({ corner: $("ka-canto").value, routing: $("ka-sentido").value, estrategia: $("ka-estrategia").value, ordem: $("ka-ordem").value, salto: $("ka-salto").value }); }); });
   twoStep($("ka-go"), "Distribuir", "Confirmar: substitui as rotas", function () {
       var r = distribuirAuto($("ka-escopo").value);
-      kmsg(r.aviso && !r.portas ? r.aviso : r.portas + " portas criadas para " + r.gabinetes + " gabinetes." + (r.aviso ? " " + r.aviso : ""));
+      var extra = (r.travadas ? " " + r.travadas + (r.travadas === 1 ? " porta travada ficou" : " portas travadas ficaram") + " como estava." : "") +
+        (r.pequenas ? " " + r.pequenas + (r.pequenas === 1 ? " porta ficou" : " portas ficaram") + " com poucos gabinetes (a forma obriga ou vale ajustar à mão)." : "") +
+        (r.saltos ? " " + r.saltos + (r.saltos === 1 ? " salto de vão." : " saltos de vão.") : "");
+      kmsg(r.aviso && !r.portas ? r.aviso : r.portas + " portas criadas para " + r.gabinetes + " gabinetes." + extra + (r.aviso ? " " + r.aviso : ""));
     });
   onSinal(atualizarSinal);
   atualizarSinal();

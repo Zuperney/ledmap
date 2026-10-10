@@ -2,7 +2,7 @@
 //   Montagem (entrada): os painéis nas posições do Rig, numa escala única (px por metro) — onde o conteúdo é feito.
 //   Composição (saída): os painéis nas posições da aba Screen, em px nativos — o que vai para o processador.
 // Não tem posição própria: test card por painel, regiões das duas pontas e proporção.
-import { tiles, groups, gname, members, res, nf, fmt, painelById, pnome } from "./core.js";
+import { tiles, groups, gname, members, res, nf, fmt, painelById, pnome, existe } from "./core.js";
 import { chave, projetoAtivo } from "./projetos.js";
 import { cabDe } from "./gabinetes.js";
 import { ports, routes, cellEl, owners, pcolor, portById } from "./cabeamento.js";
@@ -129,7 +129,7 @@ function textOn(hex) {
 // caixa de informações: a maior fonte que cabe, com teto para não dominar telas grandes
 function infoBox(ctx, it, x, y) {
   var t = it.t, q = it.q, g = cabDe(t);
-  caixaInfo(ctx, [t.name, q.w + " × " + q.h + " px", q.cols + " × " + q.rows + " = " + (q.cols * q.rows) + " gab.", fmt(t.w) + " × " + fmt(t.h) + " m · pitch " + fmt(g.mw / g.rx * 1000) + " mm"], x, y, q.w, q.h);
+  caixaInfo(ctx, [t.name, q.w + " × " + q.h + " px", q.n < q.cols * q.rows ? q.n + " gab. (recortado)" : q.cols + " × " + q.rows + " = " + q.n + " gab.", fmt(t.w) + " × " + fmt(t.h) + " m · pitch " + fmt(g.mw / g.rx * 1000) + " mm"], x, y, q.w, q.h);
 }
 
 function caixaInfo(ctx, linhas, x, y, w, h) {
@@ -164,6 +164,7 @@ function tela(ctx, it, ox, oy, own, semSobre) {
   for (r = 0; r < q.rows; r++) {
     for (c = 0; c < q.cols; c++) {
       var cx = x + c * q.cw, cy = y + r * q.ch, cor;
+      if (!existe(q, c, r)) { ctx.fillStyle = "#000"; ctx.fillRect(cx, cy, q.cw, q.ch); continue; } // recortado: fica preto
       if (p === "branco") cor = "#ffffff";
       else if (p === "barras" || p === "alinhamento") cor = p === "barras" ? "#000000" : CORES[(r + c) % 2 ? 3 : 0];
       else if (p === "cabos") { var o = own[t.id + ":" + c + ":" + r]; cor = o ? pcolor(portById(o.pid)) : "#2a2a2a"; }
@@ -205,7 +206,7 @@ function unidades(items) {
   Object.keys(por).forEach(function (pn) {
     if (por[pn].length < 2) return;
     var gabs = {}, n = 0, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    por[pn].forEach(function (it) { gabs[it.t.cab] = 1; n += it.q.cols * it.q.rows; x0 = Math.min(x0, it.t.mx); x1 = Math.max(x1, it.t.mx + it.t.w); y0 = Math.min(y0, it.t.my); y1 = Math.max(y1, it.t.my + it.t.h); });
+    por[pn].forEach(function (it) { gabs[it.t.cab] = 1; n += it.q.n; x0 = Math.min(x0, it.t.mx); x1 = Math.max(x1, it.t.mx + it.t.w); y0 = Math.min(y0, it.t.my); y1 = Math.max(y1, it.t.my + it.t.h); });
     out.push({ p: painelById(pn), items: por[pn], r: caixa(por[pn].map(function (it) { return it.ent; })), gab: n, tipos: Object.keys(gabs).length, mw: x1 - x0, mh: y1 - y0 });
   });
   return out;

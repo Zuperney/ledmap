@@ -18,7 +18,8 @@ export function init() {
       var rs = res(s);
       el("rect", { "class": "body", x: 0, y: 0, width: rs.w, height: rs.h }, g);
       el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.cw, rs.ch) }, g);
-      var gab = rs.cols + " × " + rs.rows + " gab.";
+      Object.keys(rs.fora).forEach(function (k) { var p = k.split(":"); el("rect", { "class": "furo", x: Number(p[0]) * rs.cw, y: Number(p[1]) * rs.ch, width: rs.cw, height: rs.ch }, g); });
+      var gab = rs.n < rs.cols * rs.rows ? rs.n + " gab." : rs.cols + " × " + rs.rows + " gab.";
       if (rs.h >= 600 && rs.w >= 600) {
         el("circle", { "class": "badge", cx: rs.w / 2, cy: rs.h / 2 - 170, r: 125 }, g);
         text(g, "num", rs.w / 2, rs.h / 2 - 166, 170, s.id);
@@ -29,11 +30,11 @@ export function init() {
         el("circle", { "class": "badge", cx: rs.w / 2, cy: rs.h / 2 - 160, r: 110 }, g);
         text(g, "num", rs.w / 2, rs.h / 2 - 156, 140, s.id);
         text(g, "dim-t", rs.w / 2, rs.h / 2 + 50, 70, rs.w + "×" + rs.h);
-        text(g, "dim-t", rs.w / 2, rs.h / 2 + 140, 60, rs.cols + "×" + rs.rows + " gab");
+        text(g, "dim-t", rs.w / 2, rs.h / 2 + 140, 60, (rs.n < rs.cols * rs.rows ? rs.n : rs.cols + "×" + rs.rows) + " gab");
       } else {
         el("circle", { "class": "badge", cx: 120, cy: rs.h / 2, r: 90 }, g);
         text(g, "num", 120, rs.h / 2 + 4, 120, s.id);
-        text(g, "dim-t", (rs.w + 240) / 2, rs.h / 2, 70, rs.w + " × " + rs.h + " px · " + fmt(s.w) + " × " + fmt(s.h) + " m · " + rs.cols + "×" + rs.rows + " gab");
+        text(g, "dim-t", (rs.w + 240) / 2, rs.h / 2, 70, rs.w + " × " + rs.h + " px · " + fmt(s.w) + " × " + fmt(s.h) + " m · " + (rs.n < rs.cols * rs.rows ? rs.n : rs.cols + "×" + rs.rows) + " gab");
       }
       gC[s.id] = g;
       g.addEventListener("pointerdown", function (e) { onDown(e, s); });

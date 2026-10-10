@@ -37,7 +37,7 @@ export function cleanExtra(x) {
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", extra: true };
+    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), extra: true };
   }
 
 export function cleanExtras(list) {
@@ -83,10 +83,25 @@ export function save() {
     } catch (e) {}
   }
 
+// n = gabinetes que existem (a grade menos os recortados); total = pixels desses gabinetes
 export function res(s) {
     var g = cabDe(s), cols = Math.max(1, Math.round(s.w / g.mw)), rows = Math.max(1, Math.round(s.h / g.mh));
-    var w = cols * g.rx, h = rows * g.ry;
-    return { cols: cols, rows: rows, cw: g.rx, ch: g.ry, mw: g.mw, mh: g.mh, u: Math.min(g.rx, g.ry), w: w, h: h, total: w * h };
+    var w = cols * g.rx, h = rows * g.ry, fora = {}, nf0 = 0;
+    (Array.isArray(s.off) ? s.off : []).forEach(function (k) {
+      var p = k.split(":"), c = +p[0], r = +p[1];
+      if (c < cols && r < rows && !fora[k]) { fora[k] = 1; nf0++; }
+    });
+    var n = Math.max(0, cols * rows - nf0);
+    return { cols: cols, rows: rows, cw: g.rx, ch: g.ry, mw: g.mw, mh: g.mh, u: Math.min(g.rx, g.ry), w: w, h: h, n: n, fora: fora, total: n * g.rx * g.ry };
+  }
+
+// o gabinete (coluna c, linha r, a partir de cima à esquerda) existe neste painel?
+export function existe(q, c, r) { return !q.fora[c + ":" + r]; }
+
+function limpaOff(l) {
+    var out = [], seen = {};
+    (Array.isArray(l) ? l : []).forEach(function (k) { if (typeof k === "string" && /^\d{1,3}:\d{1,3}$/.test(k) && !seen[k] && out.length < 4000) { seen[k] = 1; out.push(k); } });
+    return out;
   }
 
 export function esc(v) { return String(v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; }); }
