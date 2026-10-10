@@ -79,7 +79,7 @@ export function distribuirAuto(escopo) {
       if (travado[k]) return;
       var c = cellEl[k], q = res(c.t);
       // x, y, w, h = montagem (m, y de cima para baixo): ordem e vizinhança do cabo; ax.. = canvas (px): área da porta
-      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(c.t.mx + c.c * q.mw), y: m4(-(c.t.my + c.t.h) + c.r * q.mh), w: q.mw, h: q.mh, ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch });
+      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(c.t.mx + c.c * q.mw), y: m4(-(c.t.my + c.t.h) + c.r * q.mh), z: c.t.z || 0, w: q.mw, h: q.mh, ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch });
     });
     if (!cels.length) return { portas: 0, gabinetes: 0, aviso: "Não há gabinetes nesse escopo." };
     var grupos = {}, ordem = [];
@@ -101,7 +101,7 @@ export function distribuirAuto(escopo) {
           if (vistos[c.t.id]) return;
           vistos[c.t.id] = 1;
           var q = res(c.t);
-          telasG.push({ id: c.t.id, x: c.t.mx, y: m4(-(c.t.my + c.t.h)), w: q.mw * q.cols, h: q.mh * q.rows, k: { x: c.t.cx, y: c.t.cy, w: q.cw * q.cols, h: q.ch * q.rows } });
+          telasG.push({ id: c.t.id, x: c.t.mx, y: m4(-(c.t.my + c.t.h)), z: c.t.z || 0, w: q.mw * q.cols, h: q.mh * q.rows, k: { x: c.t.cx, y: c.t.cy, w: q.cw * q.cols, h: q.ch * q.rows } });
         });
         aglomerados(telasG).forEach(function (ag) {
           var ids = {}; ag.forEach(function (t) { ids[t.id] = 1; });
@@ -172,7 +172,7 @@ function routeLoad(route) { return areaRet(route.map(cellRet)); }
 // posição do gabinete na montagem (m, y de cima para baixo) e no canvas: para diagnóstico e área
 function cellFis(k) {
     var c = cellEl[k], t = c.t, q = res(t), a = cellRet(k);
-    return { x: t.mx + c.c * q.mw, y: -(t.my + t.h) + c.r * q.mh, w: q.mw, h: q.mh, ax: a.ax, ay: a.ay, aw: a.aw, ah: a.ah };
+    return { x: t.mx + c.c * q.mw, y: -(t.my + t.h) + c.r * q.mh, z: t.z || 0, w: q.mw, h: q.mh, ax: a.ax, ay: a.ay, aw: a.aw, ah: a.ah };
   }
 
 // rota com poucos gabinetes ou com cabo atravessando vão (gabinetes seguidos que não se encostam na montagem)

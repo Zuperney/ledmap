@@ -30,6 +30,7 @@ export function areaRet(cells) {
 
 // dois retângulos encostam por um lado (não basta tocar a quina)
 function encostam(a, b, eps) {
+  if (Math.abs((a.z || 0) - (b.z || 0)) > eps) return false; // profundidades diferentes não encostam
   var ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
   return (ox > eps && Math.abs(oy) <= eps) || (oy > eps && Math.abs(ox) <= eps);
 }
@@ -226,11 +227,15 @@ function chaveXY(x, y) { return Math.round(x * 100) + "|" + Math.round(y * 100);
 // vizinhos de cada célula: os que encostam (lado com lado) e, se salto > 0, os alinhados depois de um vão curto
 function grafo(cells, salto) {
   var mapa = {}, viz = cells.map(function () { return []; });
-  cells.forEach(function (c, i) { mapa[chaveXY(c.x, c.y)] = i; });
+  cells.forEach(function (c, i) { (mapa[chaveXY(c.x, c.y)] = mapa[chaveXY(c.x, c.y)] || []).push(i); });
   cells.forEach(function (c, i) {
     [[c.w, 0], [-c.w, 0], [0, c.h], [0, -c.h]].forEach(function (d) {
-      var j = mapa[chaveXY(c.x + d[0], c.y + d[1])];
-      if (j !== undefined) viz[i].push({ j: j, salto: 0 });
+      (mapa[chaveXY(c.x + d[0], c.y + d[1])] || []).forEach(function (j) {
+        // vizinho na vista frontal: se está em outra profundidade, só passa como salto (até o vão permitido)
+        var dz = Math.abs((cells[j].z || 0) - (c.z || 0));
+        if (dz <= EPS) viz[i].push({ j: j, salto: 0 });
+        else if (dz <= salto + EPS) viz[i].push({ j: j, salto: dz });
+      });
     });
   });
   if (salto > EPS) {
@@ -242,7 +247,7 @@ function grafo(cells, salto) {
     var liga = function (lista, eixo, tam) {
       lista.sort(function (a, b) { return cells[a][eixo] - cells[b][eixo]; });
       for (var k = 1; k < lista.length; k++) {
-        var a = cells[lista[k - 1]], b = cells[lista[k]], vao = b[eixo] - (a[eixo] + a[tam]);
+        var a = cells[lista[k - 1]], b = cells[lista[k]], vao = b[eixo] - (a[eixo] + a[tam]) + Math.abs((a.z || 0) - (b.z || 0));
         if (vao > EPS && vao <= salto + EPS) { viz[lista[k - 1]].push({ j: lista[k], salto: vao }); viz[lista[k]].push({ j: lista[k - 1], salto: vao }); }
       }
     };
@@ -400,10 +405,14 @@ function faixasLivres(idx, cells, viz, lim, oc, eixo, equil) {
 
 // com overclock o corte pode passar um gabinete do limite; mas um plano sem overclock às vezes sai
 // melhor (cortes mais limpos). Testa os dois e fica com o de menos portas; overclock nunca piora.
+// O mesmo vale para o salto de vão: liberar salto junta regiões e às vezes rende um plano pior. Testa com e sem
+// (e com e sem overclock) e fica com o de menos portas; no empate, o de menos saltos (sem salto).
 export function planejar(cells, lim, oc, opts) {
-  if (!oc) return planejarCom(cells, lim, false, opts);
-  var a = planejarCom(cells, lim, true, opts), b = planejarCom(cells, lim, false, opts);
-  return b.length < a.length ? b : a;
+  opts = opts || {};
+  var semSalto = Object.assign({}, opts, { salto: 0 }), planos = [planejarCom(cells, lim, false, semSalto)];
+  if (oc) planos.push(planejarCom(cells, lim, true, semSalto));
+  if (Number(opts.salto) > 0) { planos.push(planejarCom(cells, lim, false, opts)); if (oc) planos.push(planejarCom(cells, lim, true, opts)); }
+  return planos.reduce(function (m, p) { return p.length < m.length ? p : m; });
 }
 
 function planejarCom(cells, lim, oc, opts) {

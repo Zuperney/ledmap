@@ -1,4 +1,4 @@
-import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis, membrosPainel, pnome } from "./core.js";
+import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis, membrosPainel, pnome, sobrepoem } from "./core.js";
 import { corCab } from "./gabinetes.js";
 import { editM, onDownM, toggleMselM, limparMselM, modoSelM } from "./rig-edicao.js";
 import { select } from "./tabela.js";
@@ -37,7 +37,7 @@ export function statM() {
     tiles.forEach(function (a, i) {
       tiles.forEach(function (b, j) {
         if (j <= i) return;
-        if (a.mx < b.mx + b.w - e && b.mx < a.mx + a.w - e && a.my < b.my + b.h - e && b.my < a.my + a.h - e) { bad[a.id] = bad[b.id] = true; }
+        if (sobrepoem(a, b)) { bad[a.id] = bad[b.id] = true; }
       });
     });
     tiles.forEach(function (t) { if (bad[t.id]) nb++; gM[t.id].classList.toggle("overlap", !!bad[t.id]); });
@@ -83,13 +83,19 @@ export function init() {
   for (i = 0; i <= 25; i += 5) text(svgM, "tick", i, FLOOR + 0.8, 0.5, i + " m").setAttribute("text-anchor", "middle");
   [2, 4, 6, 8].forEach(function (v) { text(svgM, "tick", -0.85, FLOOR - v + 0.18, 0.45, v); });
   layerM = el("g", {}, svgM);
-  tiles.forEach(function (s) {
-      var g = el("g", { "class": "scr", style: "--cor:" + corCab(s), transform: "translate(" + s.mx + " " + (FLOOR - s.my - s.h) + ")" }, layerM);
+  // o recuado por último: ele só ocupa recortes (sobreposição de gabinete é avisada), então aparece pelo vão do
+  // painel da frente; o tracejado e a etiqueta dizem que ele está atrás
+  tiles.slice().sort(function (a, b) { return (a.z || 0) - (b.z || 0); }).forEach(function (s) {
+      var g = el("g", { "class": "scr" + ((s.z || 0) > 0 ? " fundo" : (s.z || 0) < 0 ? " frente" : ""), style: "--cor:" + corCab(s), transform: "translate(" + s.mx + " " + (FLOOR - s.my - s.h) + ")" }, layerM);
       var rs = res(s), tall = s.h >= 3;
       el("rect", { "class": "body", x: 0, y: 0, width: s.w, height: s.h }, g);
       el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.mw, rs.mh) }, g);
       furosM[s.id] = el("g", { "class": "furos" }, g);
       desenharFurosM(s);
+      if (s.z) {
+        var zt = text(g, "ztag", s.w - 0.08, 0.32, 0.26, (s.z > 0 ? "recuo " : "avanço ") + fmt(Math.abs(s.z)) + " m");
+        zt.setAttribute("text-anchor", "end");
+      }
       var r = tall ? 0.6 : (s.w < 2 ? 0.45 : 0.38);
       var fs = tall ? 0.85 : (s.w < 2 ? 0.6 : 0.5);
       var bx = s.w / 2, by = s.h / 2;

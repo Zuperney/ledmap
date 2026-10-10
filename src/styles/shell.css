@@ -151,3 +151,12 @@ input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-i
 #view-n table { font-size: 11px; }
 #view-n th, #view-n td { padding: 5px 8px; }
 #view-n tr.grow td { font-weight: 700; color: var(--imag); }
+
+/* Vista 3D */
+.v3d { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; background: #0d1319; }
+.v3d-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.v3d-tit { font: 700 15px var(--font-display); margin-right: 4px; }
+.v3d-dica { flex: 1 1 200px; font-size: 10px; color: var(--muted); text-align: right; }
+.v3d-palco { position: relative; flex: 1; min-height: 0; touch-action: none; }
+.v3d-palco canvas { display: block; }
+body.com-3d { overflow: hidden; }
