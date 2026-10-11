@@ -88,7 +88,7 @@ export function init() {
   // o recuado por último: ele só ocupa recortes (sobreposição de gabinete é avisada), então aparece pelo vão do
   // painel da frente; o tracejado e a etiqueta dizem que ele está atrás
   tiles.slice().sort(function (a, b) { return (a.z || 0) - (b.z || 0); }).forEach(function (s) {
-      var g = el("g", { "class": "scr" + ((s.z || 0) > 0 ? " fundo" : (s.z || 0) < 0 ? " frente" : ""), style: "--cor:" + corCab(s), transform: "translate(" + s.mx + " " + (FLOOR - s.my - s.h) + ")" }, layerM);
+      var g = el("g", { "class": "scr" + ((s.z || 0) > 0 ? " fundo" : (s.z || 0) < 0 ? " frente" : ""), "data-id": s.id, style: "--cor:" + corCab(s), transform: "translate(" + s.mx + " " + (FLOOR - s.my - s.h) + ")" }, layerM);
       var rs = res(s), tall = s.h >= 3;
       el("rect", { "class": "body", x: 0, y: 0, width: s.w, height: s.h }, g);
       el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.mw, rs.mh) }, g);
