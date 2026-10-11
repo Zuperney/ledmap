@@ -49,6 +49,7 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .scr.fundo rect.body { fill-opacity: .16; stroke-dasharray: 5 3; }
 .scr.frente rect.body { fill-opacity: .4; stroke-width: 2.5; }
 .ztag { fill: var(--fg); font-family: var(--font-data); font-weight: 500; pointer-events: none; stroke: var(--panel); stroke-width: 0.06; paint-order: stroke; }
+.eixo0 { stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; opacity: .55; pointer-events: none; }
 .laco { fill: var(--imag); fill-opacity: .08; stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
 .furo { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; stroke-opacity: .6; }
 .scr.recorte { cursor: crosshair; }

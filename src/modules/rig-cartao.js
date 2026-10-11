@@ -6,7 +6,8 @@ import { cabNome } from "./gabinetes.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
-import { commitAndReload, duplicarPainel, excluirPaineis, editarPainel, espelharPaineis, duplicarEspelhado } from "./telas.js";
+import { commitAndReload, duplicarPainel, excluirPaineis, editarPainel } from "./telas.js";
+import { menuEspelho } from "./menu-contexto.js";
 import { viewM } from "./rig-cabos.js";
 import { twoStep } from "./cabeamento.js";
 import { mselLista, modoSelM, iniciarSelecao, sairModoSel, desagrupar, refreshM } from "./rig-edicao.js";
@@ -128,12 +129,14 @@ export function init() {
       if (erro) { pmsg(erro); renderCartao(); }
     });
   });
-  $("m-esp").addEventListener("click", function () { if (selected) espelharPaineis([selected]); });
-  $("m-desp").addEventListener("click", function () { if (selected) duplicarEspelhado([selected]); });
-  $("mc-gesp").addEventListener("click", function () { var m = membrosPainel(grupoFoco); if (m.length) espelharPaineis([m[0].id]); });
-  $("mc-gdesp").addEventListener("click", function () { var m = membrosPainel(grupoFoco); if (m.length) duplicarEspelhado([m[0].id]); });
-  $("mc-vesp").addEventListener("click", function () { var ids = mselLista(); if (ids.length) espelharPaineis(ids); });
-  $("mc-vdesp").addEventListener("click", function () { var ids = mselLista(); if (ids.length) duplicarEspelhado(ids); });
+  // Espelhar / Duplicar espelhado abrem as opções: eixo X, eixo Y ou no próprio eixo
+  function esp(btn, dup, ids) { if (ids.length) menuEspelho(btn, ids, dup); }
+  $("m-esp").addEventListener("click", function () { esp(this, false, selected ? [selected] : []); });
+  $("m-desp").addEventListener("click", function () { esp(this, true, selected ? [selected] : []); });
+  $("mc-gesp").addEventListener("click", function () { esp(this, false, membrosPainel(grupoFoco).slice(0, 1).map(function (m) { return m.id; })); });
+  $("mc-gdesp").addEventListener("click", function () { esp(this, true, membrosPainel(grupoFoco).slice(0, 1).map(function (m) { return m.id; })); });
+  $("mc-vesp").addEventListener("click", function () { esp(this, false, mselLista()); });
+  $("mc-vdesp").addEventListener("click", function () { esp(this, true, mselLista()); });
   // recuo muda a ordem de desenho e o cabeamento: grava e recarrega
   $("mc-z").addEventListener("change", function () {
     var t = selected && tById[selected];

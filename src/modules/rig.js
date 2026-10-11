@@ -4,7 +4,7 @@ import { editM, onDownM, toggleMselM, limparMselM, modoSelM, ignorarCliqueM } fr
 import { select } from "./tabela.js";
 let i;
 
-let gridM, floorLine, boundsM, layerM, guideMV, guideMH, pnLayer;
+let gridM, floorLine, eixoM, regua, boundsM, layerM, guideMV, guideMH, pnLayer;
 
 export function fitM() {
     var minX = Infinity, maxX = -Infinity, topY = Infinity, botY = -Infinity;
@@ -12,17 +12,23 @@ export function fitM() {
       minX = Math.min(minX, t.mx); maxX = Math.max(maxX, t.mx + t.w);
       topY = Math.min(topY, FLOOR - t.my - t.h); botY = Math.max(botY, FLOOR - t.my);
     });
-    var b = boundsM;
-    b.x0 = Math.min(-1, Math.floor(minX) - 1); b.x1 = Math.max(28, Math.ceil(maxX) + 1);
+    // o x = 0 é o centro do palco: a área é simétrica em volta dele
+    var b = boundsM, meia = tiles.length ? Math.max(14, Math.ceil(Math.max(-minX, maxX)) + 1) : 14;
+    b.x0 = -meia; b.x1 = meia;
     b.y0 = Math.min(-0.5, Math.floor(topY) - 1); b.y1 = Math.max(10, Math.ceil(botY) + 1.5);
     svgM.setAttribute("viewBox", [b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0].join(" "));
     gridM.textContent = "";
-    var gx0 = Math.min(-1, Math.floor(minX)), gx1 = Math.max(28, Math.ceil(maxX));
+    var gx0 = -meia + 1, gx1 = meia - 1;
     var gy0 = Math.min(0, Math.floor(topY)), gy1 = Math.max(FLOOR, Math.ceil(botY));
     var k;
     for (k = gx0; k <= gx1; k++) el("line", { x1: k, y1: gy0, x2: k, y2: gy1 }, gridM);
     for (k = gy0; k <= gy1; k++) el("line", { x1: gx0, y1: k, x2: gx1, y2: k }, gridM);
     floorLine.setAttribute("x1", gx0); floorLine.setAttribute("x2", gx1);
+    eixoM.setAttribute("y1", gy0 - 0.5); eixoM.setAttribute("y2", gy1);
+    // régua: metros a cada 5 m a partir do centro (negativos à esquerda) e alturas na borda esquerda
+    regua.textContent = "";
+    for (k = -Math.floor(gx1 / 5) * 5; k <= gx1; k += 5) text(regua, "tick", k, FLOOR + 0.8, 0.5, (k < 0 ? "−" + -k : k) + " m").setAttribute("text-anchor", "middle");
+    for (k = 2; k <= FLOOR - gy0; k += 2) text(regua, "tick", gx0 - 0.15, FLOOR - k + 0.18, 0.45, k).setAttribute("text-anchor", "end");
     desenharPaineis();
     statM();
   }
@@ -80,10 +86,10 @@ export function placeM(t) { gM[t.id].setAttribute("transform", "translate(" + t.
 
 export function init() {
   gridM = el("g", { "class": "grid", id: "grid-m" }, svgM);
-  floorLine = el("line", { "class": "floor", x1: -1, y1: FLOOR, x2: 28, y2: FLOOR }, svgM);
-  boundsM = { x0: -1, x1: 28, y0: -0.5, y1: 10 };
-  for (i = 0; i <= 25; i += 5) text(svgM, "tick", i, FLOOR + 0.8, 0.5, i + " m").setAttribute("text-anchor", "middle");
-  [2, 4, 6, 8].forEach(function (v) { text(svgM, "tick", -0.85, FLOOR - v + 0.18, 0.45, v); });
+  floorLine = el("line", { "class": "floor", x1: -13, y1: FLOOR, x2: 13, y2: FLOOR }, svgM);
+  eixoM = el("line", { "class": "eixo0", x1: 0, y1: -0.5, x2: 0, y2: FLOOR }, svgM);
+  regua = el("g", {}, svgM);
+  boundsM = { x0: -14, x1: 14, y0: -0.5, y1: 10 };
   layerM = el("g", {}, svgM);
   // o recuado por último: ele só ocupa recortes (sobreposição de gabinete é avisada), então aparece pelo vão do
   // painel da frente; o tracejado e a etiqueta dizem que ele está atrás

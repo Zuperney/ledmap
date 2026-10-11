@@ -31,7 +31,7 @@ export function cleanExtra(x) {
     var id = String(x.id == null ? "" : x.id);
     if (!/^\d{1,3}$/.test(id)) return null;
     var kind = Object.prototype.hasOwnProperty.call(PITCH, x.kind) ? x.kind : "imag";
-    var g = GAB[String(x.cab)] || cabDe({ kind: kind }), cab = g.id, mx = half(x.mx, -30, 60), my = half(x.my, -10, 30);
+    var g = GAB[String(x.cab)] || cabDe({ kind: kind }), cab = g.id, mx = half(x.mx, -60, 60), my = half(x.my, -10, 30);
     var w = snapDim(x.w, g.mw), h = snapDim(x.h, g.mh);
     if (w === null || h === null || mx === null || my === null) return null;
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));

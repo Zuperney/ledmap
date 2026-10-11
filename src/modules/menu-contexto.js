@@ -6,7 +6,7 @@ import { multiLista, iniciarSelecaoC, movendoC } from "./canvas-edicao.js";
 import { colocarNaScreen } from "./screen-cartao.js";
 import { tById } from "./exportar.js";
 import { select } from "./tabela.js";
-import { openAdd, duplicarPainel, excluirPaineis, espelharPaineis, duplicarEspelhado } from "./telas.js";
+import { openAdd, duplicarPainel, excluirPaineis, espelharPaineis, duplicarEspelhado, centralizarRig } from "./telas.js";
 import { mselLista, iniciarSelecao, desagrupar, editM } from "./rig-edicao.js";
 import { abrirGrupo } from "./rig-cartao.js";
 
@@ -24,7 +24,8 @@ function fechar() {
 function fora(e) { if (menu && !menu.contains(e.target)) fechar(); }
 function tecla(e) { if (e.key === "Escape") { e.stopPropagation(); fechar(); } }
 
-// itens: { t: texto, fn, perigo, confirmar } ou "-" (separador). "confirmar": o 1º clique pede confirmação.
+// itens: { t: texto, fn, perigo, confirmar, sub } ou "-" (separador). "confirmar": o 1º clique pede confirmação;
+// "sub": abre as opções no lugar do menu, com "‹ Voltar" no topo.
 function abrir(x, y, itens) {
   fechar();
   menu = document.createElement("div");
@@ -34,8 +35,9 @@ function abrir(x, y, itens) {
     if (it === "-") { var s = document.createElement("div"); s.className = "cmsep"; menu.appendChild(s); return; }
     var b = document.createElement("button");
     b.type = "button"; b.className = "cmi" + (it.perigo ? " perigo" : ""); b.setAttribute("role", "menuitem");
-    b.textContent = it.t;
+    b.textContent = it.t + (it.sub ? "  ›" : "");
     b.addEventListener("click", function () {
+      if (it.sub) { abrir(x, y, [{ t: "‹ " + it.t, fn: function () { abrir(x, y, itens); } }, "-"].concat(it.sub)); return; }
       if (it.confirmar && b.getAttribute("data-arm") !== "1") { b.setAttribute("data-arm", "1"); b.textContent = it.confirmar; return; }
       fechar(); it.fn();
     });
@@ -55,14 +57,30 @@ function abrir(x, y, itens) {
   if (primeiro) primeiro.focus({ preventScroll: true });
 }
 
+// Espelhar / Duplicar espelhado: no eixo X (o x troca de sinal: 3 m vira −3 m), no eixo Y (de cabeça para baixo)
+// ou no próprio eixo (inverte no lugar; a cópia nasce encostada à direita)
+function opcoesEspelho(ids, dup) {
+  var f = dup ? duplicarEspelhado : espelharPaineis;
+  return [
+    { t: dup ? "Eixo X (do outro lado do 0)" : "Eixo X (passa para o outro lado do 0)", fn: function () { f(ids, "x"); } },
+    { t: dup ? "Eixo Y (em cima, de cabeça para baixo)" : "Eixo Y (de cabeça para baixo)", fn: function () { f(ids, "y"); } },
+    { t: dup ? "No próprio eixo (ao lado)" : "No próprio eixo (inverte no lugar)", fn: function () { f(ids, "proprio"); } }
+  ];
+}
+// usado pelos botões Espelhar / Duplicar espelhado dos cartões: as mesmas opções, abertas junto do botão
+export function menuEspelho(botao, ids, dup) {
+  var r = botao.getBoundingClientRect();
+  abrir(r.left, r.bottom + 4, opcoesEspelho(ids, dup));
+}
+
 function itensPainel(t) {
   var sel = mselLista();
   // painel dentro de uma seleção de vários: ações da seleção
   if (sel.length >= 2 && sel.indexOf(t.id) >= 0) {
     return [
       { t: "Agrupar (" + sel.length + ")", fn: function () { $("m-grp").click(); } },
-      { t: "Espelhar", fn: function () { espelharPaineis(sel); } },
-      { t: "Duplicar espelhado", fn: function () { duplicarEspelhado(sel); } },
+      { t: "Espelhar", sub: opcoesEspelho(sel, false) },
+      { t: "Duplicar espelhado", sub: opcoesEspelho(sel, true) },
       "-",
       { t: "Excluir " + sel.length + " painéis", perigo: true, confirmar: "Confirmar exclusão", fn: function () { excluirPaineis(sel); } }
     ];
@@ -72,8 +90,8 @@ function itensPainel(t) {
     { t: "Editar…", fn: function () { sel1(); openAdd(t.id); } },
     { t: "Recortar gabinetes", fn: function () { sel1(); $("m-rec").click(); } },
     { t: p ? "Duplicar grupo" : "Duplicar", fn: function () { duplicarPainel(t.id); } },
-    { t: p ? "Espelhar grupo" : "Espelhar", fn: function () { espelharPaineis([t.id]); } },
-    { t: "Duplicar espelhado", fn: function () { duplicarEspelhado([t.id]); } },
+    { t: p ? "Espelhar grupo" : "Espelhar", sub: opcoesEspelho([t.id], false) },
+    { t: "Duplicar espelhado", sub: opcoesEspelho([t.id], true) },
     { t: "Ir até o painel", fn: function () { sel1(); $("mc-ir").click(); } },
     "-"
   ];
@@ -90,11 +108,12 @@ function itensVazio() {
   return [
     { t: "+ Adicionar painel", fn: function () { openAdd(); } },
     { t: "Enquadrar tudo", fn: function () { $("m-zfit").click(); } },
+    tiles.length ? { t: "Centralizar no eixo 0", fn: centralizarRig } : null,
     { t: editM ? "Desligar Mover" : "Ligar Mover", fn: function () { $("m-edit").click(); } },
     "-",
     { t: ($("btn-grid-m").getAttribute("aria-pressed") === "true" ? "Esconder" : "Mostrar") + " grade", fn: function () { $("btn-grid-m").click(); } },
     { t: "Vista 3D", fn: function () { $("m-3d").click(); } }
-  ];
+  ].filter(Boolean);
 }
 
 // painel sob o clique: a linha da lista, o desenho do Rig ou o canvas da Screen (todos guardam o número em data-id)
