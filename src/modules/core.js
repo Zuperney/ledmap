@@ -166,7 +166,12 @@ export function limpaPaineis(l) {
 
 export function painelById(id) { for (var i = 0; i < paineis.length; i++) if (paineis[i].id === id) return paineis[i]; return null; }
 
-export function pnome(p) { return (p.name || "").trim() || "Grupo " + p.id.slice(1); }
+// nome do grupo: o que o usuário deu, ou "Grupo N" pela ordem dos grupos (sem buracos)
+export function pnome(p) {
+    if ((p.name || "").trim()) return p.name.trim();
+    var i = paineis.findIndex(function (x) { return x.id === p.id; });
+    return "Grupo " + (i >= 0 ? i + 1 : paineis.length + 1);
+  }
 
 export function membrosPainel(id) { return id ? tiles.filter(function (t) { return t.pn === id; }) : []; }
 

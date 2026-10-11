@@ -1,5 +1,5 @@
 import { cabNome, cabDe, corGab } from "./gabinetes.js";
-import { tiles, rowsEl, groups, gname, save, selected, gM, gC, res, esc, fmt, nf, set_selected } from "./core.js";
+import { tiles, rowsEl, groups, gname, save, selected, gM, gC, res, esc, fmt, nf, set_selected, painelById, pnome } from "./core.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
 import { syncInsp } from "./gaveta.js";
 import { syncMPanel } from "./rig-edicao.js";
@@ -31,6 +31,17 @@ export function refreshSelects() {
     syncInsp();
   }
 
+// etiqueta do grupo ao lado do nome, na lista
+export function atualizarTags() {
+    tiles.forEach(function (t) {
+      var el = document.querySelector('#rows tr[data-id="' + t.id + '"] .ptag');
+      if (!el) return;
+      var p = t.pn && painelById(t.pn);
+      el.textContent = p ? pnome(p) : "";
+      el.hidden = !p;
+    });
+  }
+
 export function select(id) {
     set_selected(id);
     tiles.forEach(function (s) {
@@ -50,7 +61,7 @@ export function init() {
       var q = res(s);
       var tr = document.createElement("tr");
       tr.setAttribute("data-id", s.id);
-      tr.innerHTML = '<td><span class="n">' + s.id + '</span></td><td>' + esc(s.name) + (s.extra ? ' <button class="xdel" type="button">Excluir</button>' : '') +
+      tr.innerHTML = '<td><span class="n">' + s.id + '</span></td><td><span class="pnm">' + esc(s.name) + '</span><span class="ptag"></span>' + (s.extra ? ' <button class="xdel" type="button">Excluir</button>' : '') +
         '</td><td class="gsel"></td><td class="r">' + fmt(s.w) + ' × ' + fmt(s.h) + '</td><td class="r">' + q.cols + ' × ' + q.rows + (q.n < q.cols * q.rows ? ' − ' + (q.cols * q.rows - q.n) : '') +
         '</td><td>' + cabNome(s) + '</td><td class="r">' + q.w + ' × ' + q.h +
         '</td><td class="r">' + nf(q.total) + '</td><td class="r mpos">' + fmt(s.mx) + ' , ' + fmt(s.my) +
@@ -74,6 +85,7 @@ export function init() {
     sp.appendChild(document.createTextNode(g.nome + " · " + g.rx + " × " + g.ry + " px"));
     leg.appendChild(sp);
   });
+  atualizarTags();
   document.getElementById("total-cab").textContent = tiles.reduce(function (a, s) { var q = res(s); return a + q.n; }, 0) + " gabinetes";
   document.getElementById("total").textContent = nf(tiles.reduce(function (a, s) { return a + res(s).total; }, 0));
 }

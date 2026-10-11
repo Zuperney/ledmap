@@ -3,7 +3,8 @@ import { updInsp } from "./gaveta.js";
 import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis, desenharFurosM } from "./rig.js";
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
 import { tById, pmsg } from "./exportar.js";
-import { select } from "./tabela.js";
+import { select, atualizarTags } from "./tabela.js";
+import { renderCartao } from "./rig-cartao.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep, routes } from "./cabeamento.js";
 import { curTab } from "./abas.js";
@@ -30,13 +31,8 @@ export function refreshM() {
     if (cabOn) renderCabM();
   }
 
+// o cartão do painel mostra a seleção; aqui só se avisa que ela mudou
 export function syncMPanel() {
-    var t = selected && tById[selected];
-    document.getElementById("m-who").textContent = t ? "Painel " + t.id + " · " + t.name : "Toque num painel para movê-lo";
-    var ix = document.getElementById("m-x"), iy = document.getElementById("m-y");
-    ix.disabled = iy.disabled = !t;
-    ix.value = t ? t.mx : ""; iy.value = t ? t.my : "";
-    document.getElementById("m-prop").disabled = !t;
     syncGrupo();
     desenharPaineis();
   }
@@ -46,7 +42,24 @@ var mselM = [], modoSel = false;
 
 export function modoSelM() { return modoSel; }
 
-function sairModoSel() { modoSel = false; mselM = []; marcarMsel(); }
+export function sairModoSel() { modoSel = false; mselM = []; marcarMsel(); }
+
+export function mselLista() { return mselM.slice(); }
+
+// "Selecionar vários" (no cartão): cada toque marca ou desmarca um painel; o painel aberto já entra
+export function iniciarSelecao() {
+    modoSel = true;
+    mselM = selected && tById[selected] ? [selected] : [];
+    marcarMsel();
+  }
+
+export function desagrupar(pn) {
+    if (!pn) return;
+    membrosPainel(pn).forEach(function (o) { o.pn = ""; });
+    podarPaineis();
+    pmsg("Grupo desfeito.");
+    save(); refreshM(); atualizarTags();
+  }
 
 function marcarMsel() {
     tiles.forEach(function (t) { gM[t.id].classList.toggle("msel", mselM.indexOf(t.id) >= 0); });
@@ -65,45 +78,18 @@ export function limparMselM() { if (mselM.length) { mselM = []; marcarMsel(); } 
 // painéis que o botão Excluir apaga: a multisseleção ou o painel selecionado
 export function selecaoM() { return mselM.length ? mselM.slice() : (selected && tById[selected] ? [selected] : []); }
 
-function syncGrupo() {
-    var b = document.getElementById("m-grp");
-    if (!b) return;
-    var del = document.getElementById("m-del");
-    var dup = document.getElementById("m-dup"), ts = selected && tById[selected];
-    if (dup) { dup.disabled = !ts; dup.textContent = ts && ts.pn ? "Duplicar grupo" : "Duplicar"; }
-    if (del) { var n = selecaoM().length; del.disabled = !n; del.title = n > 1 ? "Excluir " + n + " painéis" : "Excluir o painel selecionado"; }
-    var t = selected && tById[selected];
-    b.setAttribute("aria-pressed", String(modoSel));
-    b.disabled = tiles.length < 2;
-    if (mselM.length >= 2) b.textContent = "Agrupar (" + mselM.length + ")";
-    else if (modoSel) b.textContent = "Cancelar";
-    else if (t && t.pn) b.textContent = "Desagrupar";
-    else b.textContent = "Grupo";
-  }
+function syncGrupo() { renderCartao(); }
 
 function clicarGrupo() {
-    var t = selected && tById[selected];
-    if (mselM.length >= 2) {
-      var p = novoPainel();
-      mselM.forEach(function (id) { if (tById[id]) tById[id].pn = p.id; });
-      podarPaineis();
-      pmsg(pnome(p) + " criado com " + mselM.length + " painéis. Em Editar, o grupo se move junto.");
-      modoSel = false; mselM = [];
-      marcarMsel(); save(); refreshM();
-    } else if (modoSel) {
-      sairModoSel();
-    } else if (t && t.pn) {
-      membrosPainel(t.pn).forEach(function (o) { o.pn = ""; });
-      podarPaineis();
-      pmsg("Grupo desfeito.");
-      marcarMsel(); save(); refreshM();
-    } else {
-      // liga o modo de seleção: cada toque marca ou desmarca um painel
-      modoSel = true;
-      mselM = t ? [t.id] : [];
-      marcarMsel();
-      pmsg("Toque nos painéis do grupo e depois em Agrupar.");
-    }
+    if (mselM.length < 2) return;
+    var p = novoPainel();
+    mselM.forEach(function (id) { if (tById[id]) tById[id].pn = p.id; });
+    podarPaineis();
+    pmsg(pnome(p) + " criado com " + mselM.length + " painéis. Com Mover ligado, o grupo se move junto.");
+    var primeiro = mselM[0];
+    modoSel = false; mselM = [];
+    marcarMsel(); save(); refreshM(); atualizarTags();
+    select(primeiro);
   }
 
 // ---- Recortar: tirar ou devolver gabinetes de um painel (triângulo, escada, vão...) ----
@@ -151,8 +137,10 @@ function setRecorte(on) {
     else if (mudou) { mudou = false; concluirRecorte(); }
   }
 
+// sair da aba Rig (ou do projeto) com o Recortar ligado grava o recorte
+export function encerrarRecorte() { if (recorte) setRecorte(false); }
+
 export function setEditM(on) {
-    if (!on && recorte) setRecorte(false);
     editM = on;
     document.getElementById("m-edit").setAttribute("aria-pressed", String(on));
     document.getElementById("m-edit-panel").hidden = !on;
@@ -163,7 +151,7 @@ export function setEditM(on) {
   }
 
 export function onDownM(e, t) {
-    if (editM && recorte) {
+    if (recorte) {
       var cel = celulaEm(t, e);
       if (!cel) return;
       if (selected !== t.id) select(t.id);
@@ -257,6 +245,12 @@ export function init() {
       });
     });
   document.getElementById("m-grp").addEventListener("click", clicarGrupo);
+  // tocar no vazio do desenho tira a seleção (fora do modo de selecionar vários)
+  svgM.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest(".scr")) return;
+    if (modoSel || recorte) return;
+    limparMselM(); if (selected) select(null);
+  });
   document.getElementById("m-rec").addEventListener("click", function () { setRecorte(!recorte); });
   document.getElementById("m-dup").addEventListener("click", function () { if (selected && tById[selected]) duplicarPainel(selected); });
   document.getElementById("m-prop").addEventListener("click", function () { if (selected && tById[selected]) openAdd(selected); });

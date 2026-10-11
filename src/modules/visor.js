@@ -48,8 +48,8 @@ export function makeViewer(stage, svg, ids, onPinch, minW, conteudo) {
     btnLock.addEventListener("click", function () { setLock(!locked); });
     $(ids.zin).addEventListener("click", function () { setZoom(zoom * 1.25); });
     $(ids.zout).addEventListener("click", function () { setZoom(zoom / 1.25); });
-    function enquadrar() {
-      var c = conteudo && conteudo(), vb = svg.viewBox.baseVal;
+    function enquadrar(alvo) {
+      var c = alvo && typeof alvo.w === "number" ? alvo : (conteudo && conteudo()), vb = svg.viewBox.baseVal;
       if (!c || !(c.w > 0) || !(c.h > 0) || !vb || !vb.width) { setZoom(stage.clientWidth / baseW()); stage.scrollLeft = 0; stage.scrollTop = 0; return; }
       var m = Math.max(c.w, c.h) * 0.06, W = stage.clientWidth || 300;
       var maxH = parseFloat(getComputedStyle(stage).maxHeight), H = isFinite(maxH) && maxH > 0 ? Math.min(maxH, window.innerHeight * 0.85) : window.innerHeight * 0.6;
