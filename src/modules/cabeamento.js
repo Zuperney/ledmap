@@ -2,7 +2,7 @@ import { res, tiles, groups, nf, bbox, el, text, existe } from "./core.js";
 import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
-import { makeViewer } from "./visor.js";
+import { makeViewer, caixaPx } from "./visor.js";
 import { snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas, areaRet, cortarPorArea, cabeNaPorta, planejar, diagnostico } from "./auto-cabos.js";
 
 function m4(v) { return Math.round(v * 10000) / 10000; }
@@ -451,7 +451,8 @@ export function init() {
   svgK.addEventListener("pointercancel", function () { paint = null; });
   viewK = makeViewer(svgK.parentNode, svgK,
     { label: "k-zlabel", lock: "k-lock", zin: "k-zin", zout: "k-zout", zfit: "k-zfit" },
-    function () { paint = null; });
+    function () { paint = null; }, undefined,
+    function () { return tiles.length ? caixaPx(tiles) : null; });
   document.getElementById("k-new").addEventListener("click", function () {
       var p = { id: "p" + nextP, n: nextP, name: "Porta " + nextP };
       nextP++;
