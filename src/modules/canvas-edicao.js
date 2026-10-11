@@ -4,6 +4,8 @@ import { updateBoxes, updateDetailStat } from "./screens.js";
 import { updInsp } from "./gaveta.js";
 import { select } from "./tabela.js";
 import { tById, pmsg as pmsgC } from "./exportar.js";
+import { renderCartaoC } from "./screen-cartao.js";
+import { viewC } from "./visor.js";
 
 let moving, drag, multi, multiOn, magnetOn, btnMagnet;
 
@@ -70,15 +72,28 @@ function multiIds() { return Object.keys(multi); }
 
 function paintMulti() {
     tiles.forEach(function (t) { gC[t.id].classList.toggle("msel", !!multi[t.id]); });
-    var b = document.getElementById("btn-multi"), n = multiIds().length;
-    b.textContent = n ? "Multi · " + n : "Multi";
-    b.setAttribute("aria-pressed", String(multiOn));
+    renderCartaoC();
   }
 
 export function clearMulti() { multi = {}; multiOn = false; paintMulti(); }
 
+// seleção de vários na Screen (Shift/Ctrl + clique, ou "Selecionar vários" no cartão)
+export function multiLista() { return multiIds(); }
+export function modoSelC() { return multiOn; }
+export function movendoC() { return moving; }
+export function iniciarSelecaoC() {
+    multiOn = true; multi = {};
+    if (selected && tById[selected]) multi[selected] = 1;
+    paintMulti();
+  }
+export function toggleMultiC(id) {
+    if (!multiIds().length && selected && tById[selected] && selected !== id) multi[selected] = 1;
+    if (multi[id]) delete multi[id]; else multi[id] = 1;
+    paintMulti();
+  }
+
 export function onDown(e, s) {
-    if (multiOn) { if (multi[s.id]) delete multi[s.id]; else multi[s.id] = 1; paintMulti(); select(s.id); e.preventDefault(); return; }
+    if (multiOn || e.shiftKey || e.ctrlKey || e.metaKey) { toggleMultiC(s.id); e.preventDefault(); return; }
     var inMulti = multiIds().length > 1 && multi[s.id];
     if (!inMulti && multiIds().length) { multi = {}; paintMulti(); }
     select(s.id);
@@ -138,9 +153,12 @@ function endDrag() {
     if (was) save();
   }
 
+// Mover (desligado por padrão): desligado, tocar seleciona e arrastar só navega; ligado, arrasta painéis
 export function setMoving(on) {
     moving = on;
     document.getElementById("btn-move").setAttribute("aria-pressed", String(on));
+    document.getElementById("c-edit-panel").hidden = !on;
+    if (viewC) viewC.setLock(on);
     tiles.forEach(function (s) {
       gC[s.id].classList.toggle("edit", on);
       gC[s.id].style.touchAction = on ? "none" : "";
@@ -157,7 +175,7 @@ function gridToggle(btnId, gridId) {
   }
 
 export function init() {
-  moving = true;
+  moving = false;
   drag = null;
   multi = {};
   multiOn = false;
@@ -165,11 +183,13 @@ export function init() {
       var n = trazerParaDentro();
       if (n) pmsgC(n === 1 ? "1 painel trazido para dentro do canvas." : n + " painéis trazidos para dentro do canvas.");
     });
-  document.getElementById("btn-multi").addEventListener("click", function () {
-      if (multiOn) { multiOn = false; if (multiIds().length < 2) multi = {}; }
-      else { multiOn = true; if (selected && tById[selected] && !multiIds().length) multi[selected] = 1; }
-      paintMulti();
-    });
+  // tocar no vazio do canvas tira a seleção (fora do modo de selecionar vários)
+  svgC.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest(".scr")) return;
+    if (multiOn) return;
+    if (multiIds().length) clearMulti();
+    if (selected) select(null);
+  });
   magnetOn = true;
   svgC.addEventListener("pointermove", function (e) {
       if (!drag) return;

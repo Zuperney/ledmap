@@ -5,8 +5,10 @@ import { refreshSelects } from "./tabela.js";
 let chipsEl, detailEl, nameInput, btnGroupMove, btnDel, armTimer;
 
 export function applyFocus() {
+    // screen em foco apaga os outros painéis; uma screen ainda vazia não apaga nada (senão não dá para tocar em ninguém)
+    var focoVazio = active !== null && !members(active).length;
     tiles.forEach(function (t) {
-      var dim = active !== null && t.grp !== active;
+      var dim = active !== null && !focoVazio && t.grp !== active;
       gC[t.id].classList.toggle("dim", dim);
       gM[t.id].classList.toggle("dim", dim);
     });

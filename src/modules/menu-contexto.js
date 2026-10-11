@@ -1,7 +1,9 @@
 // Menu do clique direito no Rig (computador e app de desktop): as ações do painel sem ir até o cartão.
 // Sobre um painel: o que dá para fazer com ele (ou com a seleção, se ele estiver nela).
 // No vazio: + Painel, Enquadrar, Mover, Grade, 3D. Atalhos: Ctrl+D duplica, F2 edita o painel selecionado.
-import { selected, painelById, pnome, tiles } from "./core.js";
+import { selected, painelById, pnome, tiles, groups, gname } from "./core.js";
+import { multiLista, iniciarSelecaoC, movendoC } from "./canvas-edicao.js";
+import { colocarNaScreen } from "./screen-cartao.js";
 import { tById } from "./exportar.js";
 import { select } from "./tabela.js";
 import { openAdd, duplicarPainel, excluirPaineis } from "./telas.js";
@@ -91,10 +93,50 @@ function itensVazio() {
   ];
 }
 
-// painel sob o clique: a linha da lista ou o desenho do Rig (os dois guardam o número em data-id)
+// painel sob o clique: a linha da lista, o desenho do Rig ou o canvas da Screen (todos guardam o número em data-id)
 function idDoAlvo(alvo) {
-  var el = alvo.closest && alvo.closest("#rows tr[data-id], #svg-m .scr[data-id]");
+  var el = alvo.closest && alvo.closest("#rows tr[data-id], #svg-m .scr[data-id], #svg-c .scr[data-id]");
   return el ? el.getAttribute("data-id") : null;
+}
+
+// ---- aba Screen ----
+function itensScreenDestino(ids) {
+  var itens = groups.map(function (g) {
+    return { t: "Colocar em " + gname(g), fn: function () { colocarNaScreen(ids, g.id); } };
+  });
+  itens.push({ t: "Colocar numa screen nova", fn: function () { colocarNaScreen(ids, "__nova"); } });
+  itens.push({ t: "Tirar da screen", fn: function () { colocarNaScreen(ids, ""); } });
+  return itens;
+}
+
+function itensPainelC(t) {
+  var sel = multiLista();
+  if (sel.length >= 2 && sel.indexOf(t.id) >= 0) {
+    return itensScreenDestino(sel).concat(["-", { t: "Excluir " + sel.length + " painéis", perigo: true, confirmar: "Confirmar exclusão", fn: function () { excluirPaineis(sel); } }]);
+  }
+  var p = t.pn && painelById(t.pn), sel1 = function () { if (selected !== t.id) select(t.id); };
+  return [
+    { t: "Editar…", fn: function () { sel1(); openAdd(t.id); } },
+    { t: p ? "Duplicar grupo" : "Duplicar", fn: function () { duplicarPainel(t.id); } },
+    { t: "Ir até o painel", fn: function () { sel1(); $("cc-ir").click(); } },
+    "-"
+  ].concat(itensScreenDestino([t.id]), ["-",
+    tiles.length > 1 ? { t: "Selecionar vários…", fn: function () { sel1(); iniciarSelecaoC(); } } : null,
+    { t: "Excluir painel", perigo: true, confirmar: "Confirmar exclusão", fn: function () { excluirPaineis([t.id]); } }
+  ]).filter(Boolean);
+}
+
+function itensVazioC() {
+  var itens = [
+    { t: "+ Adicionar painel", fn: function () { openAdd(); } },
+    { t: "Enquadrar tudo", fn: function () { $("zoom-fit").click(); } },
+    { t: movendoC() ? "Desligar Mover" : "Ligar Mover", fn: function () { $("btn-move").click(); } },
+    { t: "Nova screen", fn: function () { $("btn-new-screen").click(); } },
+    "-",
+    { t: ($("btn-grid-c").getAttribute("aria-pressed") === "true" ? "Esconder" : "Mostrar") + " grade", fn: function () { $("btn-grid-c").click(); } }
+  ];
+  if (!$("btn-dentro").hidden) itens.push({ t: $("btn-dentro").textContent, fn: function () { $("btn-dentro").click(); } });
+  return itens;
 }
 
 export function init() {
@@ -105,15 +147,29 @@ export function init() {
     if (t && selected !== t.id && mselLista().indexOf(t.id) < 0) select(t.id);
     abrir(e.clientX, e.clientY, t ? itensPainel(t) : itensVazio());
   });
-  $("rows").addEventListener("contextmenu", function (e) {
-    var id = idDoAlvo(e.target), t = id && tById[id];
-    if (!t || document.body.getAttribute("data-aba") !== "m") return;
+  $("svg-c").addEventListener("contextmenu", function (e) {
     e.preventDefault();
-    abrir(e.clientX, e.clientY, itensPainel(t));
+    var id = idDoAlvo(e.target), t = id && tById[id];
+    if (t && selected !== t.id && multiLista().indexOf(t.id) < 0) select(t.id);
+    abrir(e.clientX, e.clientY, t ? itensPainelC(t) : itensVazioC());
   });
-  // atalhos de teclado do Rig (fora de campos de texto)
+  $("rows").addEventListener("contextmenu", function (e) {
+    var id = idDoAlvo(e.target), t = id && tById[id], aba = document.body.getAttribute("data-aba");
+    if (!t || (aba !== "m" && aba !== "c")) return;
+    e.preventDefault();
+    if (selected !== t.id) select(t.id);
+    abrir(e.clientX, e.clientY, aba === "c" ? itensPainelC(t) : itensPainel(t));
+  });
+  // atalhos de teclado do Rig e da Screen (fora de campos de texto)
   document.addEventListener("keydown", function (e) {
-    if (document.body.getAttribute("data-aba") !== "m" || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || "")) return;
+    var aba = document.body.getAttribute("data-aba");
+    if ((aba !== "m" && aba !== "c") || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || "")) return;
+    // Delete na Screen: como no Rig, o 1º toque arma o botão Excluir do cartão e o 2º confirma
+    if (aba === "c" && (e.key === "Delete" || e.key === "Backspace") && (multiLista().length || selected)) {
+      e.preventDefault();
+      $(multiLista().length >= 2 ? "cc-vdel" : "cc-del").click();
+      return;
+    }
     var t = selected && tById[selected];
     if (!t) return;
     if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === "d") { e.preventDefault(); duplicarPainel(t.id); }

@@ -3,6 +3,7 @@ import { tiles, rowsEl, groups, gname, save, selected, gM, gC, res, esc, fmt, nf
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
 import { syncInsp } from "./gaveta.js";
 import { syncMPanel } from "./rig-edicao.js";
+import { renderCartaoC } from "./screen-cartao.js";
 
 let deleteLater;
 
@@ -52,6 +53,7 @@ export function select(id) {
       tr.classList.toggle("sel", tr.getAttribute("data-id") === id);
     });
     syncMPanel();
+    renderCartaoC();
     syncInsp();
   }
 
