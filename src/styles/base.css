@@ -50,6 +50,10 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .scr.frente rect.body { fill-opacity: .4; stroke-width: 2.5; }
 .ztag { fill: var(--fg); font-family: var(--font-data); font-weight: 500; pointer-events: none; stroke: var(--panel); stroke-width: 0.06; paint-order: stroke; }
 .eixo0 { stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; opacity: .55; pointer-events: none; }
+.scr.outra-vista { display: none; }
+body.vista-horizontal #svg-m .floor { display: none; }
+.vnav { display: inline-flex; gap: 2px; }
+.vnav #m-vista { max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .laco { fill: var(--imag); fill-opacity: .08; stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
 .furo { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; stroke-opacity: .6; }
 .scr.recorte { cursor: crosshair; }
@@ -133,6 +137,7 @@ td.r, th.r { text-align: right; }
 .modal .fld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 .modal .fld input, .modal .fld select { font: 500 14px var(--font-data); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px; min-width: 0; }
 .modal .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .modal .prev { font-size: 12px; color: var(--fg); background: var(--bg); border: 1px dashed var(--line); border-radius: 4px; padding: 8px; }
 .modal .err { font-size: 12px; color: var(--bad); min-height: 1em; }
 .modal .acts { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }

@@ -3,7 +3,7 @@
 // A frente de cada painel recebe a imagem da Montagem (entrada) com o test card escolhido, como o UV map do disguise.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { tiles, res } from "./core.js";
+import { tiles, res, planoById } from "./core.js";
 import { imagemMontagem, PRESETS } from "./composicao.js";
 import { projetoAtivo } from "./projetos.js";
 import { saveFile, pmsg } from "./exportar.js";
@@ -13,16 +13,15 @@ var aberta = null;
 
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
-// limites do conjunto em metros (x, y do chão para cima, z para frente)
-function limites() {
-  var b = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, z0: Infinity, z1: -Infinity };
-  tiles.forEach(function (t) {
-    var q = res(t);
-    b.x0 = Math.min(b.x0, t.mx); b.x1 = Math.max(b.x1, t.mx + q.cols * q.mw);
-    b.y0 = Math.min(b.y0, t.my); b.y1 = Math.max(b.y1, t.my + q.rows * q.mh);
-    b.z0 = Math.min(b.z0, -(t.z || 0) - PROF); b.z1 = Math.max(b.z1, -(t.z || 0));
-  });
-  return b;
+// cada vista de montagem é um plano posto no palco: posição (ox, oy, oz) e giro conforme a orientação.
+// No plano: x = x do Rig, y = y do Rig, z = para fora da face (o recuo vai para trás).
+var GIRO = { esq: [0, Math.PI / 2, 0], dir: [0, -Math.PI / 2, 0], tras: [0, Math.PI, 0], teto: [Math.PI / 2, 0, 0], piso: [-Math.PI / 2, 0, 0] };
+function grupoDoPlano(pl) {
+  var p = planoById(pl || "") || planoById(""), g = new THREE.Group(), R = GIRO[p.ori];
+  g.position.set(p.ox, p.oy, p.oz);
+  if (R) g.rotation.set(R[0], R[1], R[2]);
+  g.updateMatrixWorld(true);
+  return g;
 }
 
 // textura da frente de um painel: o recorte dele na imagem da Montagem, com os gabinetes recortados transparentes
@@ -78,52 +77,53 @@ export function abrir3D() {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a3, 1.25));
   var sol = new THREE.DirectionalLight(0xffffff, 1.2); sol.position.set(4, 8, 10); scene.add(sol);
 
-  var L = limites(), cx = (L.x0 + L.x1) / 2, cy = (L.y0 + L.y1) / 2, larg = L.x1 - L.x0, alt = L.y1 - L.y0;
-  var lado = Math.ceil(Math.max(larg, alt, Math.abs(L.z0) + 2) + 6);
-  var grade = new THREE.GridHelper(lado * 2, lado * 2, 0x9aa5b1, 0xd3d9df);
-  grade.position.set(cx, 0, (L.z0 + L.z1) / 2);
-  scene.add(grade);
-  // eixo 0 do Rig (centro do palco), no chão
-  var eixo = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.002, -lado), new THREE.Vector3(0, 0.002, lado)]), new THREE.LineBasicMaterial({ color: 0x2f7de1, transparent: true, opacity: 0.6 }));
-  scene.add(eixo);
+  // um grupo por vista de montagem (Frente, paredes, teto...), já girado e posto no lugar
+  var grupos = {};
+  function grupo(t) { var k = t.pl || ""; if (!grupos[k]) { grupos[k] = grupoDoPlano(k); scene.add(grupos[k]); } return grupos[k]; }
 
-  // gabinetes: uma caixa por gabinete existente, todas num único objeto (uma chamada de desenho)
+  // gabinetes: uma caixa por gabinete existente, todas num único objeto (uma chamada de desenho), já no lugar do palco
   var n = tiles.reduce(function (a, t) { return a + res(t).n; }, 0);
   var caixas = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x3b434d, roughness: 0.85, metalness: 0.1 }), Math.max(1, n));
   var m = new THREE.Matrix4(), pos = new THREE.Vector3(), rot = new THREE.Quaternion(), esc = new THREE.Vector3(), i = 0;
+  // contorno de cada gabinete (as 12 arestas da caixa): deixa claro onde cada um começa e termina
+  var arestas = [], v3 = new THREE.Vector3();
+  function aresta(mw, a, b) { v3.set(a[0], a[1], a[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); v3.set(b[0], b[1], b[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); }
   tiles.forEach(function (t) {
-    var q = res(t), z = -(t.z || 0);
+    var q = res(t), z = -(t.z || 0), mw = grupo(t).matrixWorld, z1 = z + 0.003, z0 = z - PROF;
     for (var r = 0; r < q.rows; r++) for (var c = 0; c < q.cols; c++) {
       if (q.fora[c + ":" + r]) continue;
       pos.set(t.mx + (c + 0.5) * q.mw, t.my + (q.rows - 1 - r + 0.5) * q.mh, z - PROF / 2);
       esc.set(q.mw * 0.992, q.mh * 0.992, PROF);
-      caixas.setMatrixAt(i++, m.compose(pos, rot, esc));
+      caixas.setMatrixAt(i++, m.compose(pos, rot, esc).premultiply(mw));
+      var x0 = t.mx + c * q.mw, x1 = x0 + q.mw, y0 = t.my + (q.rows - 1 - r) * q.mh, y1 = y0 + q.mh;
+      [z0, z1].forEach(function (zz) { aresta(mw, [x0, y0, zz], [x1, y0, zz]); aresta(mw, [x1, y0, zz], [x1, y1, zz]); aresta(mw, [x1, y1, zz], [x0, y1, zz]); aresta(mw, [x0, y1, zz], [x0, y0, zz]); });
+      [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].forEach(function (v) { aresta(mw, [v[0], v[1], z0], [v[0], v[1], z1]); });
     }
   });
   caixas.count = i;
   caixas.instanceMatrix.needsUpdate = true;
   scene.add(caixas);
-
-  // contorno de cada gabinete (as 12 arestas da caixa): deixa claro onde cada um começa e termina
-  var arestas = [];
-  tiles.forEach(function (t) {
-    var q = res(t), z1 = -(t.z || 0) + 0.003, z0 = -(t.z || 0) - PROF;
-    for (var r = 0; r < q.rows; r++) for (var c = 0; c < q.cols; c++) {
-      if (q.fora[c + ":" + r]) continue;
-      var x0 = t.mx + c * q.mw, x1 = x0 + q.mw, y0 = t.my + (q.rows - 1 - r) * q.mh, y1 = y0 + q.mh;
-      [z0, z1].forEach(function (z) { arestas.push(x0, y0, z, x1, y0, z, x1, y0, z, x1, y1, z, x1, y1, z, x0, y1, z, x0, y1, z, x0, y0, z); });
-      [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].forEach(function (v) { arestas.push(v[0], v[1], z0, v[0], v[1], z1); });
-    }
-  });
   var gArestas = new THREE.BufferGeometry();
   gArestas.setAttribute("position", new THREE.Float32BufferAttribute(arestas, 3));
   var linhas = new THREE.LineSegments(gArestas, new THREE.LineBasicMaterial({ color: 0x141a21, transparent: true, opacity: 0.45 }));
   scene.add(linhas);
 
-  // frentes: um plano por painel com a imagem da Montagem
+  // limites do conjunto no palco (m): enquadramento e chão
+  gArestas.computeBoundingBox();
+  var L = gArestas.boundingBox, cx = (L.min.x + L.max.x) / 2, cy = (L.min.y + L.max.y) / 2, cz = (L.min.z + L.max.z) / 2;
+  var larg = Math.max(L.max.x - L.min.x, (L.max.z - L.min.z) * 0.7), alt = L.max.y - L.min.y;
+  var lado = Math.ceil(Math.max(L.max.x - L.min.x, L.max.z - L.min.z, alt) / 2 + 6);
+  var grade = new THREE.GridHelper(lado * 2, lado * 2, 0x9aa5b1, 0xd3d9df);
+  grade.position.set(Math.round(cx), 0, Math.round(cz));
+  scene.add(grade);
+  // eixo 0 do Rig (centro do palco), no chão
+  var eixo = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.002, cz - lado), new THREE.Vector3(0, 0.002, cz + lado)]), new THREE.LineBasicMaterial({ color: 0x2f7de1, transparent: true, opacity: 0.6 }));
+  scene.add(eixo);
+
+  // frentes: um plano por painel com a imagem da Montagem, dentro do grupo da vista dele
   var frentes = [];
   function montarFrentes() {
-    frentes.forEach(function (f) { scene.remove(f); f.geometry.dispose(); if (f.material.map) f.material.map.dispose(); f.material.dispose(); });
+    frentes.forEach(function (f) { f.parent.remove(f); f.geometry.dispose(); if (f.material.map) f.material.map.dispose(); f.material.dispose(); });
     frentes = [];
     var img = imagemMontagem(sel.value, 4096);
     tiles.forEach(function (t) {
@@ -131,21 +131,23 @@ export function abrir3D() {
       var mat = new THREE.MeshBasicMaterial({ map: tx, color: tx ? 0xffffff : 0x445566, transparent: true, alphaTest: 0.5 });
       var pl = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
       pl.position.set(t.mx + w / 2, t.my + h / 2, -(t.z || 0) + 0.002);
-      scene.add(pl); frentes.push(pl);
+      grupo(t).add(pl); frentes.push(pl);
     });
     pedir();
   }
 
   var camera = new THREE.PerspectiveCamera(40, 1, 0.05, 500);
   var controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(cx, cy, -0.3);
-  controls.maxPolarAngle = Math.PI * 0.495; // não passa para baixo do chão
+  controls.target.set(cx, cy, cz);
+  // não passa para baixo do chão; com painel no teto, dá para olhar de baixo para cima
+  var temTeto = tiles.some(function (t) { var p = planoById(t.pl || ""); return p && p.ori === "teto"; });
+  controls.maxPolarAngle = temTeto ? Math.PI * 0.97 : Math.PI * 0.495;
 
   function distEnquadrar() {
     return Math.max(larg / (2 * Math.tan(THREE.MathUtils.degToRad(20)) * Math.max(0.6, camera.aspect)), alt / (2 * Math.tan(THREE.MathUtils.degToRad(20)))) * 1.25 + 1;
   }
   function vista(tipo, instantaneo) {
-    controls.target.set(cx, cy, -0.3);
+    controls.target.set(cx, cy, cz);
     var d = tipo === "frente" ? new THREE.Vector3(0, 0, 1) : tipo === "topo" ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(-0.55, 0.25, 0.85);
     girarPara(d, distEnquadrar(), instantaneo);
   }
@@ -154,7 +156,7 @@ export function abrir3D() {
   var anim = null;
   function girarPara(dir, dist, instantaneo) {
     dir = dir.clone().normalize();
-    if (dir.y > 0.999) dir.set(0, 1, 0.002).normalize(); // olhar reto de cima trava a órbita
+    if (Math.abs(dir.y) > 0.999) dir.set(0, Math.sign(dir.y), 0.002).normalize(); // olhar reto de cima (ou de baixo) trava a órbita
     var rel = camera.position.clone().sub(controls.target), r0 = rel.length() || 1, r1 = dist || r0, a = rel.lengthSq() ? rel.normalize() : dir.clone();
     var q = new THREE.Quaternion().setFromUnitVectors(a, dir), id = new THREE.Quaternion(), t0 = performance.now();
     if (anim) cancelAnimationFrame(anim);
@@ -215,7 +217,7 @@ export function abrir3D() {
     if (!p) return;
     // face, aresta ou canto: cada eixo perto da borda do cubo entra na direção
     var d = new THREE.Vector3(Math.abs(p.x) > 0.3 ? Math.sign(p.x) : 0, Math.abs(p.y) > 0.3 ? Math.sign(p.y) : 0, Math.abs(p.z) > 0.3 ? Math.sign(p.z) : 0);
-    if (d.y < 0) d.y = 0; // por baixo do chão não dá
+    if (d.y < 0 && !temTeto) d.y = 0; // por baixo só faz sentido com teto
     if (d.lengthSq() > 0) girarPara(d);
   });
   renderer.domElement.addEventListener("pointermove", function (e) { if (!e.buttons) renderer.domElement.style.cursor = noCubo(e) ? "pointer" : ""; });

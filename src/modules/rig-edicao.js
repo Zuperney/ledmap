@@ -1,4 +1,4 @@
-import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis, res, existe, EXTRAS } from "./core.js";
+import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis, res, existe, EXTRAS, noPlano } from "./core.js";
 import { updInsp } from "./gaveta.js";
 import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis, desenharFurosM } from "./rig.js";
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
@@ -220,7 +220,7 @@ function fecharLaco(e) {
     if (!l || !l.w || Math.hypot(e.clientX - l.sx, e.clientY - l.sy) < 6) return;
     ignorarAte = performance.now() + 350;
     var x0 = Math.min(l.x, l.w.x), x1 = Math.max(l.x, l.w.x), y0 = Math.min(l.y, l.w.y), y1 = Math.max(l.y, l.w.y);
-    var ids = tiles.filter(function (t) { var ty = FLOOR - t.my - t.h; return t.mx < x1 && t.mx + t.w > x0 && ty < y1 && ty + t.h > y0; }).map(function (t) { return t.id; });
+    var ids = tiles.filter(function (t) { var ty = FLOOR - t.my - t.h; return noPlano(t) && t.mx < x1 && t.mx + t.w > x0 && ty < y1 && ty + t.h > y0; }).map(function (t) { return t.id; });
     if (ids.length >= 2) { modoSel = false; mselM = ids; marcarMsel(); }
     else if (ids.length === 1) { limparMselM(); select(ids[0]); }
   }
@@ -253,7 +253,7 @@ export function init() {
         var mys = [{ v: by, k: 0 }, { v: by + bh, k: 0 }, { v: by + bh / 2, k: 1 }];
         var txs = [{ v: 0, k: 0 }], tys = [{ v: 0, k: 0 }];
         tiles.forEach(function (o) {
-          if (dragM.ids.indexOf(o.id) >= 0) return;
+          if (dragM.ids.indexOf(o.id) >= 0 || !noPlano(o)) return;
           txs.push({ v: o.mx, k: 0 }, { v: o.mx + o.w, k: 0 }, { v: o.mx + o.w / 2, k: 1 });
           tys.push({ v: o.my, k: 0 }, { v: o.my + o.h, k: 0 }, { v: o.my + o.h / 2, k: 1 });
         });

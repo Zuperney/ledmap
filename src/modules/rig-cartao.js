@@ -1,7 +1,7 @@
 // Cartão do Rig: tocar num painel (no desenho ou na lista) mostra o que dá para fazer com ele.
 // Três formas: um painel · vários selecionados · um grupo (aberto pela etiqueta do grupo).
 // Editar aqui é direto: nome, X/Y, recuo e Screen; tamanho e gabinete abrem o modal (Editar).
-import { tiles, selected, res, fmt, nf, EXTRAS, save, groups, gname, painelById, pnome, membrosPainel, mnum } from "./core.js";
+import { tiles, selected, res, fmt, nf, EXTRAS, save, groups, gname, painelById, pnome, membrosPainel, mnum, noPlano, planos, todosPlanos, horizontal } from "./core.js";
 import { cabNome } from "./gabinetes.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
@@ -13,6 +13,7 @@ import { twoStep } from "./cabeamento.js";
 import { mselLista, modoSelM, iniciarSelecao, sairModoSel, desagrupar, refreshM } from "./rig-edicao.js";
 import { FLOOR } from "./core.js";
 import { curTab } from "./abas.js";
+import { irParaVista, moverParaVista } from "./vistas.js";
 
 var grupoFoco = null; // id do grupo aberto no cartão (pela etiqueta)
 function $(id) { return document.getElementById(id); }
@@ -75,6 +76,16 @@ function cartaoUm(t) {
   if (document.activeElement !== $("m-y")) $("m-y").value = t.my;
   if (document.activeElement !== $("mc-z")) $("mc-z").value = t.z || "";
   opcoesScreen($("mc-scr"), t.grp);
+  // vista de montagem: o painel selecionado leva o Rig para a vista dele; o campo move o painel (e o grupo) para outra
+  if (!noPlano(t)) irParaVista(t.pl || "", true);
+  $("m-y-l").textContent = horizontal(t.pl) ? "Y (m)" : "Y do chão (m)";
+  $("mc-vista-l").hidden = !planos.length;
+  if (planos.length) {
+    var sv = $("mc-vista");
+    sv.textContent = "";
+    todosPlanos().forEach(function (v) { var e = document.createElement("option"); e.value = v.id; e.textContent = v.nome; sv.appendChild(e); });
+    sv.value = t.pl || "";
+  }
   $("m-dup").textContent = p ? "Duplicar grupo" : "Duplicar";
   $("mc-sel").hidden = tiles.length < 2;
 }
@@ -147,6 +158,7 @@ export function init() {
     EXTRAS.forEach(function (x) { if (x.id === t.id) x.z = v; });
     if (!commitAndReload(curTab + ":" + t.id)) pmsg("Não consegui salvar neste navegador.");
   });
+  $("mc-vista").addEventListener("change", function () { if (selected) moverParaVista([selected], $("mc-vista").value); });
   $("mc-scr").addEventListener("change", function () {
     var t = selected && tById[selected];
     if (!t) return;

@@ -38,6 +38,25 @@
     </div>
   </div>
 </div>
+<div class="modal" id="vista-modal" role="dialog" aria-modal="true" aria-labelledby="v-title" hidden>
+  <div class="box">
+    <h2 id="v-title">Nova vista de montagem</h2>
+    <p class="sub">Uma vista é um plano 2D para painéis que não ficam de frente para o público: paredes de uma borda de campo, fundo, teto, piso. Ela é desenhada como quem olha para ela; o 3D junta tudo no lugar.</p>
+    <label class="fld">Nome <input type="text" id="v-nome" maxlength="40" autocomplete="off"></label>
+    <label class="fld">Orientação <select id="v-ori"></select></label>
+    <p class="sub">Onde fica o ponto 0 desta vista no palco. O 0 da Frente é o centro do palco, no chão.</p>
+    <div class="three">
+      <label class="fld">X (m) <input type="number" id="v-x" step="0.5" inputmode="decimal" title="Negativo = à esquerda, positivo = à direita (como o público vê)"></label>
+      <label class="fld">Altura (m) <input type="number" id="v-y" step="0.5" inputmode="decimal"></label>
+      <label class="fld">Profundidade (m) <input type="number" id="v-z" step="0.5" inputmode="decimal" title="Negativo = para o fundo, positivo = para o público"></label>
+    </div>
+    <div class="err" id="v-err" role="alert"></div>
+    <div class="acts">
+      <button class="btn" id="v-cancel">Cancelar</button>
+      <button class="btn" id="v-ok" aria-pressed="true">Criar</button>
+    </div>
+  </div>
+</div>
 <div class="modal" id="gab-modal" role="dialog" aria-modal="true" aria-labelledby="gab-h" hidden>
   <div class="box gab-box">
     <div id="gab-v-lista">
@@ -201,6 +220,11 @@
       <button class="btn" id="add-open">+ Painel</button>
       <button class="btn" id="m-edit" aria-pressed="false" title="Ligado: arrastar move os painéis. Desligado: arrastar só navega">Mover</button>
       <button class="btn" id="m-3d" title="Ver a montagem em 3D (só para olhar; editar continua aqui)">3D</button>
+      <span class="vnav" role="group" aria-label="Vistas de montagem">
+        <button class="btn" id="m-vant" aria-label="Vista anterior">‹</button>
+        <button class="btn" id="m-vista">Frente ▾</button>
+        <button class="btn" id="m-vprox" aria-label="Próxima vista">›</button>
+      </span>
       <div class="dd">
         <button class="btn dd-b">Visão ▾</button>
         <div class="dd-m keep" hidden>
@@ -248,9 +272,10 @@
           <label>Largura (m) <input type="number" id="mc-w" step="0.05" min="0.05" inputmode="decimal"></label>
           <label>Altura (m) <input type="number" id="mc-h" step="0.05" min="0.05" inputmode="decimal"></label>
           <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
-          <label>Y do chão (m) <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
+          <label><span id="m-y-l">Y do chão (m)</span> <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
           <label>Recuo (m) <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
           <label>Screen <select id="mc-scr" aria-label="Screen do painel"></select></label>
+          <label id="mc-vista-l" style="grid-column: 1 / -1" hidden>Vista de montagem <select id="mc-vista" aria-label="Vista de montagem do painel"></select></label>
         </div>
         <div class="mc-acts">
           <button class="btn" id="m-prop">Editar</button>

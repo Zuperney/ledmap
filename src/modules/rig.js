@@ -1,4 +1,4 @@
-import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis, membrosPainel, pnome, sobrepoem } from "./core.js";
+import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis, membrosPainel, pnome, sobrepoem, noPlano } from "./core.js";
 import { corCab } from "./gabinetes.js";
 import { editM, onDownM, toggleMselM, limparMselM, modoSelM, ignorarCliqueM } from "./rig-edicao.js";
 import { select } from "./tabela.js";
@@ -8,12 +8,15 @@ let gridM, floorLine, eixoM, regua, boundsM, layerM, guideMV, guideMH, pnLayer;
 
 export function fitM() {
     var minX = Infinity, maxX = -Infinity, topY = Infinity, botY = -Infinity;
-    tiles.forEach(function (t) {
+    // o Rig mostra uma vista de montagem por vez; os painéis das outras ficam escondidos
+    tiles.forEach(function (t) { gM[t.id].classList.toggle("outra-vista", !noPlano(t)); });
+    var aqui = tiles.filter(noPlano);
+    aqui.forEach(function (t) {
       minX = Math.min(minX, t.mx); maxX = Math.max(maxX, t.mx + t.w);
       topY = Math.min(topY, FLOOR - t.my - t.h); botY = Math.max(botY, FLOOR - t.my);
     });
     // o x = 0 é o centro do palco: a área é simétrica em volta dele
-    var b = boundsM, meia = tiles.length ? Math.max(14, Math.ceil(Math.max(-minX, maxX)) + 1) : 14;
+    var b = boundsM, meia = aqui.length ? Math.max(14, Math.ceil(Math.max(-minX, maxX)) + 1) : 14;
     b.x0 = -meia; b.x1 = meia;
     b.y0 = Math.min(-0.5, Math.floor(topY) - 1); b.y1 = Math.max(10, Math.ceil(botY) + 1.5);
     svgM.setAttribute("viewBox", [b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0].join(" "));
@@ -34,8 +37,8 @@ export function fitM() {
   }
 
 export function statM() {
-    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    tiles.forEach(function (t) {
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, aqui = tiles.filter(noPlano);
+    aqui.forEach(function (t) {
       minX = Math.min(minX, t.mx); maxX = Math.max(maxX, t.mx + t.w);
       minY = Math.min(minY, t.my); maxY = Math.max(maxY, t.my + t.h);
     });
@@ -46,10 +49,10 @@ export function statM() {
         if (sobrepoem(a, b)) { bad[a.id] = bad[b.id] = true; }
       });
     });
-    tiles.forEach(function (t) { if (bad[t.id]) nb++; gM[t.id].classList.toggle("overlap", !!bad[t.id]); });
+    tiles.forEach(function (t) { if (bad[t.id] && noPlano(t)) nb++; gM[t.id].classList.toggle("overlap", !!bad[t.id]); });
     var vazio = document.getElementById("m-vazio");
     if (vazio) vazio.hidden = !!tiles.length;
-    if (!tiles.length) { document.getElementById("stat-m").textContent = "Sem painéis"; return; }
+    if (!aqui.length) { document.getElementById("stat-m").textContent = tiles.length ? "Nenhum painel nesta vista" : "Sem painéis"; return; }
     document.getElementById("stat-m").innerHTML = "Conjunto: <b>" + fmt(maxX - minX) + " m</b> de largura × <b>" + fmt(maxY - minY) + " m</b> de altura" +
       (nb ? ' · <span class="warn">' + nb + " painéis sobrepostos</span>" : "");
   }
@@ -59,7 +62,7 @@ export function desenharPaineis() {
     if (!pnLayer) return;
     pnLayer.textContent = "";
     paineis.forEach(function (p) {
-      var m = membrosPainel(p.id);
+      var m = membrosPainel(p.id).filter(noPlano);
       if (!m.length) return;
       var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, gabs = {};
       m.forEach(function (t) { x0 = Math.min(x0, t.mx); x1 = Math.max(x1, t.mx + t.w); y0 = Math.min(y0, t.my); y1 = Math.max(y1, t.my + t.h); gabs[t.cab] = 1; });

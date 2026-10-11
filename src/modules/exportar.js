@@ -1,5 +1,5 @@
 import { cabNome, corCab } from "./gabinetes.js";
-import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR } from "./core.js";
+import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR, noPlano, planoById, vistaM } from "./core.js";
 import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, limiteRota, limiteTxt, oc } from "./cabeamento.js";
 import { boundsM } from "./rig.js";
 
@@ -330,14 +330,14 @@ function drawLayout(withCab) {
     ctx.fillRect(0, 0, W, H);
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    tiles.forEach(function (t) {
+    tiles.filter(noPlano).forEach(function (t) {
       minX = Math.min(minX, t.mx); maxX = Math.max(maxX, t.mx + t.w);
       minY = Math.min(minY, t.my); maxY = Math.max(maxY, t.my + t.h);
     });
     ctx.font = "700 72px " + DISP;
     halo(ctx, withCab ? "Montagem com cabeamento" : "Layout da montagem", pad, 96, "#ffffff", 0);
     ctx.font = "400 34px " + MONO;
-    halo(ctx, "Mapa de painéis LED · conjunto " + fmt(maxX - minX) + " × " + fmt(maxY - minY) + " m · vista frontal, medidas em metros", pad, 140, "#9fb2c1", 0);
+    halo(ctx, "Mapa de painéis LED · conjunto " + fmt(maxX - minX) + " × " + fmt(maxY - minY) + " m · vista " + (planoById(vistaM) || { nome: "Frente" }).nome + ", medidas em metros", pad, 140, "#9fb2c1", 0);
     var m, sy;
     ctx.strokeStyle = "#1c2a35"; ctx.lineWidth = 1;
     ctx.beginPath();
@@ -351,7 +351,7 @@ function drawLayout(withCab) {
     ctx.textAlign = "left";
     [2, 4, 6, 8].forEach(function (v) { halo(ctx, v + " m", X(b.x0) + 8, Y(FLOOR - v) - 8, "#9fb2c1", 0); });
 
-    tiles.forEach(function (t) {
+    tiles.filter(noPlano).forEach(function (t) {
       var q = res(t), x = X(t.mx), y = Y(FLOOR - t.my - t.h), w = t.w * S, h = t.h * S, k;
       ctx.globalAlpha = withCab ? 0.3 : 0.85;
       ctx.fillStyle = corCab(t);
@@ -401,7 +401,7 @@ function drawLayout(withCab) {
       });
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       ports.forEach(function (pt) {
-        var route = routes[pt.id];
+        var route = routes[pt.id].filter(function (k) { return cellEl[k] && noPlano(cellEl[k].t); });
         if (!route.length) return;
         var col = pcolor(pt);
         var pts = route.map(function (key) { var p = cc(key); return [p.x + p.cs / 2, p.y + p.ch / 2]; });

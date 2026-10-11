@@ -30,6 +30,7 @@ import { init as init_gab_ui } from "./modules/gab-ui.js";
 import { init as init_rig_cartao } from "./modules/rig-cartao.js";
 import { init as init_menu_contexto } from "./modules/menu-contexto.js";
 import { init as init_screen_cartao } from "./modules/screen-cartao.js";
+import { init as init_vistas } from "./modules/vistas.js";
 
 init_core();
 init_rig();
@@ -55,6 +56,7 @@ init_gab_ui();
 init_rig_cartao();
 init_menu_contexto();
 init_screen_cartao();
+init_vistas();
 init_ui();
 
 iniciarTemas();

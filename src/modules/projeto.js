@@ -1,5 +1,5 @@
 import { ID_V1, TELAS_V1, projetoAtivo } from "./projetos.js";
-import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis, gabsUsados } from "./core.js";
+import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis, gabsUsados, planos, set_planos, limpaPlanos, vistaM, set_vistaM } from "./core.js";
 import { garantirGabs } from "./gabinetes.js";
 import { eletricaState, loadEletrica } from "./eletrica.js";
 import { compState, loadComp } from "./composicao.js";
@@ -22,7 +22,9 @@ export function buildProject() {
       projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "", obs: a.obs || "" }; })(),
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
       paineis: paineis.map(function (p) { return { id: p.id, nome: p.name }; }),
-      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0 }; }),
+      vistas: planos.map(function (p) { return { id: p.id, nome: p.nome, ori: p.ori, ox: p.ox, oy: p.oy, oz: p.oz }; }),
+      vistaAtual: vistaM,
+      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, vista: e.pl || "" }; }),
       gabinetes: gabsUsados(EXTRAS),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
@@ -75,11 +77,14 @@ export function applyProject(o) {
     if (o && typeof o === "object" && o.tipo === "mapa-telas-led") o = converterV1(o);
     if (!o || typeof o !== "object" || o.tipo !== "ledmap") throw new Error("Este arquivo não é um projeto do Led Map.");
     garantirGabs(o.gabinetes);
+    // vistas de montagem antes dos painéis (o painel aponta para a vista dele)
+    set_planos(limpaPlanos(o.vistas));
+    set_vistaM(typeof o.vistaAtual === "string" ? o.vistaAtual : "");
     if (Array.isArray(o.extras)) {
       var ne = cleanExtras(o.extras.map(function (x) {
-        return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes, z: x.profundidade } : null;
+        return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes, z: x.profundidade, pl: x.vista } : null;
       }));
-      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(","), e.z || 0]; })); };
+      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(","), e.z || 0, e.pl || ""]; })); };
       if (sig(ne) !== sig(EXTRAS)) {
         var prevEx = EXTRAS;
         set_EXTRAS(ne);

@@ -1,5 +1,5 @@
 import { GABINETES, GAB, gabPadrao } from "./gabinetes.js";
-import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS, bbox, membrosPainel, novoPainel, painelById, pnome, paineis, set_paineis } from "./core.js";
+import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS, bbox, membrosPainel, novoPainel, painelById, pnome, paineis, set_paineis, noPlano, vistaM } from "./core.js";
 import { ksave, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
@@ -37,7 +37,7 @@ function updatePrev() {
   }
 
 export function freeM(w, h) {
-    function hitAt(x, y) { return tiles.some(function (b) { return x < b.mx + b.w && b.mx < x + w && y < b.my + b.h && b.my < y + h; }); }
+    function hitAt(x, y) { return tiles.some(function (b) { if (!noPlano(b)) return false; return x < b.mx + b.w && b.mx < x + w && y < b.my + b.h && b.my < y + h; }); }
     var x, y;
     // o x = 0 é o centro do palco: procura o espaço livre mais perto do centro, linha a linha a partir do chão
     function xs(lim) { var l = []; for (var k = -lim; k <= lim - w + 1e-9; k += 0.5) l.push(k); return l.sort(function (p, q) { return Math.abs(p + w / 2) - Math.abs(q + w / 2) || q - p; }); }
@@ -134,7 +134,7 @@ export function init() {
       var fm = freeM(w, h);
       if (!fm) { aErr.textContent = "Sem espaço livre na montagem."; return; }
       var fc = freeC({ w: w, h: h, kind: "imag", cab: aCab.value, mx: fm.x, my: fm.y });
-      var c = cleanExtra({ id: id, name: aName.value, kind: "imag", cab: aCab.value, w: w, h: h, mx: fm.x, my: fm.y, cx: fc.x, cy: fc.y, grp: "" });
+      var c = cleanExtra({ id: id, name: aName.value, kind: "imag", cab: aCab.value, w: w, h: h, mx: fm.x, my: fm.y, cx: fc.x, cy: fc.y, grp: "", pl: vistaM });
       if (!c) { aErr.textContent = "Dimensões ou posição fora do limite (até 30 m de largura e altura)."; return; }
       EXTRAS.push(c);
       if (!commitAndReload(curTab + ":" + id)) {
@@ -181,7 +181,7 @@ export function duplicarPainel(id) {
     if (orig) { novoG = novoPainel(); novoG.name = (pnome(orig) + " cópia").slice(0, 40); }
     var falhou = mem.some(function (m, i) {
       var nid = String(base + i), mx = Math.round((m.mx + dx) * 100) / 100, my = Math.round((m.my + dy) * 100) / 100;
-      var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "", off: m.off, z: m.z });
+      var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "", off: m.off, z: m.z, pl: m.pl || "" });
       if (!c) return true;
       EXTRAS.push(c);
       // entra também em tiles para o save() gravar a posição exata e o grupo antes de recarregar
@@ -307,7 +307,7 @@ export function duplicarEspelhado(ids, modo) {
       else my = r2(2 * fr.y1 - (m.my + m.h));
       if (v) cy = Math.round(2 * tudo.y1 - (m.cy + q.h));
       else cx = Math.round(2 * tudo.x1 - (m.cx + q.w));
-      var c = cleanExtra({ id: nid, name: (m.name + " (espelho)").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: cx, cy: cy, grp: m.grp || "", off: offEspelhado(m, v ? "v" : "h"), z: m.z });
+      var c = cleanExtra({ id: nid, name: (m.name + " (espelho)").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: cx, cy: cy, grp: m.grp || "", off: offEspelhado(m, v ? "v" : "h"), z: m.z, pl: m.pl || "" });
       if (!c) return true;
       EXTRAS.push(c);
       tiles.push(Object.assign({}, c, { mx: mx, my: my, pn: m.pn ? novos[m.pn] || "" : "" }));
@@ -320,12 +320,13 @@ export function duplicarEspelhado(ids, modo) {
 
 // leva o desenho do Rig para o centro: o meio do conjunto fica no x = 0 (projetos feitos antes do eixo no centro)
 export function centralizarRig() {
-    if (!tiles.length) return;
-    var f = faixa(tiles, true), d = -Math.round((f.x0 + f.x1) / 2 * 2) / 2;
+    var aqui = tiles.filter(noPlano);
+    if (!aqui.length) return;
+    var f = faixa(aqui, true), d = -Math.round((f.x0 + f.x1) / 2 * 2) / 2;
     if (!d) { pmsg("O desenho já está centralizado no eixo 0."); return; }
-    tiles.forEach(function (t) { t.mx = r2(t.mx + d); });
+    aqui.forEach(function (t) { t.mx = r2(t.mx + d); });
     try { localStorage.setItem("ledmap-msg", "Rig centralizado no eixo 0."); } catch (e) {}
-    if (!commitAndReload(curTab)) { tiles.forEach(function (t) { t.mx = r2(t.mx - d); }); pmsg("Não consegui salvar neste navegador."); }
+    if (!commitAndReload(curTab)) { aqui.forEach(function (t) { t.mx = r2(t.mx - d); }); pmsg("Não consegui salvar neste navegador."); }
   }
 
 export { KEY_PEND, KEY_REOPEN };

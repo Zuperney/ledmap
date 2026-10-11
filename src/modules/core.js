@@ -3,6 +3,46 @@ import { chave } from "./projetos.js";
 import { GAB, cabDe, garantirGabs } from "./gabinetes.js";
 
 let paineis = [];
+// Vistas de montagem: cada uma é um plano 2D do Rig (Frente, paredes, fundo, teto, piso) com posição no espaço.
+// A Frente ("") sempre existe. Cada painel guarda a vista em "pl". O 3D junta todas na posição real.
+let planos = [], vistaM = "";
+export var ORI = {
+  frente: { nome: "De frente (virada para o público)", curto: "frente" },
+  esq: { nome: "Parede do lado esquerdo (virada para a direita)", curto: "parede esquerda" },
+  dir: { nome: "Parede do lado direito (virada para a esquerda)", curto: "parede direita" },
+  tras: { nome: "De costas (virada para o fundo)", curto: "de costas" },
+  teto: { nome: "Teto (virada para baixo, vista de baixo)", curto: "teto" },
+  piso: { nome: "Piso (virada para cima, vista de cima)", curto: "piso" }
+};
+export function limpaPlanos(l) {
+  var out = [], vistos = {};
+  (Array.isArray(l) ? l : []).forEach(function (p) {
+    if (!p || typeof p.id !== "string" || !/^v\d{1,4}$/.test(p.id) || vistos[p.id] || out.length >= 30) return;
+    vistos[p.id] = 1;
+    var n = function (v, lim) { v = Number(v); return isFinite(v) && Math.abs(v) <= lim ? Math.round(v * 100) / 100 : 0; };
+    out.push({ id: p.id, nome: (typeof p.nome === "string" && p.nome.trim() ? p.nome.trim() : "Vista").slice(0, 40), ori: ORI[p.ori] ? p.ori : "frente", ox: n(p.ox, 200), oy: n(p.oy, 100), oz: n(p.oz, 200) });
+  });
+  return out;
+}
+export function planoById(id) { if (!id) return { id: "", nome: "Frente", ori: "frente", ox: 0, oy: 0, oz: 0 }; for (var k = 0; k < planos.length; k++) if (planos[k].id === id) return planos[k]; return null; }
+export function todosPlanos() { return [planoById("")].concat(planos); }
+export function noPlano(t) { return (t.pl || "") === vistaM; }
+export function idxPlano(id) { if (!id) return 0; for (var k = 0; k < planos.length; k++) if (planos[k].id === id) return k + 1; return 0; }
+export function horizontal(pl) { var p = planoById(pl || ""); return !!p && (p.ori === "teto" || p.ori === "piso"); }
+// profundidade usada pelo cabeamento: vistas diferentes nunca se encostam (o cabo entre elas conta como salto)
+export function zCabo(t) { return (t.z || 0) + idxPlano(t.pl) * 1000; }
+// x na imagem da Montagem (Composição): as vistas ficam lado a lado, na ordem, com 1 m entre elas; a Frente não se mexe
+export function mxMont(t) {
+  var faixas = {}, cursor = null, desl = {};
+  tiles.forEach(function (o) { var k = o.pl || ""; var f = faixas[k] || (faixas[k] = { x0: Infinity, x1: -Infinity }); f.x0 = Math.min(f.x0, o.mx); f.x1 = Math.max(f.x1, o.mx + o.w); });
+  todosPlanos().forEach(function (p) {
+    var f = faixas[p.id];
+    if (!f) return;
+    desl[p.id] = cursor === null ? 0 : cursor - f.x0;
+    cursor = f.x1 + desl[p.id] + 1;
+  });
+  return t.mx + (desl[t.pl || ""] || 0);
+}
 let NS, FLOOR, CW, CH, STORE, PITCH, EXTRA_MAX, EXTRAS, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
 
 function half(v, lo, hi) {
@@ -37,7 +77,7 @@ export function cleanExtra(x) {
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), extra: true };
+    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), pl: typeof x.pl === "string" && /^v\d{1,4}$/.test(x.pl) ? x.pl : "", extra: true };
   }
 
 export function cleanExtras(list) {
@@ -79,7 +119,7 @@ export function save() {
     try {
       var pos = {}, tg = {}, mpos = {}, tp = {};
       tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; tp[t.id] = t.pn || ""; });
-      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
+      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, planos: planos, vista: vistaM, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
     } catch (e) {}
   }
 
@@ -115,6 +155,7 @@ export function gabinetesFisicos(t) {
 // (um painel pode ocupar o recorte do outro: miolo recuado, janela, moldura com conteúdo atrás)
 export function sobrepoem(a, b) {
     var e = 0.001;
+    if ((a.pl || "") !== (b.pl || "")) return false; // vistas diferentes são planos diferentes
     if (!(a.mx < b.mx + b.w - e && b.mx < a.mx + a.w - e && a.my < b.my + b.h - e && b.my < a.my + a.h - e)) return false;
     var gb = gabinetesFisicos(b);
     return gabinetesFisicos(a).some(function (p) {
@@ -244,9 +285,12 @@ export function init() {
           if (saved.tp && typeof saved.tp[t.id] === "string") t.pn = saved.tp[t.id];
         });
         paineis = limpaPaineis(saved.paineis);
+        planos = limpaPlanos(saved.planos);
+        vistaM = typeof saved.vista === "string" && planoById(saved.vista) ? saved.vista : "";
       }
     } catch (e) {}
-  tiles.forEach(function (t) { if (t.pn && !painelById(t.pn)) t.pn = ""; });
+  tiles.forEach(function (t) { if (t.pn && !painelById(t.pn)) t.pn = ""; if (t.pl && !planoById(t.pl)) t.pl = ""; });
+  EXTRAS.forEach(function (x) { if (x.pl && !planoById(x.pl)) x.pl = ""; });
   podarPaineis();
   tiles.forEach(function (t) {
       if (t.grp && !groups.some(function (g) { return g.id === t.grp; })) t.grp = "";
@@ -261,6 +305,9 @@ export function init() {
 
 export { tiles, FLOOR, svgM, gM, selected, svgC, CW, CH, gC, rowsEl, groups, PITCH, active, nextG, groupMove, BASE, EXTRAS, STORE, EXTRA_MAX, paineis };
 export function set_paineis(v) { paineis = v; return v; }
+export { planos, vistaM };
+export function set_planos(v) { planos = v; return v; }
+export function set_vistaM(v) { vistaM = planoById(v) ? v : ""; return vistaM; }
 export function set_selected(v) { selected = v; return v; }
 export function set_active(v) { active = v; return v; }
 export function set_nextG(v) { nextG = v; return v; }
