@@ -14,7 +14,7 @@ export function init() {
   occupied = el("rect", { "class": "occupied", x: 0, y: 0, width: 0, height: 0 }, svgC);
   layerC = el("g", {}, svgC);
   tiles.forEach(function (s) {
-      var g = el("g", { "class": "scr edit", style: "--cor:" + corCab(s) }, layerC);
+      var g = el("g", { "class": "scr edit", "data-id": s.id, style: "--cor:" + corCab(s) }, layerC);
       var rs = res(s);
       el("rect", { "class": "body", x: 0, y: 0, width: rs.w, height: rs.h }, g);
       el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.cw, rs.ch) }, g);

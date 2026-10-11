@@ -286,30 +286,40 @@
 
   <section class="view" id="view-c" role="tabpanel" aria-labelledby="tab-c" hidden>
     <div class="bar">
-      <button class="btn" id="btn-move" aria-pressed="true">Mover painéis</button>
+      <button class="btn" id="add-open2">+ Painel</button>
+      <button class="btn" id="btn-move" aria-pressed="false" title="Ligado: arrastar move os painéis no canvas. Desligado: arrastar só navega">Mover</button>
       <div class="dd">
-        <button class="btn dd-b">Ajustes ▾</button>
+        <button class="btn dd-b">Visão ▾</button>
         <div class="dd-m keep" hidden>
           <button class="mi" id="btn-grid-c" aria-pressed="true">Grade 256</button>
-          <label class="mi snap">Passo
-            <select id="snap">
-              <option value="1">1 px</option>
-              <option value="8" selected>8 px</option>
-              <option value="64">64 px</option>
-              <option value="128">128 px</option>
-            </select>
-          </label>
-          <button class="mi" id="btn-magnet" aria-pressed="true">Ímã</button>
-          <button class="mi" id="btn-reset">Inicial</button>
+        </div>
+      </div>
+      <div class="dd">
+        <button class="btn dd-b">Exportar ▾</button>
+        <div class="dd-m" hidden>
+          <button class="mi" id="scr-csv">Screens (CSV)</button>
+          <button class="mi" id="scr-png">Screens (PNG)</button>
         </div>
       </div>
       <button class="btn" id="btn-dentro" hidden title="Leva para dentro do canvas os painéis que estão fora">Trazer para dentro</button>
-      <button class="btn" id="btn-multi" aria-pressed="false" title="Toque em vários painéis para movê-los juntos">Multi</button>
-      <button class="btn" id="add-open2">+ Painel</button>
     </div>
+    <div class="medit" id="c-edit-panel" hidden>
+      <span class="who">Arraste os painéis no canvas · com uma screen aberta e "Mover screen inteira", ela vai junto</span>
+      <label>Passo
+        <select id="snap">
+          <option value="1">1 px</option>
+          <option value="8" selected>8 px</option>
+          <option value="64">64 px</option>
+          <option value="128">128 px</option>
+        </select>
+      </label>
+      <button class="btn" id="btn-magnet" aria-pressed="true">Ímã</button>
+      <button class="btn" id="btn-reset">Posições iniciais</button>
+    </div>
+    <div class="mwrap">
     <div class="stagebox">
     <div class="stage pan"><svg id="svg-c" viewBox="-64 -150 6272 2790" role="img" aria-label="Configuração: painéis no canvas em pixels"></svg></div>
-      <div class="hud"><button class="btn" id="btn-lock" aria-pressed="false">Travar</button><div class="zoom" role="group" aria-label="Zoom do canvas">
+      <div class="hud"><button class="btn" id="btn-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do canvas">
   <button class="btn" id="zoom-out" aria-label="Diminuir zoom">−</button>
   <span id="zoom-label">100%</span>
   <button class="btn" id="zoom-in" aria-label="Aumentar zoom">+</button>
@@ -318,18 +328,41 @@
 </div></div>
       <div class="badge"><div class="stat" id="stat-c"></div></div>
     </div>
+    <aside class="mcard" id="c-card" hidden aria-label="Painel selecionado no canvas">
+      <div id="cc-um">
+        <div class="mc-head"><span class="n" id="cc-n"></span><input type="text" id="cc-nome" maxlength="40" autocomplete="off" aria-label="Nome do painel"><button class="btn mc-x" id="cc-fechar" aria-label="Fechar">✕</button></div>
+        <div class="mc-tags" id="cc-tags"></div>
+        <p class="mc-info" id="cc-info"></p>
+        <div class="mc-campos">
+          <label>X no canvas (px) <input type="number" id="cc-x" step="1" inputmode="numeric"></label>
+          <label>Y no canvas (px) <input type="number" id="cc-y" step="1" inputmode="numeric"></label>
+          <label style="grid-column: 1 / -1">Screen <select id="cc-scr" aria-label="Screen do painel"></select></label>
+        </div>
+        <div class="mc-acts">
+          <button class="btn" id="cc-editar">Editar</button>
+          <button class="btn" id="cc-dup">Duplicar</button>
+          <button class="btn" id="cc-sel" title="Selecionar vários painéis (no computador também dá Shift + clique)">Selecionar vários</button>
+          <button class="btn" id="cc-del">Excluir</button>
+        </div>
+        <button class="btn lnk" id="cc-ir" type="button">Ir até o painel</button>
+      </div>
+      <div id="cc-varios" hidden>
+        <div class="mc-head"><b id="cc-vtit"></b><button class="btn mc-x" id="cc-vfechar" aria-label="Cancelar seleção">✕</button></div>
+        <p class="mc-info" id="cc-vinfo"></p>
+        <div class="mc-campos"><label style="grid-column: 1 / -1">Colocar todos na Screen <select id="cc-vscr" aria-label="Screen dos painéis selecionados"></select></label></div>
+        <div class="mc-acts">
+          <button class="btn" id="cc-vdel">Excluir</button>
+          <button class="btn" id="cc-vcancel">Cancelar</button>
+        </div>
+        <p class="mc-info">Com Mover ligado, arrastar um deles leva todos juntos.</p>
+      </div>
+    </aside>
+    </div>
 
     <div class="screens">
       <div class="screens-head">
         <h2>Screens</h2>
         <button class="btn" id="btn-new-screen">+ Nova screen</button>
-        <div class="dd">
-          <button class="btn dd-b">Exportar ▾</button>
-          <div class="dd-m" hidden>
-            <button class="mi" id="scr-csv">Screens (CSV)</button>
-            <button class="mi" id="scr-png">Screens (PNG)</button>
-          </div>
-        </div>
       </div>
       <div class="chips" id="chips"></div>
       <div class="detail" id="detail" hidden>

@@ -41,7 +41,7 @@ export function init() {
   ["fs-m","fs-c","fs-k"].forEach(function (id) { document.getElementById(id).addEventListener("click", function () { setFS(!document.body.classList.contains("fs")); }); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("fs")) setFS(false); });
   applyDrawer();
-  setMoving(true);
+  setMoving(false);
   refreshSelects();
   renderChips();
   applyFocus();
