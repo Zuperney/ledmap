@@ -6,7 +6,7 @@ import { cabNome } from "./gabinetes.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
-import { commitAndReload, duplicarPainel, excluirPaineis } from "./telas.js";
+import { commitAndReload, duplicarPainel, excluirPaineis, editarPainel, espelharPaineis, duplicarEspelhado } from "./telas.js";
 import { viewM } from "./rig-cabos.js";
 import { twoStep } from "./cabeamento.js";
 import { mselLista, modoSelM, iniciarSelecao, sairModoSel, desagrupar, refreshM } from "./rig-edicao.js";
@@ -68,6 +68,8 @@ function cartaoUm(t) {
   if (t.z) tags.appendChild(chip((t.z > 0 ? "recuo " : "avanço ") + fmt(Math.abs(t.z)) + " m"));
   if (q.n < q.cols * q.rows) tags.appendChild(chip("recortado"));
   $("mc-info").textContent = fmt(t.w) + " × " + fmt(t.h) + " m · " + cabNome(t) + " · " + (q.n < q.cols * q.rows ? q.n + " gab." : q.cols + " × " + q.rows + " = " + q.n + " gab.") + " · " + nf(q.w) + " × " + nf(q.h) + " px";
+  if (document.activeElement !== $("mc-w")) $("mc-w").value = t.w;
+  if (document.activeElement !== $("mc-h")) $("mc-h").value = t.h;
   if (document.activeElement !== $("m-x")) $("m-x").value = t.mx;
   if (document.activeElement !== $("m-y")) $("m-y").value = t.my;
   if (document.activeElement !== $("mc-z")) $("mc-z").value = t.z || "";
@@ -115,6 +117,23 @@ export function init() {
     if (row) row.textContent = v;
     save(); renderCartao();
   });
+  // tamanho do painel direto no cartão (a grade de gabinetes acompanha; grava e recarrega)
+  ["mc-w", "mc-h"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      var t = selected && tById[selected];
+      if (!t) return;
+      var w = mnum($("mc-w").value), h = mnum($("mc-h").value);
+      if (!(w > 0) || !(h > 0)) { pmsg("Informe largura e altura maiores que zero."); renderCartao(); return; }
+      var erro = editarPainel(t.id, { w: w, h: h });
+      if (erro) { pmsg(erro); renderCartao(); }
+    });
+  });
+  $("m-esp").addEventListener("click", function () { if (selected) espelharPaineis([selected]); });
+  $("m-desp").addEventListener("click", function () { if (selected) duplicarEspelhado([selected]); });
+  $("mc-gesp").addEventListener("click", function () { var m = membrosPainel(grupoFoco); if (m.length) espelharPaineis([m[0].id]); });
+  $("mc-gdesp").addEventListener("click", function () { var m = membrosPainel(grupoFoco); if (m.length) duplicarEspelhado([m[0].id]); });
+  $("mc-vesp").addEventListener("click", function () { var ids = mselLista(); if (ids.length) espelharPaineis(ids); });
+  $("mc-vdesp").addEventListener("click", function () { var ids = mselLista(); if (ids.length) duplicarEspelhado(ids); });
   // recuo muda a ordem de desenho e o cabeamento: grava e recarrega
   $("mc-z").addEventListener("change", function () {
     var t = selected && tById[selected];

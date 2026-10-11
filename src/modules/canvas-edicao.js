@@ -93,17 +93,21 @@ export function toggleMultiC(id) {
   }
 
 export function onDown(e, s) {
-    if (multiOn || e.shiftKey || e.ctrlKey || e.metaKey) { toggleMultiC(s.id); e.preventDefault(); return; }
+    if (e.button === 2) return; // clique direito: o menu cuida
+    if (e.shiftKey || e.ctrlKey || e.metaKey) { toggleMultiC(s.id); e.preventDefault(); return; }
     var inMulti = multiIds().length > 1 && multi[s.id];
+    // no modo de selecionar: tocar marca/desmarca; com Mover ligado, arrastar um marcado leva todos
+    if (multiOn && !(moving && inMulti)) { toggleMultiC(s.id); e.preventDefault(); return; }
     if (!inMulti && multiIds().length) { multi = {}; paintMulti(); }
-    select(s.id);
+    if (!inMulti) select(s.id);
     if (!moving) return;
     var w = toWorld(e);
     var mem = inMulti ? tiles.filter(function (t) { return multi[t.id]; }) : (active !== null && groupMove && s.grp === active) ? members(active) : [s];
     var bb = bbox(mem);
     drag = {
       mem: mem.map(function (m) { return { s: m, x0: m.cx, y0: m.cy }; }),
-      bx: bb.x, by: bb.y, bw: bb.w, bh: bb.h, wx: w.x, wy: w.y
+      bx: bb.x, by: bb.y, bw: bb.w, bh: bb.h, wx: w.x, wy: w.y,
+      sx: e.clientX, sy: e.clientY, moveu: false, toque: multiOn ? s.id : null
     };
     gC[s.id].setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -124,7 +128,8 @@ export function best(mov, tgt, T) {
 function magnet(rect, excluded) {
     var hx = null, hy = null;
     if (magnetOn) {
-      var T = 12 / ((svgC.getBoundingClientRect().width || 1) / 6272);
+      // ímã reforçado: 20 px na tela, medido pela largura real do desenho (que cresce com painéis fora do canvas)
+      var T = 20 / ((svgC.getBoundingClientRect().width || 1) / ((svgC.viewBox.baseVal && svgC.viewBox.baseVal.width) || 6272));
       var mx = [{ v: rect.x, k: 0 }, { v: rect.x + rect.w, k: 0 }, { v: rect.x + rect.w / 2, k: 1 }];
       var my = [{ v: rect.y, k: 0 }, { v: rect.y + rect.h, k: 0 }, { v: rect.y + rect.h / 2, k: 1 }];
       var tx = [{ v: 0, k: 0 }, { v: CW, k: 0 }];
@@ -146,11 +151,41 @@ function magnet(rect, excluded) {
   }
 
 function endDrag() {
-    var was = !!drag;
+    var d = drag, was = !!(d && d.moveu);
     drag = null;
     guideV.classList.add("off");
     guideH.classList.add("off");
-    if (was) save();
+    if (was) { ignorarAteC = performance.now() + 350; save(); }
+    else if (d && d.toque) toggleMultiC(d.toque); // tocou sem arrastar, no modo de selecionar: marca/desmarca
+  }
+
+var ignorarAteC = 0;
+
+// ---- laço: com Mover ligado, arrastar no vazio seleciona os painéis que o retângulo toca ----
+var laco = null, lacoEl = null;
+function iniciarLaco(e) {
+    var w = toWorld(e);
+    laco = { x: w.x, y: w.y, sx: e.clientX, sy: e.clientY };
+    if (!lacoEl) { lacoEl = document.createElementNS("http://www.w3.org/2000/svg", "rect"); lacoEl.setAttribute("class", "laco"); }
+    lacoEl.setAttribute("width", 0); lacoEl.setAttribute("height", 0);
+    svgC.appendChild(lacoEl);
+    svgC.setPointerCapture(e.pointerId);
+  }
+function moverLaco(e) {
+    var w = toWorld(e);
+    lacoEl.setAttribute("x", Math.min(laco.x, w.x)); lacoEl.setAttribute("y", Math.min(laco.y, w.y));
+    lacoEl.setAttribute("width", Math.abs(w.x - laco.x)); lacoEl.setAttribute("height", Math.abs(w.y - laco.y));
+    laco.w = w;
+  }
+function fecharLaco(e) {
+    var l = laco; laco = null;
+    if (lacoEl && lacoEl.parentNode) lacoEl.parentNode.removeChild(lacoEl);
+    if (!l || !l.w || Math.hypot(e.clientX - l.sx, e.clientY - l.sy) < 6) return;
+    ignorarAteC = performance.now() + 350;
+    var x0 = Math.min(l.x, l.w.x), x1 = Math.max(l.x, l.w.x), y0 = Math.min(l.y, l.w.y), y1 = Math.max(l.y, l.w.y);
+    var ids = tiles.filter(function (t) { var q = res(t); return t.cx < x1 && t.cx + q.w > x0 && t.cy < y1 && t.cy + q.h > y0; }).map(function (t) { return t.id; });
+    if (ids.length >= 2) { multi = {}; ids.forEach(function (id) { multi[id] = 1; }); multiOn = false; paintMulti(); }
+    else if (ids.length === 1) { if (multiIds().length) clearMulti(); select(ids[0]); }
   }
 
 // Mover (desligado por padrão): desligado, tocar seleciona e arrastar só navega; ligado, arrasta painéis
@@ -185,14 +220,21 @@ export function init() {
     });
   // tocar no vazio do canvas tira a seleção (fora do modo de selecionar vários)
   svgC.addEventListener("click", function (e) {
+    if (performance.now() < ignorarAteC) return;
     if (e.target.closest && e.target.closest(".scr")) return;
     if (multiOn) return;
     if (multiIds().length) clearMulti();
     if (selected) select(null);
   });
   magnetOn = true;
+  svgC.addEventListener("pointerdown", function (e) {
+    if (!moving || e.button === 2 || (e.target.closest && e.target.closest(".scr"))) return;
+    iniciarLaco(e);
+  });
   svgC.addEventListener("pointermove", function (e) {
+      if (laco) { moverLaco(e); return; }
       if (!drag) return;
+      if (!drag.moveu) { if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return; drag.moveu = true; }
       var step = Number(document.getElementById("snap").value) || 1;
       var w = toWorld(e);
       var nx = Math.round((drag.bx + (w.x - drag.wx)) / step) * step;
@@ -202,8 +244,8 @@ export function init() {
       drag.mem.forEach(function (o) { o.s.cx = o.x0 + dx; o.s.cy = o.y0 + dy; });
       placeC();
     });
-  svgC.addEventListener("pointerup", endDrag);
-  svgC.addEventListener("pointercancel", endDrag);
+  svgC.addEventListener("pointerup", function (e) { if (laco) { fecharLaco(e); return; } endDrag(); });
+  svgC.addEventListener("pointercancel", function (e) { if (laco) { fecharLaco(e); return; } endDrag(); });
   document.getElementById("btn-move").addEventListener("click", function () { setMoving(!moving); });
   gridToggle("btn-grid-m", "grid-m");
   gridToggle("btn-grid-c", "grid-c");

@@ -191,4 +191,113 @@ export function duplicarPainel(id) {
     if (!commitAndReload(curTab + ":" + base)) { try { localStorage.removeItem("ledmap-msg"); } catch (e) {} desfaz("Não consegui salvar neste navegador."); }
   }
 
+// limpa as rotas de cabo que passam pelos painéis (as células deles mudaram)
+function limparRotasDe(ids) {
+    var tirou = 0;
+    Object.keys(routes).forEach(function (pid) { var n0 = routes[pid].length; routes[pid] = routes[pid].filter(function (k) { return ids.indexOf(k.split(":")[0]) < 0; }); tirou += n0 - routes[pid].length; });
+    return tirou;
+  }
+
+function gravarEAbrir(id, msg, desfaz) {
+    try { localStorage.setItem("ledmap-msg", msg); } catch (e) {}
+    if (!commitAndReload(curTab + ":" + id)) { try { localStorage.removeItem("ledmap-msg"); } catch (e) {} if (desfaz) desfaz(); pmsg("Não consegui salvar neste navegador."); }
+  }
+
+// edita campos de um painel direto do cartão (ex.: { w, h }); a posição, a Screen e o grupo ficam.
+// Devolve "" ou o motivo de não ter aplicado.
+export function editarPainel(id, campos) {
+    var i = EXTRAS.findIndex(function (x) { return x.id === id; });
+    if (i < 0) return "Painel não encontrado.";
+    var antes = EXTRAS[i], t = tiles.filter(function (x) { return x.id === id; })[0] || antes;
+    var c = cleanExtra(Object.assign({}, antes, { mx: t.mx, my: t.my, cx: t.cx, cy: t.cy }, campos));
+    if (!c) return "Medida fora do limite (até 30 m).";
+    var qa = res(antes), qn = res(c);
+    // recortes que ficaram fora da grade nova (painel diminuiu) saem
+    c.off = (c.off || []).filter(function (k) { var p = k.split(":"); return Number(p[0]) < qn.cols && Number(p[1]) < qn.rows; });
+    var mudouGrade = antes.cab !== c.cab || qa.cols !== qn.cols || qa.rows !== qn.rows;
+    if (!mudouGrade && c.w === antes.w && c.h === antes.h) return "";
+    EXTRAS[i] = c;
+    var tirou = mudouGrade ? limparRotasDe([c.id]) : 0;
+    gravarEAbrir(c.id, "Painel " + c.id + ": " + fmt(c.w) + " × " + fmt(c.h) + " m." + (tirou ? " As rotas de cabo dele foram limpas: refaça o cabeamento." : ""), function () { EXTRAS[i] = antes; });
+    return "";
+  }
+
+// ---- Espelhar ----
+// recortes de um painel invertidos da esquerda para a direita (o triângulo vira para o outro lado)
+function offEspelhado(t) {
+    var q = res(t);
+    return (t.off || []).map(function (k) { var p = k.split(":"); return (q.cols - 1 - Number(p[0])) + ":" + p[1]; });
+  }
+
+// os painéis e, se algum estiver num grupo, o grupo inteiro
+function comGrupos(ids) {
+    var set = {};
+    ids.forEach(function (id) {
+      var t = tiles.filter(function (x) { return x.id === id; })[0];
+      if (!t) return;
+      (t.pn && painelById(t.pn) ? membrosPainel(t.pn) : [t]).forEach(function (m) { set[m.id] = m; });
+    });
+    return Object.keys(set).map(function (k) { return set[k]; });
+  }
+
+function faixaX(lista, rig) {
+    var x0 = Infinity, x1 = -Infinity;
+    lista.forEach(function (t) { var a = rig ? t.mx : t.cx, w = rig ? t.w : res(t).w; x0 = Math.min(x0, a); x1 = Math.max(x1, a + w); });
+    return { x0: x0, x1: x1 };
+  }
+
+// inverte o lado dos painéis em torno do centro deles (no Rig e no canvas), com os recortes
+export function espelharPaineis(ids) {
+    var S = comGrupos(ids);
+    if (!S.length) return;
+    var fr = faixaX(S, true), fc = faixaX(S, false), ax = (fr.x0 + fr.x1) / 2, acx = (fc.x0 + fc.x1) / 2, comRecorte = [];
+    S.forEach(function (t) {
+      t.mx = Math.round((2 * ax - (t.mx + t.w)) * 100) / 100;
+      t.cx = Math.round(2 * acx - (t.cx + res(t).w));
+      if ((t.off || []).length) {
+        var off = offEspelhado(t);
+        t.off = off;
+        EXTRAS.forEach(function (x) { if (x.id === t.id) x.off = off.slice(); });
+        comRecorte.push(t.id);
+      }
+    });
+    var tirou = comRecorte.length ? limparRotasDe(comRecorte) : 0;
+    gravarEAbrir(S[0].id, (S.length === 1 ? "Painel " + S[0].id + " espelhado." : S.length + " painéis espelhados.") + (tirou ? " As rotas de cabo dos recortados foram limpas." : ""));
+  }
+
+// cria a cópia simétrica do outro lado do palco: o eixo é o centro dos outros painéis
+// (sem outros painéis, a cópia nasce encostada à direita). Grupos viram grupos novos "… espelhado".
+export function duplicarEspelhado(ids) {
+    var S = comGrupos(ids);
+    if (!S.length) return;
+    if (EXTRAS.length + S.length > EXTRA_MAX) { pmsg("Limite de " + EXTRA_MAX + " painéis."); return; }
+    var base = Number(nextExtraId());
+    if (base + S.length - 1 > 999) { pmsg("Numeração esgotada."); return; }
+    var ids0 = S.map(function (t) { return t.id; }), outros = tiles.filter(function (t) { return ids0.indexOf(t.id) < 0; });
+    var fr = faixaX(S, true), fc = faixaX(S, false);
+    // eixo: o centro dos outros painéis; se a cópia cairia em cima do original (desenho simétrico) ou antes do zero,
+    // ela vai para a direita de tudo, espelhada pela borda direita do desenho
+    function eixo(rig, f) {
+      if (!outros.length) return f.x1;
+      var o = faixaX(outros, rig), e = (o.x0 + o.x1) / 2, n0 = 2 * e - f.x1, n1 = 2 * e - f.x0;
+      if (n0 >= 0 && (n1 <= f.x0 || n0 >= f.x1)) return e;
+      return Math.max(f.x1, o.x1);
+    }
+    var ax = eixo(true, fr), acx = eixo(false, fc);
+    var antesEx = EXTRAS.length, antesT = tiles.length, antesP = paineis.slice(), novos = {};
+    var falhou = S.some(function (m, i) {
+      var nid = String(base + i), q = res(m);
+      if (m.pn && painelById(m.pn) && !novos[m.pn]) { var g = novoPainel(); g.name = (pnome(painelById(m.pn)) + " espelhado").slice(0, 40); novos[m.pn] = g.id; }
+      var mx = Math.round((2 * ax - (m.mx + m.w)) * 100) / 100, cx = Math.round(2 * acx - (m.cx + q.w));
+      var c = cleanExtra({ id: nid, name: (m.name + " (espelho)").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: m.my, cx: cx, cy: m.cy, grp: m.grp || "", off: offEspelhado(m), z: m.z });
+      if (!c) return true;
+      EXTRAS.push(c);
+      tiles.push(Object.assign({}, c, { mx: mx, my: m.my, pn: m.pn ? novos[m.pn] || "" : "" }));
+      return false;
+    });
+    if (falhou) { EXTRAS.length = antesEx; tiles.length = antesT; set_paineis(antesP); pmsg("Não foi possível duplicar espelhado."); return; }
+    gravarEAbrir(String(base), (S.length === 1 ? "Painel " + S[0].id + " duplicado espelhado." : S.length + " painéis duplicados espelhados."),
+      function () { EXTRAS.length = antesEx; tiles.length = antesT; set_paineis(antesP); });
+  }
+
 export { KEY_PEND, KEY_REOPEN };

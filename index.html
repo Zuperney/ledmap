@@ -245,6 +245,8 @@
         <div class="mc-tags" id="mc-tags"></div>
         <p class="mc-info" id="mc-info"></p>
         <div class="mc-campos">
+          <label>Largura (m) <input type="number" id="mc-w" step="0.05" min="0.05" inputmode="decimal"></label>
+          <label>Altura (m) <input type="number" id="mc-h" step="0.05" min="0.05" inputmode="decimal"></label>
           <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
           <label>Y do chão (m) <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
           <label>Recuo (m) <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
@@ -254,6 +256,8 @@
           <button class="btn" id="m-prop">Editar</button>
           <button class="btn" id="m-rec" aria-pressed="false" title="Tirar ou devolver gabinetes do painel (para triângulos, escadas, vãos)">Recortar</button>
           <button class="btn" id="m-dup">Duplicar</button>
+          <button class="btn" id="m-esp" title="Inverte o painel de lado (posição e recortes)">Espelhar</button>
+          <button class="btn" id="m-desp" title="Cria uma cópia espelhada do outro lado do desenho">Duplicar espelhado</button>
           <button class="btn" id="mc-sel" title="Selecionar vários painéis para agrupar ou excluir (no computador também dá Shift + clique)">Selecionar vários</button>
           <button class="btn" id="m-del">Excluir</button>
         </div>
@@ -264,6 +268,8 @@
         <p class="mc-info" id="mc-vinfo"></p>
         <div class="mc-acts">
           <button class="btn" id="m-grp" aria-pressed="false">Agrupar</button>
+          <button class="btn" id="mc-vesp" title="Inverte a seleção de lado (posições e recortes)">Espelhar</button>
+          <button class="btn" id="mc-vdesp" title="Cria cópias espelhadas do outro lado do desenho">Duplicar espelhado</button>
           <button class="btn" id="mc-vdel">Excluir</button>
           <button class="btn" id="mc-vcancel">Cancelar</button>
         </div>
@@ -274,6 +280,8 @@
         <div class="mc-tags" id="mc-gmembros"></div>
         <div class="mc-acts">
           <button class="btn" id="mc-gdup">Duplicar grupo</button>
+          <button class="btn" id="mc-gesp" title="Inverte o grupo de lado (posições e recortes)">Espelhar grupo</button>
+          <button class="btn" id="mc-gdesp" title="Cria uma cópia espelhada do grupo do outro lado do desenho">Duplicar espelhado</button>
           <button class="btn" id="mc-gdes">Desagrupar</button>
           <button class="btn" id="mc-gdel">Excluir grupo</button>
         </div>
@@ -336,6 +344,8 @@
         <div class="mc-campos">
           <label>X no canvas (px) <input type="number" id="cc-x" step="1" inputmode="numeric"></label>
           <label>Y no canvas (px) <input type="number" id="cc-y" step="1" inputmode="numeric"></label>
+          <label>Largura (m) <input type="number" id="cc-w" step="0.05" min="0.05" inputmode="decimal"></label>
+          <label>Altura (m) <input type="number" id="cc-h" step="0.05" min="0.05" inputmode="decimal"></label>
           <label style="grid-column: 1 / -1">Screen <select id="cc-scr" aria-label="Screen do painel"></select></label>
         </div>
         <div class="mc-acts">

@@ -6,7 +6,7 @@ import { multiLista, iniciarSelecaoC, movendoC } from "./canvas-edicao.js";
 import { colocarNaScreen } from "./screen-cartao.js";
 import { tById } from "./exportar.js";
 import { select } from "./tabela.js";
-import { openAdd, duplicarPainel, excluirPaineis } from "./telas.js";
+import { openAdd, duplicarPainel, excluirPaineis, espelharPaineis, duplicarEspelhado } from "./telas.js";
 import { mselLista, iniciarSelecao, desagrupar, editM } from "./rig-edicao.js";
 import { abrirGrupo } from "./rig-cartao.js";
 
@@ -61,6 +61,8 @@ function itensPainel(t) {
   if (sel.length >= 2 && sel.indexOf(t.id) >= 0) {
     return [
       { t: "Agrupar (" + sel.length + ")", fn: function () { $("m-grp").click(); } },
+      { t: "Espelhar", fn: function () { espelharPaineis(sel); } },
+      { t: "Duplicar espelhado", fn: function () { duplicarEspelhado(sel); } },
       "-",
       { t: "Excluir " + sel.length + " painéis", perigo: true, confirmar: "Confirmar exclusão", fn: function () { excluirPaineis(sel); } }
     ];
@@ -70,6 +72,8 @@ function itensPainel(t) {
     { t: "Editar…", fn: function () { sel1(); openAdd(t.id); } },
     { t: "Recortar gabinetes", fn: function () { sel1(); $("m-rec").click(); } },
     { t: p ? "Duplicar grupo" : "Duplicar", fn: function () { duplicarPainel(t.id); } },
+    { t: p ? "Espelhar grupo" : "Espelhar", fn: function () { espelharPaineis([t.id]); } },
+    { t: "Duplicar espelhado", fn: function () { duplicarEspelhado([t.id]); } },
     { t: "Ir até o painel", fn: function () { sel1(); $("mc-ir").click(); } },
     "-"
   ];

@@ -7,7 +7,7 @@ import { tById, pmsg } from "./exportar.js";
 import { select, refreshSelects } from "./tabela.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
 import { placeC, multiLista, modoSelC, iniciarSelecaoC, clearMulti } from "./canvas-edicao.js";
-import { openAdd, duplicarPainel, excluirPaineis } from "./telas.js";
+import { openAdd, duplicarPainel, excluirPaineis, editarPainel } from "./telas.js";
 import { viewC, caixaPx } from "./visor.js";
 import { twoStep } from "./cabeamento.js";
 
@@ -58,6 +58,8 @@ export function renderCartaoC() {
     if (p) tags.appendChild(chip(pnome(p)));
     if (fora) tags.appendChild(chip("fora do canvas", "fora"));
     $("cc-info").textContent = nf(q.w) + " × " + nf(q.h) + " px · " + cabNome(t) + " · " + q.n + " gab. · " + fmt(t.w) + " × " + fmt(t.h) + " m";
+    if (document.activeElement !== $("cc-w")) $("cc-w").value = t.w;
+    if (document.activeElement !== $("cc-h")) $("cc-h").value = t.h;
     if (document.activeElement !== $("cc-x")) $("cc-x").value = t.cx;
     if (document.activeElement !== $("cc-y")) $("cc-y").value = t.cy;
     opcoesScreen($("cc-scr"), t.grp);
@@ -81,6 +83,16 @@ export function init() {
   $("cc-sel").addEventListener("click", iniciarSelecaoC);
   $("cc-editar").addEventListener("click", function () { if (selected) openAdd(selected); });
   $("cc-dup").addEventListener("click", function () { if (selected) duplicarPainel(selected); });
+  ["cc-w", "cc-h"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      var t = selected && tById[selected];
+      if (!t) return;
+      var w = Number(String($("cc-w").value).replace(",", ".")), h = Number(String($("cc-h").value).replace(",", "."));
+      if (!(w > 0) || !(h > 0)) { pmsg("Informe largura e altura maiores que zero."); renderCartaoC(); return; }
+      var erro = editarPainel(t.id, { w: w, h: h });
+      if (erro) { pmsg(erro); renderCartaoC(); }
+    });
+  });
   twoStep($("cc-del"), "Excluir", "Confirmar?", function () { if (selected) excluirPaineis([selected]); });
   twoStep($("cc-vdel"), "Excluir", "Confirmar?", function () { var ids = multiLista(); if (ids.length) excluirPaineis(ids); });
   $("cc-ir").addEventListener("click", function () { var t = selected && tById[selected]; if (t) viewC.enquadrar(caixaPx([t])); });
