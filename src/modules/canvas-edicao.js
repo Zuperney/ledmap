@@ -1,9 +1,9 @@
-import { tiles, res, gC, rowsEl, CW, CH, nf, svgC, active, groupMove, members, bbox, save, selected, BASE } from "./core.js";
+import { tiles, res, gC, rowsEl, CW, CH, nf, svgC, active, groupMove, members, bbox, save, selected, BASE, freeSpot } from "./core.js";
 import { occupied, guideV, guideH } from "./canvas.js";
 import { updateBoxes, updateDetailStat } from "./screens.js";
 import { updInsp } from "./gaveta.js";
 import { select } from "./tabela.js";
-import { tById } from "./exportar.js";
+import { tById, pmsg as pmsgC } from "./exportar.js";
 
 let moving, drag, multi, multiOn, magnetOn, btnMagnet;
 
@@ -27,14 +27,37 @@ export function placeC() {
     if (!tiles.length) { minX = 0; maxX = 0; minY = 0; maxY = 0; }
     occupied.setAttribute("x", minX); occupied.setAttribute("y", minY);
     occupied.setAttribute("width", maxX - minX); occupied.setAttribute("height", maxY - minY);
-    var out = (minX < 0 || minY < 0 || maxX > CW || maxY > CH);
+    var out = tiles.length > 0 && (minX < 0 || minY < 0 || maxX > CW || maxY > CH);
+    // o desenho sempre mostra o canvas do processador e, se houver, os painéis que estão fora dele
+    var vx = Math.min(-64, tiles.length ? minX - 64 : 0), vy = Math.min(-150, tiles.length ? minY - 150 : 0);
+    var vx1 = Math.max(CW + 64, tiles.length ? maxX + 64 : 0), vy1 = Math.max(CH + 140, tiles.length ? maxY + 140 : 0);
+    svgC.setAttribute("viewBox", [vx, vy, vx1 - vx, vy1 - vy].join(" "));
+    var nFora = tiles.filter(function (s) { var a = res(s); return s.cx < 0 || s.cy < 0 || s.cx + a.w > CW || s.cy + a.h > CH; }).length;
+    var bt = document.getElementById("btn-dentro");
+    if (bt) { bt.hidden = !nFora; bt.textContent = "Trazer para dentro (" + nFora + ")"; }
     if (!tiles.length) document.getElementById("stat-c").textContent = "Sem painéis · toque em + Painel";
     else document.getElementById("stat-c").innerHTML = "Área ocupada: <b>" + nf(maxX - minX) + " × " + nf(maxY - minY) + " px</b>" +
       (nBad ? ' · <span class="warn">' + nBad + " painéis sobrepostos</span>" : "") +
-      (out ? ' · <span class="warn">fora do quadro</span>' : "");
+      (out ? ' · <span class="warn">' + nFora + (nFora === 1 ? " painel fora do canvas" : " painéis fora do canvas") + "</span>" : "");
     updateBoxes();
     updateDetailStat();
     updInsp();
+  }
+
+// leva para dentro do canvas os painéis que estão fora: o lugar livre mais perto, ou encostado na borda
+export function trazerParaDentro() {
+    var n = 0;
+    tiles.forEach(function (s) {
+      var a = res(s);
+      if (!(s.cx < 0 || s.cy < 0 || s.cx + a.w > CW || s.cy + a.h > CH)) return;
+      var outros = tiles.filter(function (o) { return o !== s; });
+      var livre = freeSpot(a.w, a.h, outros);
+      if (livre) { s.cx = livre.x; s.cy = livre.y; }
+      else { s.cx = Math.min(Math.max(0, s.cx), Math.max(0, CW - a.w)); s.cy = Math.min(Math.max(0, s.cy), Math.max(0, CH - a.h)); }
+      n++;
+    });
+    if (n) { save(); placeC(); }
+    return n;
   }
 
 function toWorld(e) {
@@ -138,6 +161,10 @@ export function init() {
   drag = null;
   multi = {};
   multiOn = false;
+  document.getElementById("btn-dentro").addEventListener("click", function () {
+      var n = trazerParaDentro();
+      if (n) pmsgC(n === 1 ? "1 painel trazido para dentro do canvas." : n + " painéis trazidos para dentro do canvas.");
+    });
   document.getElementById("btn-multi").addEventListener("click", function () {
       if (multiOn) { multiOn = false; if (multiIds().length < 2) multi = {}; }
       else { multiOn = true; if (selected && tById[selected] && !multiIds().length) multi[selected] = 1; }

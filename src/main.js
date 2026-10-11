@@ -27,6 +27,7 @@ import { init as init_eletrica } from "./modules/eletrica.js";
 import { init as init_seletor } from "./modules/seletor.js";
 import { init as init_composicao } from "./modules/composicao.js";
 import { init as init_gab_ui } from "./modules/gab-ui.js";
+import { init as init_rig_cartao } from "./modules/rig-cartao.js";
 
 init_core();
 init_rig();
@@ -49,6 +50,7 @@ init_gaveta();
 init_eletrica();
 init_composicao();
 init_gab_ui();
+init_rig_cartao();
 init_ui();
 
 iniciarTemas();

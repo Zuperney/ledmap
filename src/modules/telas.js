@@ -111,6 +111,7 @@ export function init() {
   [aCab, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
   document.getElementById("add-open").addEventListener("click", function () { openAdd(); });
   document.getElementById("add-open2").addEventListener("click", function () { openAdd(); });
+  document.getElementById("add-open3").addEventListener("click", function () { openAdd(); });
   document.getElementById("a-cancel").addEventListener("click", closeAdd);
   addModal.addEventListener("click", function (e) { if (e.target === addModal) closeAdd(); });
   document.addEventListener("keydown", function (e) {

@@ -1,5 +1,5 @@
 import { cellEl, ports, routes, pcolor, pname } from "./cabeamento.js";
-import { FLOOR, el, text, svgM, res } from "./core.js";
+import { FLOOR, el, text, svgM, res, tiles } from "./core.js";
 import { makeViewer } from "./visor.js";
 
 let viewM, cabOn, ovlM, btnCab;
@@ -39,7 +39,13 @@ export function renderCabM() {
 
 export function init() {
   viewM = makeViewer(svgM.parentNode, svgM,
-    { label: "m-zlabel", lock: "m-lock", zin: "m-zin", zout: "m-zout", zfit: "m-zfit" }, null, 680);
+    { label: "m-zlabel", lock: "m-lock", zin: "m-zin", zout: "m-zout", zfit: "m-zfit" }, null, 680,
+    function () {
+      if (!tiles.length) return null;
+      var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      tiles.forEach(function (t) { x0 = Math.min(x0, t.mx); x1 = Math.max(x1, t.mx + t.w); y0 = Math.min(y0, FLOOR - t.my - t.h); y1 = Math.max(y1, FLOOR - t.my); });
+      return { x: x0, y: y0, w: x1 - x0, h: Math.max(y1, FLOOR) - y0 }; // inclui o chão
+    });
   cabOn = false;
   ovlM = el("g", {}, svgM);
   btnCab = document.getElementById("m-cab");
