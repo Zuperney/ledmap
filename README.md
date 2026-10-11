@@ -9,10 +9,24 @@ Mapa de painéis LED com vários projetos: **Projeto**, **Rig** (montagem em met
 ```
 npm install
 npm run dev      # servidor local
-npm run build    # gera dist/
+npm run build    # gera dist/ (o site)
+npm run testar   # bancada de testes do cabeamento automático
 ```
 
 O push no `main` publica no GitHub Pages (workflow em `.github/workflows/pages.yml`).
+
+## Versão desktop (Windows, Electron)
+
+O mesmo build do site, numa janela própria e offline. A versão web (celular) continua igual.
+
+```
+npm run desktop  # gera o build e abre o app de desktop
+npm run dist     # gera o instalador em release/Led-Map-Setup-<versão>.exe
+```
+
+- Os projetos do app ficam em `%APPDATA%\Led Map\`, separados dos do navegador; para levar um projeto de um para o outro, use Exportar/Importar (JSON).
+- Sem certificado de assinatura, o Windows mostra "Editor desconhecido" na primeira instalação: "Mais informações → Executar assim mesmo".
+- Se o Electron não baixar sozinho no `npm install`: `node node_modules/electron/install.js`.
 
 ## Estrutura
 

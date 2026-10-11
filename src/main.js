@@ -28,6 +28,7 @@ import { init as init_seletor } from "./modules/seletor.js";
 import { init as init_composicao } from "./modules/composicao.js";
 import { init as init_gab_ui } from "./modules/gab-ui.js";
 import { init as init_rig_cartao } from "./modules/rig-cartao.js";
+import { init as init_menu_contexto } from "./modules/menu-contexto.js";
 
 init_core();
 init_rig();
@@ -51,6 +52,7 @@ init_eletrica();
 init_composicao();
 init_gab_ui();
 init_rig_cartao();
+init_menu_contexto();
 init_ui();
 
 iniciarTemas();
