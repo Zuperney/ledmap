@@ -3,6 +3,7 @@ import { corCab } from "./gabinetes.js";
 import { editM, onDownM, toggleMselM, limparMselM, modoSelM, ignorarCliqueM } from "./rig-edicao.js";
 import { select } from "./tabela.js";
 import { VISTAS, afim, casco, caixaDe, encara, profundidadeNaVista, temGiro } from "./espaco.js";
+import { avisar3D } from "./ponte3d.js";
 
 let gridM, floorLine, eixoM, regua, boundsM, layerM, guideMV, guideMH, pnLayer;
 
@@ -103,6 +104,7 @@ export function desenharFurosM(t) {
 export function placeM(t) {
   var g = gM[t.id], f = faceM[t.id];
   if (!g || !f) return;
+  avisar3D(); // toda mudança de lugar, recuo ou giro passa por aqui
   var e = encara(t, vistaM), deLado = Math.abs(e) < 0.08;
   f.setAttribute("transform", "matrix(" + afim(t, vistaM, FLOOR).join(" ") + ")");
   f.style.display = deLado ? "none" : "";

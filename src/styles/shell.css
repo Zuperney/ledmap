@@ -160,6 +160,11 @@ input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-i
 .v3d-palco { position: relative; flex: 1; min-height: 0; touch-action: none; }
 .v3d-palco canvas { display: block; }
 body.com-3d { overflow: hidden; }
+/* 3D embutido no Rig (vista "3D" do seletor): ocupa o lugar do desenho 2D; o cartão do painel continua ao lado */
+.v3d.v3d-rig { position: absolute; inset: 0; z-index: 4; }
+.v3d-rig .v3d-bar { padding: 4px 6px; }
+body.rig-3d #view-m .hud, body.rig-3d #view-m .stagebox > .badge, body.rig-3d #m-edit-panel { display: none !important; }
+body.rig-3d #view-m .stagebox { min-height: max(360px, 62vh); }
 
 /* Rig: desenho + cartão do painel (ao lado no computador, subindo de baixo no celular) */
 #view-m .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }

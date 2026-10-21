@@ -1,15 +1,18 @@
-// Vista 3D (só para olhar): desenhada a partir dos dados do Rig — posição, tamanho, profundidade e recortes.
-// Não tem dados próprios: editar continua no Rig 2D. Carregada sob demanda (o three.js fica num pedaço à parte).
+// Vista 3D (só para olhar): desenhada a partir dos dados do Rig — posição, tamanho, recuo, giro e recortes.
+// Não tem dados próprios: editar continua no Rig (cartão, alça, arrastar). Carregada sob demanda (three.js à parte).
 // A frente de cada painel recebe a imagem da Montagem (entrada) com o test card escolhido, como o UV map do disguise.
+// Duas formas: tela cheia (botão 3D) e embutida no Rig (a vista "3D" do seletor), que acompanha as edições ao vivo
+// e seleciona o painel tocado (o cartão abre ao lado).
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { tiles, res } from "./core.js";
+import { tiles, res, selected } from "./core.js";
 import { imagemMontagem, PRESETS } from "./composicao.js";
 import { projetoAtivo } from "./projetos.js";
 import { saveFile, pmsg } from "./exportar.js";
+import { select } from "./tabela.js";
 import { PROF, pivo, normal } from "./espaco.js";
 
-var aberta = null;
+var telaCheia = null, noRig = null;
 
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
@@ -39,30 +42,50 @@ function texturaPainel(img, t) {
   return tx;
 }
 
+// tela cheia (botão 3D do Rig)
 export function abrir3D() {
-  if (aberta) return;
+  if (telaCheia) return;
   if (!tiles.length) { pmsg("Adicione painéis para ver em 3D."); return; }
+  telaCheia = criar(document.body, { telaCheia: true, aoFechar: function () { telaCheia = null; } });
+}
 
-  var box = el("div", "v3d"), barra = el("div", "v3d-bar"), palco = el("div", "v3d-palco");
-  barra.appendChild(el("b", "v3d-tit", "Vista 3D"));
+// embutida no Rig: ocupa o lugar do desenho 2D; acompanha as edições e seleciona pelo toque
+export function abrir3DNoRig(alvo) {
+  if (noRig) return true;
+  noRig = criar(alvo, { aoFechar: function () { noRig = null; } });
+  return !!noRig;
+}
+export function fechar3DNoRig() { if (noRig) noRig.fechar(); }
+// algo mudou no Rig (posição, recuo, giro, pivô): a cena embutida se refaz (agrupado, para não refazer a cada passo)
+export function atualizar3D() { if (noRig) noRig.atualizar(); }
+// a seleção mudou: o painel selecionado fica destacado
+export function marcarSel3D() { if (noRig) noRig.marcarSel(); }
+
+function criar(alvo, op) {
+  var vivo = true, cheia = !!op.telaCheia;
+  var box = el("div", "v3d" + (cheia ? "" : " v3d-rig")), barra = el("div", "v3d-bar"), palco = el("div", "v3d-palco");
+  barra.appendChild(el("b", "v3d-tit", cheia ? "Vista 3D" : "3D"));
   var sel = el("select"); sel.setAttribute("aria-label", "O que aparece nos painéis");
   Object.keys(PRESETS).forEach(function (k) { var o = el("option", null, PRESETS[k]); o.value = k; sel.appendChild(o); });
   sel.value = "cores";
   barra.appendChild(sel);
-  var bFrente = el("button", "btn", "Frente"), b34 = el("button", "btn", "3/4"), bTopo = el("button", "btn", "Topo"), bFoto = el("button", "btn", "Foto (PNG)"), bFechar = el("button", "btn", "Fechar");
-  [bFrente, b34, bTopo, bFoto, bFechar].forEach(function (b) { b.type = "button"; barra.appendChild(b); });
-  barra.appendChild(el("span", "v3d-dica", "Arraste para girar · pinça ou roda para aproximar · dois dedos ou botão direito para mover · toque no cubo para escolher a vista"));
+  var bFrente = el("button", "btn", "Frente"), b34 = el("button", "btn", "3/4"), bTopo = el("button", "btn", "Topo"), bFoto = el("button", "btn", "Foto (PNG)");
+  var botoes = [bFrente, b34, bTopo, bFoto], bFechar = null;
+  if (cheia) { bFechar = el("button", "btn", "Fechar"); botoes.push(bFechar); }
+  botoes.forEach(function (b) { b.type = "button"; barra.appendChild(b); });
+  barra.appendChild(el("span", "v3d-dica", cheia ? "Arraste para girar · pinça ou roda para aproximar · dois dedos ou botão direito para mover · toque no cubo para escolher a vista"
+    : "Toque num painel para editar no cartão · arraste para girar · pinça ou roda aproxima · botão direito move · cubo escolhe a vista"));
   box.appendChild(barra); box.appendChild(palco);
-  document.body.appendChild(box);
-  document.body.classList.add("com-3d");
+  alvo.appendChild(box);
+  if (cheia) document.body.classList.add("com-3d");
 
   var renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: (window.devicePixelRatio || 1) < 2, preserveDrawingBuffer: true });
   } catch (e) {
-    box.remove(); document.body.classList.remove("com-3d");
+    box.remove(); if (cheia) document.body.classList.remove("com-3d");
     pmsg("Este aparelho não conseguiu abrir o 3D (WebGL indisponível).");
-    return;
+    return null;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // DPR 3 desenharia 9× mais pixels
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -74,71 +97,96 @@ export function abrir3D() {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a3, 1.25));
   var sol = new THREE.DirectionalLight(0xffffff, 1.2); sol.position.set(4, 8, 10); scene.add(sol);
 
-  var matrizes = {};
-  tiles.forEach(function (t) { matrizes[t.id] = matrizPainel(t); });
+  var camera = new THREE.PerspectiveCamera(40, 1, 0.05, 500);
+  var controls = new OrbitControls(camera, renderer.domElement);
 
-  // gabinetes: uma caixa por gabinete existente, todas num único objeto (uma chamada de desenho), já no lugar do palco
-  var n = tiles.reduce(function (a, t) { return a + res(t).n; }, 0);
-  var caixas = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x3b434d, roughness: 0.85, metalness: 0.1 }), Math.max(1, n));
-  var m = new THREE.Matrix4(), pos = new THREE.Vector3(), rot = new THREE.Quaternion(), esc = new THREE.Vector3(), i = 0;
-  // contorno de cada gabinete (as 12 arestas da caixa): deixa claro onde cada um começa e termina
-  var arestas = [], v3 = new THREE.Vector3();
-  function aresta(mw, a, b) { v3.set(a[0], a[1], a[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); v3.set(b[0], b[1], b[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); }
-  tiles.forEach(function (t) {
-    var q = res(t), z = -(t.z || 0), mw = matrizes[t.id], z1 = z + 0.003, z0 = z - PROF;
-    for (var r = 0; r < q.rows; r++) for (var c = 0; c < q.cols; c++) {
-      if (q.fora[c + ":" + r]) continue;
-      pos.set(t.mx + (c + 0.5) * q.mw, t.my + (q.rows - 1 - r + 0.5) * q.mh, z - PROF / 2);
-      esc.set(q.mw * 0.992, q.mh * 0.992, PROF);
-      caixas.setMatrixAt(i++, m.compose(pos, rot, esc).premultiply(mw));
-      var x0 = t.mx + c * q.mw, x1 = x0 + q.mw, y0 = t.my + (q.rows - 1 - r) * q.mh, y1 = y0 + q.mh;
-      [z0, z1].forEach(function (zz) { aresta(mw, [x0, y0, zz], [x1, y0, zz]); aresta(mw, [x1, y0, zz], [x1, y1, zz]); aresta(mw, [x1, y1, zz], [x0, y1, zz]); aresta(mw, [x0, y1, zz], [x0, y0, zz]); });
-      [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].forEach(function (v) { aresta(mw, [v[0], v[1], z0], [v[0], v[1], z1]); });
-    }
-  });
-  caixas.count = i;
-  caixas.instanceMatrix.needsUpdate = true;
-  scene.add(caixas);
-  var gArestas = new THREE.BufferGeometry();
-  gArestas.setAttribute("position", new THREE.Float32BufferAttribute(arestas, 3));
-  var linhas = new THREE.LineSegments(gArestas, new THREE.LineBasicMaterial({ color: 0x141a21, transparent: true, opacity: 0.45 }));
-  scene.add(linhas);
+  // ---- a montagem (refeita quando o Rig muda): gabinetes, contornos, chão, eixo 0 e frentes ----
+  var COR = new THREE.Color(0x3b434d), COR_SEL = new THREE.Color(0xe08a1e);
+  var geo = new THREE.Group(), caixas = null, instIds = [], frentes = [];
+  var L = null, cx = 0, cy = 0, cz = 0, larg = 1, alt = 1, temTeto = false;
+  scene.add(geo);
 
-  // limites do conjunto no palco (m): enquadramento e chão
-  gArestas.computeBoundingBox();
-  var L = gArestas.boundingBox, cx = (L.min.x + L.max.x) / 2, cy = (L.min.y + L.max.y) / 2, cz = (L.min.z + L.max.z) / 2;
-  var larg = Math.max(L.max.x - L.min.x, (L.max.z - L.min.z) * 0.7), alt = L.max.y - L.min.y;
-  var lado = Math.ceil(Math.max(L.max.x - L.min.x, L.max.z - L.min.z, alt) / 2 + 6);
-  var grade = new THREE.GridHelper(lado * 2, lado * 2, 0x9aa5b1, 0xd3d9df);
-  grade.position.set(Math.round(cx), 0, Math.round(cz));
-  scene.add(grade);
-  // eixo 0 do Rig (centro do palco), no chão
-  var eixo = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.002, cz - lado), new THREE.Vector3(0, 0.002, cz + lado)]), new THREE.LineBasicMaterial({ color: 0x2f7de1, transparent: true, opacity: 0.6 }));
-  scene.add(eixo);
+  function limpar() {
+    geo.children.slice().forEach(function (o) {
+      geo.remove(o);
+      if (o.geometry) o.geometry.dispose();
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) { if (!m) return; if (m.map) m.map.dispose(); m.dispose(); });
+    });
+    caixas = null; instIds = []; frentes = [];
+  }
 
-  // frentes: um plano por painel com a imagem da Montagem, no lugar do painel (com o giro)
-  var frentes = [];
-  function montarFrentes() {
-    frentes.forEach(function (f) { f.parent.remove(f); f.geometry.dispose(); if (f.material.map) f.material.map.dispose(); f.material.dispose(); });
-    frentes = [];
-    var img = imagemMontagem(sel.value, 4096);
+  function montar() {
+    limpar();
+    var matrizes = {};
+    tiles.forEach(function (t) { matrizes[t.id] = matrizPainel(t); });
+    // gabinetes: uma caixa por gabinete existente, todas num único objeto (uma chamada de desenho), já no lugar do palco
+    var n = tiles.reduce(function (a, t) { return a + res(t).n; }, 0);
+    caixas = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0.1 }), Math.max(1, n));
+    var m = new THREE.Matrix4(), pos = new THREE.Vector3(), rot = new THREE.Quaternion(), esc = new THREE.Vector3(), i = 0;
+    // contorno de cada gabinete (as 12 arestas da caixa): deixa claro onde cada um começa e termina
+    var arestas = [], v3 = new THREE.Vector3();
+    function aresta(mw, a, b) { v3.set(a[0], a[1], a[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); v3.set(b[0], b[1], b[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); }
+    tiles.forEach(function (t) {
+      var q = res(t), z = -(t.z || 0), mw = matrizes[t.id], z1 = z + 0.003, z0 = z - PROF;
+      for (var r = 0; r < q.rows; r++) for (var c = 0; c < q.cols; c++) {
+        if (q.fora[c + ":" + r]) continue;
+        pos.set(t.mx + (c + 0.5) * q.mw, t.my + (q.rows - 1 - r + 0.5) * q.mh, z - PROF / 2);
+        esc.set(q.mw * 0.992, q.mh * 0.992, PROF);
+        instIds[i] = t.id;
+        caixas.setMatrixAt(i++, m.compose(pos, rot, esc).premultiply(mw));
+        var x0 = t.mx + c * q.mw, x1 = x0 + q.mw, y0 = t.my + (q.rows - 1 - r) * q.mh, y1 = y0 + q.mh;
+        [z0, z1].forEach(function (zz) { aresta(mw, [x0, y0, zz], [x1, y0, zz]); aresta(mw, [x1, y0, zz], [x1, y1, zz]); aresta(mw, [x1, y1, zz], [x0, y1, zz]); aresta(mw, [x0, y1, zz], [x0, y0, zz]); });
+        [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].forEach(function (v) { aresta(mw, [v[0], v[1], z0], [v[0], v[1], z1]); });
+      }
+    });
+    caixas.count = i;
+    caixas.instanceMatrix.needsUpdate = true;
+    geo.add(caixas);
+    pintarSel();
+    var gArestas = new THREE.BufferGeometry();
+    gArestas.setAttribute("position", new THREE.Float32BufferAttribute(arestas.length ? arestas : [0, 0, 0, 0, 0, 0], 3));
+    geo.add(new THREE.LineSegments(gArestas, new THREE.LineBasicMaterial({ color: 0x141a21, transparent: true, opacity: 0.45 })));
+
+    // limites do conjunto no palco (m): enquadramento e chão
+    gArestas.computeBoundingBox();
+    L = gArestas.boundingBox; cx = (L.min.x + L.max.x) / 2; cy = (L.min.y + L.max.y) / 2; cz = (L.min.z + L.max.z) / 2;
+    larg = Math.max(L.max.x - L.min.x, (L.max.z - L.min.z) * 0.7); alt = L.max.y - L.min.y;
+    var lado = Math.ceil(Math.max(L.max.x - L.min.x, L.max.z - L.min.z, alt) / 2 + 6);
+    var grade = new THREE.GridHelper(lado * 2, lado * 2, 0x9aa5b1, 0xd3d9df);
+    grade.position.set(Math.round(cx), 0, Math.round(cz));
+    geo.add(grade);
+    // eixo 0 do Rig (centro do palco), no chão
+    geo.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.002, cz - lado), new THREE.Vector3(0, 0.002, cz + lado)]), new THREE.LineBasicMaterial({ color: 0x2f7de1, transparent: true, opacity: 0.6 })));
+
+    // frentes: um plano por painel com a imagem da Montagem, no lugar do painel (com o giro)
+    var img = tiles.length ? imagemMontagem(sel.value, 4096) : null;
     tiles.forEach(function (t) {
       var q = res(t), w = q.cols * q.mw, h = q.rows * q.mh, tx = img && texturaPainel(img, t);
       var mat = new THREE.MeshBasicMaterial({ map: tx, color: tx ? 0xffffff : 0x445566, transparent: true, alphaTest: 0.5 });
       var pl = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
       pl.matrixAutoUpdate = false;
       pl.matrix.copy(matrizes[t.id]).multiply(new THREE.Matrix4().makeTranslation(t.mx + w / 2, t.my + h / 2, -(t.z || 0) + 0.002));
-      scene.add(pl); frentes.push(pl);
+      pl.userData.id = t.id;
+      geo.add(pl); frentes.push(pl);
     });
-    pedir();
+
+    // não passa para baixo do chão; com painel virado para baixo (teto), dá para olhar de baixo para cima
+    temTeto = tiles.some(function (t) { return normal(t)[1] < -0.5; });
+    controls.maxPolarAngle = temTeto ? Math.PI * 0.97 : Math.PI * 0.495;
+    pintarSel(); // de novo, agora com as frentes
   }
 
-  var camera = new THREE.PerspectiveCamera(40, 1, 0.05, 500);
-  var controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(cx, cy, cz);
-  // não passa para baixo do chão; com painel no teto, dá para olhar de baixo para cima
-  var temTeto = tiles.some(function (t) { return normal(t)[1] < -0.5; }); // painel virado para baixo
-  controls.maxPolarAngle = temTeto ? Math.PI * 0.97 : Math.PI * 0.495;
+  // painel selecionado em destaque (só na embutida: lá o toque seleciona): os outros ficam esmaecidos e as caixas dele
+  // (laterais e fundo, que a imagem da frente não cobre) ficam laranja
+  var ESMAECIDO = new THREE.Color(0x8c8c8c), CHEIO = new THREE.Color(0xffffff);
+  function pintarSel() {
+    if (!caixas) return;
+    var s = !cheia && selected;
+    for (var k = 0; k < caixas.count; k++) caixas.setColorAt(k, s && instIds[k] === s ? COR_SEL : COR);
+    if (caixas.instanceColor) caixas.instanceColor.needsUpdate = true;
+    frentes.forEach(function (f) { if (f.material.map) f.material.color.copy(s && f.userData.id !== s ? ESMAECIDO : CHEIO); });
+    pedir();
+  }
 
   function distEnquadrar() {
     return Math.max(larg / (2 * Math.tan(THREE.MathUtils.degToRad(20)) * Math.max(0.6, camera.aspect)), alt / (2 * Math.tan(THREE.MathUtils.degToRad(20)))) * 1.25 + 1;
@@ -162,7 +210,7 @@ export function abrir3D() {
       var d = a.clone().applyQuaternion(id.clone().slerp(q, e)).multiplyScalar(r0 + (r1 - r0) * e);
       camera.position.copy(controls.target).add(d);
       controls.update(); pedir();
-      anim = k < 1 && aberta ? requestAnimationFrame(passo) : null;
+      anim = k < 1 && vivo ? requestAnimationFrame(passo) : null;
     })();
   }
 
@@ -205,25 +253,38 @@ export function abrir3D() {
     var hit = ray.intersectObject(cubo)[0];
     return hit ? hit.point : null;
   }
+  // painel sob o dedo/mouse (pelas caixas dos gabinetes ou pela frente), ou null
+  function painelEm(e) {
+    var r = renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)), camera);
+    var hit = ray.intersectObjects(frentes.concat(caixas ? [caixas] : []), false)[0];
+    if (!hit) return null;
+    return hit.object === caixas ? instIds[hit.instanceId] : hit.object.userData.id;
+  }
   var toque = null;
   renderer.domElement.addEventListener("pointerdown", function (e) { toque = { x: e.clientX, y: e.clientY }; });
   renderer.domElement.addEventListener("pointerup", function (e) {
     if (!toque || Math.hypot(e.clientX - toque.x, e.clientY - toque.y) > 4) { toque = null; return; }
     toque = null;
     var p = noCubo(e);
-    if (!p) return;
-    // face, aresta ou canto: cada eixo perto da borda do cubo entra na direção
-    var d = new THREE.Vector3(Math.abs(p.x) > 0.3 ? Math.sign(p.x) : 0, Math.abs(p.y) > 0.3 ? Math.sign(p.y) : 0, Math.abs(p.z) > 0.3 ? Math.sign(p.z) : 0);
-    if (d.y < 0 && !temTeto) d.y = 0; // por baixo só faz sentido com teto
-    if (d.lengthSq() > 0) girarPara(d);
+    if (p) {
+      // face, aresta ou canto: cada eixo perto da borda do cubo entra na direção
+      var d = new THREE.Vector3(Math.abs(p.x) > 0.3 ? Math.sign(p.x) : 0, Math.abs(p.y) > 0.3 ? Math.sign(p.y) : 0, Math.abs(p.z) > 0.3 ? Math.sign(p.z) : 0);
+      if (d.y < 0 && !temTeto) d.y = 0; // por baixo só faz sentido com teto
+      if (d.lengthSq() > 0) girarPara(d);
+      return;
+    }
+    if (cheia || e.button) return;
+    var id = painelEm(e); // embutida: tocar num painel abre o cartão dele; no vazio, fecha
+    select(id && id === selected ? null : id);
   });
-  renderer.domElement.addEventListener("pointermove", function (e) { if (!e.buttons) renderer.domElement.style.cursor = noCubo(e) ? "pointer" : ""; });
+  renderer.domElement.addEventListener("pointermove", function (e) { if (!e.buttons) renderer.domElement.style.cursor = noCubo(e) || (!cheia && painelEm(e)) ? "pointer" : ""; });
 
   var pendente = false;
   function pedir() {
     if (pendente) return;
     pendente = true;
-    requestAnimationFrame(function () { pendente = false; if (aberta) { renderer.render(scene, camera); desenharCubo(); } });
+    requestAnimationFrame(function () { pendente = false; if (vivo) { renderer.render(scene, camera); desenharCubo(); } });
   }
   controls.addEventListener("change", pedir);
 
@@ -236,26 +297,31 @@ export function abrir3D() {
   var ro = new ResizeObserver(medir); ro.observe(palco);
 
   function fechar() {
-    aberta = null;
+    if (!vivo) return;
+    vivo = false;
+    clearTimeout(refazer);
     ro.disconnect(); controls.dispose();
-    frentes.forEach(function (f) { f.geometry.dispose(); if (f.material.map) f.material.map.dispose(); f.material.dispose(); });
-    caixas.geometry.dispose(); caixas.material.dispose(); grade.geometry.dispose(); grade.material.dispose();
-    linhas.geometry.dispose(); linhas.material.dispose(); eixo.geometry.dispose(); eixo.material.dispose();
+    limpar();
     cubo.geometry.dispose(); cubo.material.forEach(function (m) { if (m.map) m.map.dispose(); m.dispose(); });
     bordaCubo.geometry.dispose(); bordaCubo.material.dispose();
     if (anim) cancelAnimationFrame(anim);
     renderer.dispose();
-    document.removeEventListener("keydown", tecla, true);
-    box.remove(); document.body.classList.remove("com-3d");
+    if (cheia) { document.removeEventListener("keydown", tecla, true); document.body.classList.remove("com-3d"); }
+    box.remove();
+    op.aoFechar();
   }
   function tecla(e) { if (e.key === "Escape") { e.stopImmediatePropagation(); fechar(); } }
-  document.addEventListener("keydown", tecla, true);
+  if (cheia) document.addEventListener("keydown", tecla, true);
 
-  sel.addEventListener("change", montarFrentes);
+  // edições em sequência (digitando um ângulo, arrastando no 2D) refazem a cena uma vez só, sem mexer na câmera
+  var refazer = null;
+  function atualizar() { clearTimeout(refazer); refazer = setTimeout(function () { if (vivo) montar(); }, 120); }
+
+  sel.addEventListener("change", montar);
   bFrente.addEventListener("click", function () { vista("frente"); });
   b34.addEventListener("click", function () { vista("34"); });
   bTopo.addEventListener("click", function () { vista("topo"); });
-  bFechar.addEventListener("click", fechar);
+  if (bFechar) bFechar.addEventListener("click", fechar);
   bFoto.addEventListener("click", function () {
     renderer.render(scene, camera); // a foto sai sem o cubo
     renderer.domElement.toBlob(function (bl) {
@@ -265,8 +331,8 @@ export function abrir3D() {
     }, "image/png");
   });
 
-  aberta = { fechar: fechar };
   medir();
-  montarFrentes();
+  montar();
   vista("34", true);
+  return { fechar: fechar, atualizar: atualizar, marcarSel: pintarSel };
 }
