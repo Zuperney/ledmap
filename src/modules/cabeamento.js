@@ -148,8 +148,21 @@ export function loadSinal(sn, ss, mp) {
 
 function cabPx(t) { var q = res(t); return q.cw * q.ch; }
 
+// Gravar o cabeamento a cada gabinete traçado custava um JSON.stringify do projeto inteiro por movimento do dedo:
+// agora a gravação espera o traço parar (KSAVE_MS). Quem lê a chave "cabos" do armazenamento chama kflush() antes;
+// ao sair da página (recarregar, trocar de projeto, fechar) o pendente é gravado.
+const KSAVE_MS = 300;
+let ksaveT = null;
 export function ksave() {
     histTick();
+    clearTimeout(ksaveT);
+    ksaveT = setTimeout(kflush, KSAVE_MS);
+  }
+
+// grava agora, só se houver gravação pendente
+export function kflush() {
+    if (ksaveT === null) return;
+    clearTimeout(ksaveT); ksaveT = null;
     try { localStorage.setItem(CSTORE, JSON.stringify({ ports: ports, routes: routes, nextP: nextP, oc: oc, sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas, auto: autoCfg })); } catch (e) {}
   }
 
@@ -230,57 +243,85 @@ function capsText() {
     return "Limite de " + limiteTxt() + " px por porta, medido no retângulo que envolve os gabinetes da porta. " + out.join(" · ");
   }
 
+// Redesenho incremental: cada célula guarda o último estado aplicado (só escreve no DOM o que mudou) e cada porta
+// guarda a linha e o botão com uma assinatura do que os define; carga e diagnóstico só são refeitos quando a
+// assinatura muda. Traçar um gabinete passa a mexer em uma célula, uma linha e um botão, e não no projeto todo.
+var linhasK = {}, botoesK = {}, quadroK = 0;
+
+// posições que afetam linhas (canvas) e diagnóstico (montagem, profundidade, vista)
+function geoSig() {
+    return tiles.map(function (t) { return t.id + "," + t.cx + "," + t.cy + "," + t.mx + "," + t.my + "," + t.h + "," + zCabo(t); }).join(";");
+  }
+
+// agrupa vários redesenhos num quadro só (traçar com o dedo dispara muitos pointermove por quadro)
+function agendarRender() {
+    if (!quadroK) quadroK = requestAnimationFrame(function () { quadroK = 0; renderCabling(); });
+  }
+
 export function renderCabling() {
+    if (quadroK) { cancelAnimationFrame(quadroK); quadroK = 0; }
     var bb = tiles.length ? bbox(tiles) : { x: 0, y: 0, w: 2000, h: 1000 }; // projeto sem painel: vista vazia
     svgK.setAttribute("viewBox", [bb.x - 100, bb.y - 100, bb.w + 200, bb.h + 200].join(" "));
     tiles.forEach(function (t) { gK[t.id].setAttribute("transform", "translate(" + t.cx + " " + t.cy + ")"); });
-    var o = owners(), assigned = 0;
+    var o = owners(), assigned = 0, cores = {};
+    ports.forEach(function (p) { cores[p.id] = pcolor(p); });
     Object.keys(cellEl).forEach(function (k) {
       var c = cellEl[k], own = o[k];
-      if (own) {
-        assigned++;
-        c.rect.style.fill = pcolor(portById(own.pid));
-        c.rect.style.fillOpacity = "0.42";
-        c.num.textContent = orderOn ? String(own.i + 1) : "";
-        c.rect.classList.toggle("act", own.pid === activePort);
-      } else {
-        c.rect.style.fill = "";
-        c.rect.style.fillOpacity = "";
-        c.num.textContent = "";
-        c.rect.classList.remove("act");
-      }
+      if (own) assigned++;
+      var f = own ? cores[own.pid] : "", n = own && orderOn ? String(own.i + 1) : "", a = !!own && own.pid === activePort;
+      if (c._f !== f) { c.rect.style.fill = f; c.rect.style.fillOpacity = f ? "0.42" : ""; c._f = f; }
+      if (c._n !== n) { c.num.textContent = n; c._n = n; }
+      if (c._a !== a) { c.rect.classList.toggle("act", a); c._a = a; }
     });
-    linesK.textContent = "";
-    ports.forEach(function (p) {
-      var route = routes[p.id];
-      if (!route.length) return;
-      var pts = route.map(center);
-      var col = pcolor(p), act = p.id === activePort;
-      el("polyline", { "class": "kline" + (act ? " act" : ""), points: pts.map(function (a) { return a[0] + "," + a[1]; }).join(" "), stroke: col }, linesK);
-      var q0 = res(cellEl[route[0]].t);
-      el("circle", { "class": "kdot", cx: pts[0][0], cy: pts[0][1], r: q0.u * 0.22, fill: col }, linesK);
-      if (route.length > 1) {
-        var ql = res(cellEl[route[route.length - 1]].t), last = pts[pts.length - 1];
-        el("circle", { "class": "kend", cx: last[0], cy: last[1], r: ql.u * 0.2, stroke: col }, linesK);
-      }
-      var tg = el("text", { "class": "ktag", x: pts[0][0] + q0.u * 0.3, y: pts[0][1] - q0.u * 0.3, "font-size": q0.u * 0.5, "stroke-width": q0.u * 0.15 }, linesK);
-      tg.textContent = pname(p).slice(0, 8);
-    });
+    var geo = geoSig();
+    renderLinhas(geo);
     var totalCab = Object.keys(cellEl).length;
-    var totalPx = tiles.reduce(function (a, t) { return a + res(t).total; }, 0);
     document.getElementById("k-stat").innerHTML = "<b>" + totalCab + "</b> gabinetes · <b>" + assigned + "</b> com porta · <b>" + (totalCab - assigned) + "</b> sem porta · mínimo de <b>" + resumoScreens(groups).reduce(function (a, x) { return a + x.min; }, 0) + "</b> portas";
-    renderPorts();
+    renderPorts(geo);
     if (sinalHook) sinalHook();
   }
 
-function renderPorts() {
-    var box = document.getElementById("ports");
-    box.textContent = "";
+function renderLinhas(geo) {
+    var vivas = {};
     ports.forEach(function (p) {
-      var route = routes[p.id], st = portState(route), LIMIT = limiteRota(route);
+      var route = routes[p.id];
+      if (!route.length) return;
+      vivas[p.id] = 1;
+      var col = pcolor(p), act = p.id === activePort, tag = pname(p).slice(0, 8);
+      var sig = route.join(",") + "|" + col + "|" + act + "|" + tag + "|" + geo, l = linhasK[p.id];
+      if (l && l.sig === sig) { linesK.appendChild(l.g); return; } // reanexar mantém a ordem das portas
+      var g = el("g", {}, linesK);
+      if (l) l.g.remove();
+      linhasK[p.id] = { sig: sig, g: g };
+      var pts = route.map(center);
+      el("polyline", { "class": "kline" + (act ? " act" : ""), points: pts.map(function (a) { return a[0] + "," + a[1]; }).join(" "), stroke: col }, g);
+      var q0 = res(cellEl[route[0]].t);
+      el("circle", { "class": "kdot", cx: pts[0][0], cy: pts[0][1], r: q0.u * 0.22, fill: col }, g);
+      if (route.length > 1) {
+        var ql = res(cellEl[route[route.length - 1]].t), last = pts[pts.length - 1];
+        el("circle", { "class": "kend", cx: last[0], cy: last[1], r: ql.u * 0.2, stroke: col }, g);
+      }
+      var tg = el("text", { "class": "ktag", x: pts[0][0] + q0.u * 0.3, y: pts[0][1] - q0.u * 0.3, "font-size": q0.u * 0.5, "stroke-width": q0.u * 0.15 }, g);
+      tg.textContent = tag;
+    });
+    Object.keys(linhasK).forEach(function (pid) { if (!vivas[pid]) { linhasK[pid].g.remove(); delete linhasK[pid]; } });
+  }
+
+function renderPorts(geo) {
+    var box = document.getElementById("ports"), vivas = {};
+    ports.forEach(function (p) {
+      var route = routes[p.id], LIMIT = limiteRota(route), act = p.id === activePort;
+      vivas[p.id] = 1;
+      var sig = route.join(",") + "|" + LIMIT + "|" + oc + "|" + p.n + "|" + pname(p) + "|" + !!p.fixa + "|" + geo, bt = botoesK[p.id];
+      if (bt && bt.sig === sig) {
+        bt.b.setAttribute("aria-pressed", String(act));
+        box.appendChild(bt.b);
+        return;
+      }
+      var st = portState(route);
       var b = document.createElement("button");
       b.className = "port";
-      b.setAttribute("aria-pressed", String(p.id === activePort));
+      b.setAttribute("aria-pressed", String(act));
       var sw = document.createElement("span"); sw.className = "sw"; sw.style.background = pcolor(p);
       var nm = document.createElement("span"); nm.className = "nm"; nm.textContent = pname(p);
       var pill = document.createElement("span"); pill.className = "pill " + st.cls; pill.textContent = st.txt;
@@ -294,9 +335,13 @@ function renderPorts() {
       fill.style.background = st.cls === "bad" ? "var(--bad)" : pcolor(p);
       bar.appendChild(fill);
       b.appendChild(sw); b.appendChild(nm); b.appendChild(pill); b.appendChild(mt); b.appendChild(bar);
-      b.addEventListener("click", function () { setActivePort(p.id); });
+      var pid = p.id;
+      b.addEventListener("click", function () { setActivePort(pid); });
+      if (bt) bt.b.remove();
+      botoesK[p.id] = { sig: sig, b: b };
       box.appendChild(b);
     });
+    Object.keys(botoesK).forEach(function (pid) { if (!vivas[pid]) { botoesK[pid].b.remove(); delete botoesK[pid]; } });
   }
 
 export function setActivePort(id) {
@@ -328,7 +373,7 @@ function tryAppend(key) {
     }
     route.push(key);
     kmsg("");
-    renderCabling();
+    agendarRender();
     ksave();
     return true;
   }
@@ -511,6 +556,9 @@ export function init() {
   applyTrace();
   applyOc();
   setActivePort(activePort);
+  // grava o cabeamento pendente ao sair (recarregar, trocar de projeto, fechar) ou ir para segundo plano no celular
+  window.addEventListener("pagehide", kflush);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") kflush(); });
 }
 
 export { cellEl, ports, routes, oc, nextP, activePort, viewK };

@@ -1,7 +1,7 @@
 /* Aba Projeto: cadastro do projeto atual (nome, dados, observações), resumo e exportar/importar.
    A troca de projeto fica num seletor compacto no topo. */
 import { tiles, res, nf, fmt } from "./core.js";
-import { twoStep } from "./cabeamento.js";
+import { twoStep, kflush } from "./cabeamento.js";
 import { pmsg } from "./exportar.js";
 import { KEY_PEND } from "./telas.js";
 import { calcular } from "./eletrica.js";
@@ -63,12 +63,14 @@ export function init() {
   document.getElementById("p-novo").addEventListener("click", function () { abrirProjeto(criarProjeto("", "limpo")); });
   document.getElementById("p-dup").addEventListener("click", function () {
     var a = projetoAtivo(); if (!a) return;
+    kflush(); // a cópia lê o cabeamento do armazenamento
     var id = duplicarProjeto(a.id);
     if (id) abrirProjeto(id);
   });
   twoStep(document.getElementById("p-del"), "Excluir", "Confirmar?", function () {
     var a = projetoAtivo(); if (!a) return;
     if (listar().length <= 1) { pmsg("Mantenha pelo menos um projeto."); return; }
+    kflush(); // grava o pendente antes de apagar, senão o flush da saída recriaria a chave do projeto excluído
     abrirProjeto(excluirProjeto(a.id));
   });
   var arq = document.createElement("input");
