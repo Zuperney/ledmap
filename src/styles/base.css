@@ -50,8 +50,20 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .scr.frente rect.body { fill-opacity: .4; stroke-width: 2.5; }
 .ztag { fill: var(--fg); font-family: var(--font-data); font-weight: 500; pointer-events: none; stroke: var(--panel); stroke-width: 0.06; paint-order: stroke; }
 .eixo0 { stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; opacity: .55; pointer-events: none; }
-.scr.outra-vista { display: none; }
-body.vista-horizontal #svg-m .floor { display: none; }
+/* contorno da caixa do painel na vista (mostra a espessura e o painel de lado); a frente vai por cima */
+.scr .casco { fill: var(--cor, var(--imag)); fill-opacity: .1; stroke: var(--cor, var(--imag)); stroke-opacity: .6; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.scr.de-lado .casco { fill-opacity: .45; stroke-opacity: 1; stroke-width: 2; }
+.scr.de-lado.sel .casco, .scr.de-lado.msel .casco { stroke: var(--fg); stroke-width: 3; }
+.scr.costas .face { opacity: .45; }
+.scr .lado-t { display: none; fill: var(--fg); font-family: var(--font-display); font-weight: 700; text-anchor: middle; dominant-baseline: central; stroke: var(--panel); stroke-width: 0.08; paint-order: stroke; }
+.scr.de-lado .lado-t, .scr.obliquo .lado-t { display: inline; }
+.scr.obliquo .face text, .scr.obliquo .face .badge { display: none; }
+/* alça de giro: pivô, haste e botão de arrastar */
+.alca-l { stroke: var(--fg); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-dasharray: 4 3; pointer-events: none; }
+.alca-p { fill: var(--fg); pointer-events: none; }
+.alca-b { fill: var(--imag); stroke: var(--fg); stroke-width: 2; vector-effect: non-scaling-stroke; cursor: grab; }
+.alca-b:active { cursor: grabbing; }
+.alca-t { fill: var(--fg); font-family: var(--font-data); font-weight: 600; dominant-baseline: central; stroke: var(--panel); stroke-width: 0.08; paint-order: stroke; pointer-events: none; }
 .vnav { display: inline-flex; gap: 2px; }
 .vnav #m-vista { max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .laco { fill: var(--imag); fill-opacity: .08; stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }

@@ -119,7 +119,7 @@ function atualizar(sel) {
 }
 
 export function melhorar(sel) {
-  if (sel._nsel || sel.multiple) return;
+  if (sel._nsel || sel.multiple || !sel.parentNode) return; // já saiu da página (recriado antes do observador rodar)
   var btn = document.createElement("button");
   btn.type = "button";
   btn.className = "nsel";

@@ -1,12 +1,15 @@
 import { cellEl, ports, routes, pcolor, pname } from "./cabeamento.js";
-import { FLOOR, el, text, svgM, res, tiles, noPlano } from "./core.js";
+import { FLOOR, el, text, svgM, res, tiles, vistaM } from "./core.js";
 import { makeViewer } from "./visor.js";
+import { afim, encara, noMundo, projetar, caixaDe } from "./espaco.js";
 
 let viewM, cabOn, ovlM, btnCab;
 
-function cellM(k) {
+// centro do gabinete na vista atual (unidades do desenho do Rig)
+function centroM(k) {
     var c = cellEl[k], t = c.t, q = res(t);
-    return { x: t.mx + c.c * q.mw, y: FLOOR - t.my - t.h + c.r * q.mh, w: q.mw, h: q.mh };
+    var p = projetar(vistaM, noMundo(t, [t.mx + (c.c + 0.5) * q.mw, t.my + t.h - (c.r + 0.5) * q.mh, -(t.z || 0)]));
+    return [p[0], FLOOR - p[1]];
   }
 
 export function renderCabM() {
@@ -15,6 +18,9 @@ export function renderCabM() {
     box.textContent = "";
     box.hidden = !cabOn;
     if (!cabOn) return;
+    // a cor dos gabinetes vai na frente de cada painel (com a afim da vista); painel visto de lado não mostra cabo
+    var visivel = {}, mat = {};
+    tiles.forEach(function (t) { visivel[t.id] = Math.abs(encara(t, vistaM)) >= 0.08; if (visivel[t.id]) mat[t.id] = "matrix(" + afim(t, vistaM, FLOOR).join(" ") + ")"; });
     ports.forEach(function (p) {
       var route = routes[p.id], col = pcolor(p);
       var chip = document.createElement("span"), dot = document.createElement("i");
@@ -22,13 +28,12 @@ export function renderCabM() {
       chip.appendChild(dot);
       chip.appendChild(document.createTextNode(pname(p) + " · " + route.length + (route.length === 1 ? " gabinete" : " gabinetes")));
       box.appendChild(chip);
-      // só os gabinetes da vista de montagem que está na tela
-      route = route.filter(function (k) { return cellEl[k] && noPlano(cellEl[k].t); });
+      route = route.filter(function (k) { return cellEl[k] && visivel[cellEl[k].t.id]; });
       if (!route.length) return;
-      var pts = route.map(function (k) { var c = cellM(k); return [c.x + c.w / 2, c.y + c.h / 2]; });
+      var pts = route.map(centroM);
       route.forEach(function (k) {
-        var c = cellM(k);
-        el("rect", { "class": "ovc", x: c.x, y: c.y, width: c.w, height: c.h, fill: col }, ovlM);
+        var c = cellEl[k], q = res(c.t);
+        el("rect", { "class": "ovc", x: c.c * q.mw, y: c.r * q.mh, width: q.mw, height: q.mh, fill: col, transform: mat[c.t.id] }, ovlM);
       });
       el("polyline", { "class": "kline act", points: pts.map(function (a) { return a[0] + "," + a[1]; }).join(" "), stroke: col }, ovlM);
       el("circle", { "class": "kdot", cx: pts[0][0], cy: pts[0][1], r: 0.12, fill: col }, ovlM);
@@ -43,11 +48,9 @@ export function init() {
   viewM = makeViewer(svgM.parentNode, svgM,
     { label: "m-zlabel", lock: "m-lock", zin: "m-zin", zout: "m-zout", zfit: "m-zfit" }, null, 680,
     function () {
-      var aqui = tiles.filter(noPlano);
-      if (!aqui.length) return null;
-      var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-      aqui.forEach(function (t) { x0 = Math.min(x0, t.mx); x1 = Math.max(x1, t.mx + t.w); y0 = Math.min(y0, FLOOR - t.my - t.h); y1 = Math.max(y1, FLOOR - t.my); });
-      return { x: x0, y: y0, w: x1 - x0, h: Math.max(y1, FLOOR) - y0 }; // inclui o chão
+      if (!tiles.length) return null;
+      var c = caixaDe(tiles, vistaM), y0 = FLOOR - c.v1, y1 = FLOOR - c.v0;
+      return { x: c.u0, y: y0, w: c.u1 - c.u0, h: Math.max(y1, FLOOR) - y0 }; // inclui o chão (a frente, no Topo)
     });
   cabOn = false;
   ovlM = el("g", {}, svgM);

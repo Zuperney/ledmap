@@ -1,30 +1,37 @@
 // Cartão do Rig: tocar num painel (no desenho ou na lista) mostra o que dá para fazer com ele.
 // Três formas: um painel · vários selecionados · um grupo (aberto pela etiqueta do grupo).
 // Editar aqui é direto: nome, X/Y, recuo e Screen; tamanho e gabinete abrem o modal (Editar).
-import { tiles, selected, res, fmt, nf, EXTRAS, save, groups, gname, painelById, pnome, membrosPainel, mnum, noPlano, planos, todosPlanos, horizontal } from "./core.js";
+import { tiles, selected, res, fmt, nf, EXTRAS, save, groups, gname, painelById, pnome, membrosPainel, mnum, vistaM, gravarVivo } from "./core.js";
+import { PIVOS, limpaGiro, limpaPivo, trocarPivo, caixaDe, temGiro } from "./espaco.js";
+import { placeM, reordenarM, statM, desenharPaineis } from "./rig.js";
+import { cabOn, renderCabM } from "./rig-cabos.js";
 import { cabNome } from "./gabinetes.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
-import { commitAndReload, duplicarPainel, excluirPaineis, editarPainel } from "./telas.js";
+import { duplicarPainel, excluirPaineis, editarPainel } from "./telas.js";
 import { menuEspelho } from "./menu-contexto.js";
 import { viewM } from "./rig-cabos.js";
 import { twoStep } from "./cabeamento.js";
-import { mselLista, modoSelM, iniciarSelecao, sairModoSel, desagrupar, refreshM } from "./rig-edicao.js";
+import { mselLista, modoSelM, iniciarSelecao, sairModoSel, desagrupar, refreshM, desenharAlca } from "./rig-edicao.js";
 import { FLOOR } from "./core.js";
-import { curTab } from "./abas.js";
-import { irParaVista, moverParaVista } from "./vistas.js";
 
 var grupoFoco = null; // id do grupo aberto no cartão (pela etiqueta)
 function $(id) { return document.getElementById(id); }
 
 export function abrirGrupo(pn) { grupoFoco = painelById(pn) ? pn : null; renderCartao(); }
 
-// retângulo (unidades do desenho do Rig) de uma lista de painéis, para o "Ir até"
+// retângulo (unidades do desenho do Rig, na vista atual) de uma lista de painéis, para o "Ir até"
 function caixaRig(lista) {
-  var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  lista.forEach(function (t) { x0 = Math.min(x0, t.mx); x1 = Math.max(x1, t.mx + t.w); y0 = Math.min(y0, FLOOR - t.my - t.h); y1 = Math.max(y1, FLOOR - t.my); });
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  var c = caixaDe(lista, vistaM);
+  return { x: c.u0, y: FLOOR - c.v1, w: c.u1 - c.u0, h: c.v1 - c.v0 };
+}
+
+// recuo, giro e pivô mudam só o desenho e a geometria: redesenha sem recarregar a página
+function aplicarVivo(t) {
+  placeM(t); reordenarM(); statM(); desenharPaineis(); desenharAlca();
+  if (cabOn) renderCabM();
+  gravarVivo([t]); save(); renderCartao();
 }
 
 function chip(txt, cls, onClick) {
@@ -68,6 +75,7 @@ function cartaoUm(t) {
   var p = t.pn && painelById(t.pn);
   if (p) tags.appendChild(chip(pnome(p) + " ›", "grupo", function () { abrirGrupo(p.id); }));
   if (t.z) tags.appendChild(chip((t.z > 0 ? "recuo " : "avanço ") + fmt(Math.abs(t.z)) + " m"));
+  if (temGiro(t)) tags.appendChild(chip("girado · zerar", "", function () { t.rx = t.ry = t.rz = 0; aplicarVivo(t); }));
   if (q.n < q.cols * q.rows) tags.appendChild(chip("recortado"));
   $("mc-info").textContent = fmt(t.w) + " × " + fmt(t.h) + " m · " + cabNome(t) + " · " + (q.n < q.cols * q.rows ? q.n + " gab." : q.cols + " × " + q.rows + " = " + q.n + " gab.") + " · " + nf(q.w) + " × " + nf(q.h) + " px";
   if (document.activeElement !== $("mc-w")) $("mc-w").value = t.w;
@@ -76,16 +84,8 @@ function cartaoUm(t) {
   if (document.activeElement !== $("m-y")) $("m-y").value = t.my;
   if (document.activeElement !== $("mc-z")) $("mc-z").value = t.z || "";
   opcoesScreen($("mc-scr"), t.grp);
-  // vista de montagem: o painel selecionado leva o Rig para a vista dele; o campo move o painel (e o grupo) para outra
-  if (!noPlano(t)) irParaVista(t.pl || "", true);
-  $("m-y-l").textContent = horizontal(t.pl) ? "Y (m)" : "Y do chão (m)";
-  $("mc-vista-l").hidden = !planos.length;
-  if (planos.length) {
-    var sv = $("mc-vista");
-    sv.textContent = "";
-    todosPlanos().forEach(function (v) { var e = document.createElement("option"); e.value = v.id; e.textContent = v.nome; sv.appendChild(e); });
-    sv.value = t.pl || "";
-  }
+  ["rx", "ry", "rz"].forEach(function (k) { if (document.activeElement !== $("mc-" + k)) $("mc-" + k).value = t[k] || ""; });
+  $("mc-pv").value = limpaPivo(t.pv);
   $("m-dup").textContent = p ? "Duplicar grupo" : "Duplicar";
   $("mc-sel").hidden = tiles.length < 2;
 }
@@ -148,17 +148,35 @@ export function init() {
   $("mc-gdesp").addEventListener("click", function () { esp(this, true, membrosPainel(grupoFoco).slice(0, 1).map(function (m) { return m.id; })); });
   $("mc-vesp").addEventListener("click", function () { esp(this, false, mselLista()); });
   $("mc-vdesp").addEventListener("click", function () { esp(this, true, mselLista()); });
-  // recuo muda a ordem de desenho e o cabeamento: grava e recarrega
+  // recuo, giro e pivô: direto, sem recarregar
   $("mc-z").addEventListener("change", function () {
     var t = selected && tById[selected];
     if (!t) return;
     var v = mnum($("mc-z").value || 0);
-    if (v === null || v === (t.z || 0)) return;
+    if (v === null || Math.abs(v) > 200) { pmsg("Recuo entre −200 e 200 m."); renderCartao(); return; }
+    if (v === (t.z || 0)) return;
     t.z = v;
-    EXTRAS.forEach(function (x) { if (x.id === t.id) x.z = v; });
-    if (!commitAndReload(curTab + ":" + t.id)) pmsg("Não consegui salvar neste navegador.");
+    aplicarVivo(t);
   });
-  $("mc-vista").addEventListener("change", function () { if (selected) moverParaVista([selected], $("mc-vista").value); });
+  ["rx", "ry", "rz"].forEach(function (k) {
+    $("mc-" + k).addEventListener("change", function () {
+      var t = selected && tById[selected];
+      if (!t) return;
+      var v = limpaGiro(String($("mc-" + k).value || 0).replace(",", "."));
+      if (v === (t[k] || 0)) { renderCartao(); return; }
+      t[k] = v;
+      aplicarVivo(t);
+    });
+  });
+  var spv = $("mc-pv");
+  Object.keys(PIVOS).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = PIVOS[k][2]; spv.appendChild(o); });
+  spv.addEventListener("change", function () {
+    var t = selected && tById[selected];
+    if (!t) return;
+    var n = trocarPivo(t, spv.value); // o painel fica onde está; só o ponto de giro muda
+    t.mx = mnum(n.mx); t.my = mnum(n.my); t.z = mnum(n.z) || 0; t.pv = limpaPivo(spv.value);
+    aplicarVivo(t);
+  });
   $("mc-scr").addEventListener("change", function () {
     var t = selected && tById[selected];
     if (!t) return;

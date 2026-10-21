@@ -3,25 +3,22 @@
 // A frente de cada painel recebe a imagem da Montagem (entrada) com o test card escolhido, como o UV map do disguise.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { tiles, res, planoById } from "./core.js";
+import { tiles, res } from "./core.js";
 import { imagemMontagem, PRESETS } from "./composicao.js";
 import { projetoAtivo } from "./projetos.js";
 import { saveFile, pmsg } from "./exportar.js";
+import { PROF, pivo, normal } from "./espaco.js";
 
-var PROF = 0.09; // espessura do gabinete desenhada (m)
 var aberta = null;
 
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
-// cada vista de montagem é um plano posto no palco: posição (ox, oy, oz) e giro conforme a orientação.
-// No plano: x = x do Rig, y = y do Rig, z = para fora da face (o recuo vai para trás).
-var GIRO = { esq: [0, Math.PI / 2, 0], dir: [0, -Math.PI / 2, 0], tras: [0, Math.PI, 0], teto: [Math.PI / 2, 0, 0], piso: [-Math.PI / 2, 0, 0] };
-function grupoDoPlano(pl) {
-  var p = planoById(pl || "") || planoById(""), g = new THREE.Group(), R = GIRO[p.ori];
-  g.position.set(p.ox, p.oy, p.oz);
-  if (R) g.rotation.set(R[0], R[1], R[2]);
-  g.updateMatrixWorld(true);
-  return g;
+// leva o painel sem giro (coordenadas do palco: x = mx…, y = my…, z = −recuo, frente para +Z) ao lugar dele:
+// gira em volta do pivô, ordem YXZ (a mesma de espaco.js)
+var GRAU = Math.PI / 180;
+function matrizPainel(t) {
+  var P = pivo(t), R = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler((t.rx || 0) * GRAU, (t.ry || 0) * GRAU, (t.rz || 0) * GRAU, "YXZ"));
+  return new THREE.Matrix4().makeTranslation(P[0], P[1], P[2]).multiply(R).multiply(new THREE.Matrix4().makeTranslation(-P[0], -P[1], -P[2]));
 }
 
 // textura da frente de um painel: o recorte dele na imagem da Montagem, com os gabinetes recortados transparentes
@@ -77,9 +74,8 @@ export function abrir3D() {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a3, 1.25));
   var sol = new THREE.DirectionalLight(0xffffff, 1.2); sol.position.set(4, 8, 10); scene.add(sol);
 
-  // um grupo por vista de montagem (Frente, paredes, teto...), já girado e posto no lugar
-  var grupos = {};
-  function grupo(t) { var k = t.pl || ""; if (!grupos[k]) { grupos[k] = grupoDoPlano(k); scene.add(grupos[k]); } return grupos[k]; }
+  var matrizes = {};
+  tiles.forEach(function (t) { matrizes[t.id] = matrizPainel(t); });
 
   // gabinetes: uma caixa por gabinete existente, todas num único objeto (uma chamada de desenho), já no lugar do palco
   var n = tiles.reduce(function (a, t) { return a + res(t).n; }, 0);
@@ -89,7 +85,7 @@ export function abrir3D() {
   var arestas = [], v3 = new THREE.Vector3();
   function aresta(mw, a, b) { v3.set(a[0], a[1], a[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); v3.set(b[0], b[1], b[2]).applyMatrix4(mw); arestas.push(v3.x, v3.y, v3.z); }
   tiles.forEach(function (t) {
-    var q = res(t), z = -(t.z || 0), mw = grupo(t).matrixWorld, z1 = z + 0.003, z0 = z - PROF;
+    var q = res(t), z = -(t.z || 0), mw = matrizes[t.id], z1 = z + 0.003, z0 = z - PROF;
     for (var r = 0; r < q.rows; r++) for (var c = 0; c < q.cols; c++) {
       if (q.fora[c + ":" + r]) continue;
       pos.set(t.mx + (c + 0.5) * q.mw, t.my + (q.rows - 1 - r + 0.5) * q.mh, z - PROF / 2);
@@ -120,7 +116,7 @@ export function abrir3D() {
   var eixo = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.002, cz - lado), new THREE.Vector3(0, 0.002, cz + lado)]), new THREE.LineBasicMaterial({ color: 0x2f7de1, transparent: true, opacity: 0.6 }));
   scene.add(eixo);
 
-  // frentes: um plano por painel com a imagem da Montagem, dentro do grupo da vista dele
+  // frentes: um plano por painel com a imagem da Montagem, no lugar do painel (com o giro)
   var frentes = [];
   function montarFrentes() {
     frentes.forEach(function (f) { f.parent.remove(f); f.geometry.dispose(); if (f.material.map) f.material.map.dispose(); f.material.dispose(); });
@@ -130,8 +126,9 @@ export function abrir3D() {
       var q = res(t), w = q.cols * q.mw, h = q.rows * q.mh, tx = img && texturaPainel(img, t);
       var mat = new THREE.MeshBasicMaterial({ map: tx, color: tx ? 0xffffff : 0x445566, transparent: true, alphaTest: 0.5 });
       var pl = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-      pl.position.set(t.mx + w / 2, t.my + h / 2, -(t.z || 0) + 0.002);
-      grupo(t).add(pl); frentes.push(pl);
+      pl.matrixAutoUpdate = false;
+      pl.matrix.copy(matrizes[t.id]).multiply(new THREE.Matrix4().makeTranslation(t.mx + w / 2, t.my + h / 2, -(t.z || 0) + 0.002));
+      scene.add(pl); frentes.push(pl);
     });
     pedir();
   }
@@ -140,7 +137,7 @@ export function abrir3D() {
   var controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(cx, cy, cz);
   // não passa para baixo do chão; com painel no teto, dá para olhar de baixo para cima
-  var temTeto = tiles.some(function (t) { var p = planoById(t.pl || ""); return p && p.ori === "teto"; });
+  var temTeto = tiles.some(function (t) { return normal(t)[1] < -0.5; }); // painel virado para baixo
   controls.maxPolarAngle = temTeto ? Math.PI * 0.97 : Math.PI * 0.495;
 
   function distEnquadrar() {

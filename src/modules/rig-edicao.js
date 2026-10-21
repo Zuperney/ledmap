@@ -1,6 +1,7 @@
-import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis, res, existe, EXTRAS, noPlano } from "./core.js";
+import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis, res, existe, EXTRAS, vistaM, el, text, gravarVivo } from "./core.js";
 import { updInsp } from "./gaveta.js";
-import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis, desenharFurosM } from "./rig.js";
+import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis, desenharFurosM, reordenarM, faceM } from "./rig.js";
+import { VISTAS, caixa, caixaDe, desprojetar, projetar, pivo, limpaGiro, encara } from "./espaco.js";
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
@@ -25,7 +26,7 @@ function rowM(t) {
   }
 
 export function refreshM() {
-    tiles.forEach(function (t) { placeM(t); rowM(t); });
+    tiles.forEach(function (t) { rowM(t); });
     fitM();
     syncMPanel();
     if (cabOn) renderCabM();
@@ -35,6 +36,63 @@ export function refreshM() {
 export function syncMPanel() {
     syncGrupo();
     desenharPaineis();
+    desenharAlca();
+  }
+
+// ---- alça de giro: com Mover ligado e um painel selecionado, girar em volta do pivô no plano da tela ----
+// Cada vista gira um eixo (Frente → Z, Topo → Y, laterais → X); o passo vem de "Passo do giro".
+// Só o painel selecionado gira (o grupo não vai junto). Com os outros dois giros em zero o ângulo é exato;
+// com eles, a alça muda o valor do eixo da vista e o desenho mostra o resultado.
+var alca = null, giro = null, RAIO = 1.1;
+function anguloTela(e, px, py) { var w = toWorldM(e); return Math.atan2(-(w.y - py), w.x - px); }
+export function desenharAlca() {
+    if (!svgM) return;
+    if (!alca) {
+      alca = el("g", { "class": "alca" }, svgM);
+      alca.linha = el("line", { "class": "alca-l" }, alca);
+      alca.piv = el("circle", { "class": "alca-p", r: 0.12 }, alca);
+      alca.bot = el("circle", { "class": "alca-b", r: 0.26 }, alca);
+      alca.txt = text(alca, "alca-t", 0, 0, 0.34, "");
+      alca.bot.addEventListener("pointerdown", iniciarGiro);
+    }
+    var t = selected && tById[selected], on = !!(editM && t && !recorte && mselM.length < 2);
+    alca.style.display = on ? "" : "none";
+    if (!on) return;
+    svgM.appendChild(alca); // por cima de tudo
+    var V = VISTAS[vistaM], P = projetar(vistaM, pivo(t)), px = P[0], py = FLOOR - P[1];
+    var a = giro ? giro.a : Math.PI / 2, bx = px + RAIO * Math.cos(a), by = py - RAIO * Math.sin(a);
+    alca.piv.setAttribute("cx", px); alca.piv.setAttribute("cy", py);
+    alca.bot.setAttribute("cx", bx); alca.bot.setAttribute("cy", by);
+    alca.linha.setAttribute("x1", px); alca.linha.setAttribute("y1", py); alca.linha.setAttribute("x2", bx); alca.linha.setAttribute("y2", by);
+    alca.txt.setAttribute("x", bx + 0.35); alca.txt.setAttribute("y", by);
+    alca.txt.textContent = "Giro " + V.eixo.slice(1).toUpperCase() + " " + fmt(t[V.eixo] || 0) + "°";
+  }
+function iniciarGiro(e) {
+    var t = selected && tById[selected];
+    if (!t) return;
+    e.stopPropagation(); e.preventDefault();
+    var P = projetar(vistaM, pivo(t)), px = P[0], py = FLOOR - P[1], a = anguloTela(e, px, py), V = VISTAS[vistaM];
+    giro = { t: t, eixo: V.eixo, sinal: V.sinal, v0: t[V.eixo] || 0, px: px, py: py, ult: a, acc: 0, a: a };
+    alca.bot.setPointerCapture(e.pointerId);
+  }
+function moverGiro(e) {
+    var a = anguloTela(e, giro.px, giro.py), d = a - giro.ult;
+    if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI;
+    giro.ult = a; giro.acc += d; giro.a = a;
+    var passo = Number(document.getElementById("m-gpasso").value) || 5;
+    var alvo = limpaGiro(Math.round((giro.v0 + giro.sinal * giro.acc * 180 / Math.PI) / passo) * passo);
+    if (alvo !== (giro.t[giro.eixo] || 0)) {
+      giro.t[giro.eixo] = alvo;
+      placeM(giro.t); reordenarM(); statM(); desenharPaineis(); renderCartao();
+      if (cabOn) renderCabM();
+    }
+    desenharAlca();
+  }
+function fimGiro() {
+    if (!giro) return;
+    gravarVivo([giro.t]);
+    giro = null; ignorarAte = performance.now() + 350;
+    save(); fitM(); desenharAlca();
   }
 
 // multisseleção do Rig (Shift ou Ctrl + clique, ou o modo de seleção do botão Grupo, que serve no celular)
@@ -97,9 +155,14 @@ function clicarGrupo() {
 // Ao desligar (ou sair de Editar) grava e recarrega: cabeamento, elétrica e composição passam a ignorar os recortados.
 var recorte = false, pintar = null, mudou = false;
 
+// gabinete sob o dedo: o ponto volta para o desenho da frente do painel (desfaz a afim da vista)
 function celulaEm(t, e) {
-    var w = toWorldM(e), q = res(t), topo = FLOOR - t.my - t.h;
-    var c = Math.floor((w.x - t.mx) / q.mw), r = Math.floor((w.y - topo) / q.mh);
+    var f = faceM[t.id], m = f && f.style.display !== "none" && f.getScreenCTM();
+    if (!m) return null;
+    var pt = svgM.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    var p = pt.matrixTransform(m.inverse()), q = res(t);
+    var c = Math.floor(p.x / q.mw), r = Math.floor(p.y / q.mh);
     return c >= 0 && r >= 0 && c < q.cols && r < q.rows ? { c: c, r: r, q: q } : null;
   }
 
@@ -146,7 +209,7 @@ export function setEditM(on) {
     document.getElementById("m-edit-panel").hidden = !on;
     tiles.forEach(function (t) { gM[t.id].classList.toggle("edit", on); });
     viewM.setLock(on);
-    if (!on) { dragM = null; guideMV.classList.add("off"); guideMH.classList.add("off"); }
+    if (!on) { dragM = null; giro = null; guideMV.classList.add("off"); guideMH.classList.add("off"); }
     syncMPanel();
   }
 
@@ -172,14 +235,13 @@ export function onDownM(e, t) {
     });
     conj[t.id] = t;
     var lista = Object.keys(conj).map(function (k) { return conj[k]; });
-    var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    lista.forEach(function (o) { x0 = Math.min(x0, o.mx); x1 = Math.max(x1, o.mx + o.w); y0 = Math.min(y0, o.my); y1 = Math.max(y1, o.my + o.h); });
     var w = toWorldM(e);
-    dragM = { t: t, x0: t.mx, y0: t.my, wx: w.x, wy: w.y, sx: e.clientX, sy: e.clientY, moveu: false,
-      outros: lista.filter(function (o) { return o !== t; }).map(function (o) { return { t: o, x0: o.mx, y0: o.my }; }),
+    // arrastar move no plano da vista (Frente: X e altura; Topo: X e recuo; laterais: Z e altura);
+    // o ímã e o passo valem para o contorno do conjunto na vista, não só para o painel puxado
+    dragM = { t: t, wx: w.x, wy: w.y, sx: e.clientX, sy: e.clientY, moveu: false,
+      todos: lista.map(function (o) { return { t: o, x0: o.mx, y0: o.my, z0: o.z || 0 }; }),
       ids: lista.map(function (o) { return o.id; }),
-      // contorno do conjunto em relação ao painel puxado: o ímã encaixa o conjunto, não só o painel
-      ox: x0 - t.mx, oy: y0 - t.my, bw: x1 - x0, bh: y1 - y0 };
+      cx: caixaDe(lista, vistaM) };
     gM[t.id].setPointerCapture(e.pointerId);
     e.preventDefault();
   }
@@ -191,7 +253,7 @@ export function ignorarCliqueM() { return performance.now() < ignorarAte; }
 function endDragM() {
     pintar = null;
     var was = dragM && dragM.moveu;
-    if (was) ignorarAte = performance.now() + 350;
+    if (was) { ignorarAte = performance.now() + 350; gravarVivo(dragM.todos.map(function (o) { return o.t; })); } // no Topo e nas laterais o recuo muda
     dragM = null;
     guideMV.classList.add("off");
     guideMH.classList.add("off");
@@ -220,7 +282,7 @@ function fecharLaco(e) {
     if (!l || !l.w || Math.hypot(e.clientX - l.sx, e.clientY - l.sy) < 6) return;
     ignorarAte = performance.now() + 350;
     var x0 = Math.min(l.x, l.w.x), x1 = Math.max(l.x, l.w.x), y0 = Math.min(l.y, l.w.y), y1 = Math.max(l.y, l.w.y);
-    var ids = tiles.filter(function (t) { var ty = FLOOR - t.my - t.h; return noPlano(t) && t.mx < x1 && t.mx + t.w > x0 && ty < y1 && ty + t.h > y0; }).map(function (t) { return t.id; });
+    var ids = tiles.filter(function (t) { var c = caixa(t, vistaM); return c.u0 < x1 && c.u1 > x0 && FLOOR - c.v1 < y1 && FLOOR - c.v0 > y0; }).map(function (t) { return t.id; });
     if (ids.length >= 2) { modoSel = false; mselM = ids; marcarMsel(); }
     else if (ids.length === 1) { limparMselM(); select(ids[0]); }
   }
@@ -237,53 +299,53 @@ export function init() {
   });
   svgM.addEventListener("pointermove", function (e) {
       if (pintar) { var cel = celulaEm(pintar.t, e); if (cel) aplicarRecorte(pintar.t, cel, pintar.tirar); return; }
+      if (giro) { moverGiro(e); return; }
       if (laco) { moverLaco(e); return; }
       if (!dragM) return;
       if (!dragM.moveu) { if (Math.hypot(e.clientX - dragM.sx, e.clientY - dragM.sy) < 5) return; dragM.moveu = true; }
-      var t = dragM.t, step = Number(document.getElementById("m-snap").value) || 0.5;
-      var w = toWorldM(e);
-      var nx = Math.round((dragM.x0 + (w.x - dragM.wx)) / step) * step;
-      var ny = Math.round((dragM.y0 - (w.y - dragM.wy)) / step) * step;
+      var step = Number(document.getElementById("m-snap").value) || 0.5;
+      var w = toWorldM(e), c = dragM.cx, bw = c.u1 - c.u0, bh = c.v1 - c.v0;
+      // canto do contorno do conjunto na vista (U para a direita, V para cima), no passo
+      var nu = Math.round((c.u0 + (w.x - dragM.wx)) / step) * step;
+      var nv = Math.round((c.v0 - (w.y - dragM.wy)) / step) * step;
       var hx = null, hy = null;
       if (magnetM) {
-        // ímã reforçado: alcance de 20 px na tela e encaixe pelo contorno do conjunto que está sendo arrastado
+        // ímã reforçado: alcance de 20 px na tela, encaixe pelo contorno do conjunto nas bordas e centros dos outros e no 0
         var T = 20 / ((svgM.getBoundingClientRect().width || 1) / (boundsM.x1 - boundsM.x0));
-        var bx = nx + dragM.ox, by = ny + dragM.oy, bw = dragM.bw, bh = dragM.bh;
-        var mxs = [{ v: bx, k: 0 }, { v: bx + bw, k: 0 }, { v: bx + bw / 2, k: 1 }];
-        var mys = [{ v: by, k: 0 }, { v: by + bh, k: 0 }, { v: by + bh / 2, k: 1 }];
+        var mxs = [{ v: nu, k: 0 }, { v: nu + bw, k: 0 }, { v: nu + bw / 2, k: 1 }];
+        var mys = [{ v: nv, k: 0 }, { v: nv + bh, k: 0 }, { v: nv + bh / 2, k: 1 }];
         var txs = [{ v: 0, k: 0 }], tys = [{ v: 0, k: 0 }];
         tiles.forEach(function (o) {
-          if (dragM.ids.indexOf(o.id) >= 0 || !noPlano(o)) return;
-          txs.push({ v: o.mx, k: 0 }, { v: o.mx + o.w, k: 0 }, { v: o.mx + o.w / 2, k: 1 });
-          tys.push({ v: o.my, k: 0 }, { v: o.my + o.h, k: 0 }, { v: o.my + o.h / 2, k: 1 });
+          if (dragM.ids.indexOf(o.id) >= 0) return;
+          var b = caixa(o, vistaM);
+          txs.push({ v: b.u0, k: 0 }, { v: b.u1, k: 0 }, { v: (b.u0 + b.u1) / 2, k: 1 });
+          tys.push({ v: b.v0, k: 0 }, { v: b.v1, k: 0 }, { v: (b.v0 + b.v1) / 2, k: 1 });
         });
         hx = best(mxs, txs, T); hy = best(mys, tys, T);
-        if (hx) nx += hx.d;
-        if (hy) ny += hy.d;
+        if (hx) nu += hx.d;
+        if (hy) nv += hy.d;
       }
-      var b = boundsM;
-      nx = Math.min(Math.max(nx, b.x0 - dragM.ox), b.x1 - dragM.ox - dragM.bw);
-      ny = Math.min(Math.max(ny, FLOOR - b.y1 - dragM.oy), FLOOR - b.y0 - dragM.oy - dragM.bh);
-      t.mx = Math.round(nx * 100) / 100; t.my = Math.round(ny * 100) / 100;
-      var dx = t.mx - dragM.x0, dy = t.my - dragM.y0;
-      dragM.outros.forEach(function (o) {
-        o.t.mx = Math.round((o.x0 + dx) * 100) / 100; o.t.my = Math.round((o.y0 + dy) * 100) / 100;
+      var d = desprojetar(vistaM, nu - c.u0, nv - c.v0); // deslocamento no palco
+      dragM.todos.forEach(function (o) {
+        o.t.mx = Math.round((o.x0 + d[0]) * 100) / 100;
+        o.t.my = Math.round((o.y0 + d[1]) * 100) / 100;
+        o.t.z = Math.round((o.z0 - d[2]) * 100) / 100 || 0; // recuo é para trás (−Z)
         placeM(o.t); rowM(o.t);
       });
-      if (dragM.outros.length) desenharPaineis();
       if (hx) { guideMV.setAttribute("x1", hx.line); guideMV.setAttribute("x2", hx.line); }
       if (hy) { guideMH.setAttribute("y1", FLOOR - hy.line); guideMH.setAttribute("y2", FLOOR - hy.line); }
       guideMV.classList.toggle("off", !hx);
       guideMH.classList.toggle("off", !hy);
-      placeM(t); rowM(t); syncMPanel(); statM();
+      if (d[2]) reordenarM();
+      syncMPanel(); statM();
       if (cabOn) renderCabM();
     });
   svgM.addEventListener("pointerdown", function (e) {
-    if (!editM || recorte || e.button === 2 || (e.target.closest && e.target.closest(".scr"))) return;
+    if (!editM || recorte || giro || e.button === 2 || (e.target.closest && e.target.closest(".scr, .alca"))) return;
     iniciarLaco(e);
   });
-  svgM.addEventListener("pointerup", function (e) { if (laco) { fecharLaco(e); return; } endDragM(); });
-  svgM.addEventListener("pointercancel", function (e) { if (laco) { fecharLaco(e); return; } endDragM(); });
+  svgM.addEventListener("pointerup", function (e) { if (giro) { fimGiro(); return; } if (laco) { fecharLaco(e); return; } endDragM(); });
+  svgM.addEventListener("pointercancel", function (e) { if (giro) { fimGiro(); return; } if (laco) { fecharLaco(e); return; } endDragM(); });
   ["m-x", "m-y"].forEach(function (id) {
       document.getElementById(id).addEventListener("change", function () {
         var t = selected && tById[selected];
@@ -320,8 +382,9 @@ export function init() {
   btnMagM = document.getElementById("m-magnet");
   btnMagM.addEventListener("click", function () { magnetM = !magnetM; btnMagM.setAttribute("aria-pressed", String(magnetM)); });
   twoStep(document.getElementById("m-reset"), "Restaurar", "Confirmar?", function () {
-      tiles.forEach(function (t, idx) { t.mx = BASE[idx].mx; t.my = BASE[idx].my; });
-      save(); refreshM();
+      // volta posição, recuo, giro e pivô ao que estava quando o projeto abriu
+      tiles.forEach(function (t, idx) { ["mx", "my", "z", "rx", "ry", "rz", "pv"].forEach(function (k) { t[k] = BASE[idx][k]; }); });
+      gravarVivo(tiles); save(); refreshM();
     });
 }
 

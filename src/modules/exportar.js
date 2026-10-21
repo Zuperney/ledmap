@@ -1,5 +1,6 @@
 import { cabNome, corCab } from "./gabinetes.js";
-import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR, noPlano, planoById, vistaM } from "./core.js";
+import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR, vistaM } from "./core.js";
+import { VISTAS, afim, encara, casco, caixaDe, noMundo, projetar } from "./espaco.js";
 import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, limiteRota, limiteTxt, oc } from "./cabeamento.js";
 import { boundsM } from "./rig.js";
 
@@ -329,15 +330,11 @@ function drawLayout(withCab) {
     ctx.fillStyle = "#0d1319";
     ctx.fillRect(0, 0, W, H);
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    tiles.filter(noPlano).forEach(function (t) {
-      minX = Math.min(minX, t.mx); maxX = Math.max(maxX, t.mx + t.w);
-      minY = Math.min(minY, t.my); maxY = Math.max(maxY, t.my + t.h);
-    });
+    var cj = tiles.length ? caixaDe(tiles, vistaM) : { u0: 0, u1: 0, v0: 0, v1: 0 };
     ctx.font = "700 72px " + DISP;
     halo(ctx, withCab ? "Montagem com cabeamento" : "Layout da montagem", pad, 96, "#ffffff", 0);
     ctx.font = "400 34px " + MONO;
-    halo(ctx, "Mapa de painéis LED · conjunto " + fmt(maxX - minX) + " × " + fmt(maxY - minY) + " m · vista " + (planoById(vistaM) || { nome: "Frente" }).nome + ", medidas em metros", pad, 140, "#9fb2c1", 0);
+    halo(ctx, "Mapa de painéis LED · conjunto " + fmt(cj.u1 - cj.u0) + " × " + fmt(cj.v1 - cj.v0) + " m · vista " + VISTAS[vistaM].nome + ", medidas em metros", pad, 140, "#9fb2c1", 0);
     var m, sy;
     ctx.strokeStyle = "#1c2a35"; ctx.lineWidth = 1;
     ctx.beginPath();
@@ -347,12 +344,27 @@ function drawLayout(withCab) {
     ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(X(b.x0), Y(FLOOR)); ctx.lineTo(X(b.x1), Y(FLOOR)); ctx.stroke();
     ctx.font = "400 30px " + MONO; ctx.textAlign = "center";
-    for (m = 0; m <= 25; m += 5) halo(ctx, m + " m", X(m), Y(FLOOR) + 44, "#9fb2c1", 0);
+    for (m = Math.ceil(b.x0 / 5) * 5; m <= b.x1; m += 5) halo(ctx, (m < 0 ? "−" + -m : m) + " m", X(m), Y(FLOOR) + 44, "#9fb2c1", 0);
     ctx.textAlign = "left";
     [2, 4, 6, 8].forEach(function (v) { halo(ctx, v + " m", X(b.x0) + 8, Y(FLOOR - v) - 8, "#9fb2c1", 0); });
 
-    tiles.filter(noPlano).forEach(function (t) {
-      var q = res(t), x = X(t.mx), y = Y(FLOOR - t.my - t.h), w = t.w * S, h = t.h * S, k;
+    // cada painel com a afim da vista (em pixels: sem giro, na Frente, é o desenho de sempre); visto de lado, só o contorno
+    var mat = {}, visto = {};
+    tiles.forEach(function (t) { mat[t.id] = afim(t, vistaM, FLOOR); visto[t.id] = Math.abs(encara(t, vistaM)) >= 0.08; });
+    function naFrente(t, fn) { var A = mat[t.id]; ctx.save(); ctx.transform(A[0], A[1], A[2], A[3], X(A[4]), Y(A[5])); fn(); ctx.restore(); }
+    tiles.forEach(function (t) {
+      if (visto[t.id]) return;
+      var pts = casco(t, vistaM);
+      ctx.fillStyle = corCab(t); ctx.globalAlpha = 0.85;
+      ctx.beginPath(); pts.forEach(function (p, i) { if (i) ctx.lineTo(X(p[0]), Y(FLOOR - p[1])); else ctx.moveTo(X(p[0]), Y(FLOOR - p[1])); }); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.stroke();
+      var cx = 0, cy = 0; pts.forEach(function (p) { cx += X(p[0]); cy += Y(FLOOR - p[1]); });
+      ctx.font = "700 40px " + DISP; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      halo(ctx, t.id, cx / pts.length, cy / pts.length - 40, "#ffffff", 8);
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    });
+    tiles.filter(function (t) { return visto[t.id]; }).forEach(function (t) { naFrente(t, function () {
+      var q = res(t), x = 0, y = 0, w = t.w * S, h = t.h * S, k;
       ctx.globalAlpha = withCab ? 0.3 : 0.85;
       ctx.fillStyle = corCab(t);
       ctx.fillRect(x, y, w, h);
@@ -381,30 +393,36 @@ function drawLayout(withCab) {
         halo(ctx, t.id, x + w / 2, y + h / 2, "#ffffff", 8);
       }
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    });
+    }); });
 
     if (withCab) {
       var own = owners();
-      function cc(key) {
+      // centro do gabinete na imagem (px), pela vista
+      function centro(key) {
         var c = cellEl[key], t = c.t, q = res(t);
-        return { x: X(t.mx + c.c * q.mw), y: Y(FLOOR - t.my - t.h + c.r * q.mh), cs: q.mw * S, ch: q.mh * S };
+        var p = projetar(vistaM, noMundo(t, [t.mx + (c.c + 0.5) * q.mw, t.my + t.h - (c.r + 0.5) * q.mh, -(t.z || 0)]));
+        return [X(p[0]), Y(FLOOR - p[1])];
       }
       Object.keys(own).forEach(function (key) {
-        var p = cc(key);
-        ctx.globalAlpha = 0.6;
-        ctx.fillStyle = pcolor(portById(own[key].pid));
-        ctx.fillRect(p.x, p.y, p.cs, p.ch);
-        ctx.globalAlpha = 1;
+        var c = cellEl[key], q = res(c.t);
+        if (!visto[c.t.id]) return;
+        naFrente(c.t, function () {
+          ctx.globalAlpha = 0.6;
+          ctx.fillStyle = pcolor(portById(own[key].pid));
+          ctx.fillRect(c.c * q.mw * S, c.r * q.mh * S, q.mw * S, q.mh * S);
+          ctx.globalAlpha = 1;
+        });
+        var p = centro(key);
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.font = "700 22px " + MONO;
-        halo(ctx, String(own[key].i + 1), p.x + p.cs / 2, p.y + p.ch / 2, "#ffffff", 4);
+        halo(ctx, String(own[key].i + 1), p[0], p[1], "#ffffff", 4);
       });
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       ports.forEach(function (pt) {
-        var route = routes[pt.id].filter(function (k) { return cellEl[k] && noPlano(cellEl[k].t); });
+        var route = routes[pt.id].filter(function (k) { return cellEl[k] && visto[cellEl[k].t.id]; });
         if (!route.length) return;
         var col = pcolor(pt);
-        var pts = route.map(function (key) { var p = cc(key); return [p.x + p.cs / 2, p.y + p.ch / 2]; });
+        var pts = route.map(centro);
         ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.lineJoin = "round"; ctx.lineCap = "round";
         ctx.beginPath();
         pts.forEach(function (a, i) { if (i) ctx.lineTo(a[0], a[1]); else ctx.moveTo(a[0], a[1]); });
