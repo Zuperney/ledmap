@@ -230,6 +230,7 @@ body.fs .mcard { display: none; }
 /* Recortar: o cartão sai e o desenho fica com a largura toda; a barra fica presa no topo do desenho */
 body.recortando #view-m .mcard { display: none !important; }
 body.recortando #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+@media (min-width: 900px) { body.recortando.rig-mosaico #view-m .mwrap { grid-template-columns: 210px minmax(0, 1fr) !important; } }
 .rec-barra { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 16px); padding: 6px 6px 6px 12px; background: var(--panel); border: 1px solid var(--imag); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); font-size: 12px; color: var(--fg); }
 .rec-barra[hidden] { display: none; }
 .rec-barra .btn { flex: none; background: var(--imag); color: var(--bg); border-color: var(--imag); }
@@ -240,3 +241,12 @@ body.fs #view-m .mcard[hidden], body.fs.recortando #view-m .mcard { display: non
 body.fs #view-m .mwrap:has(> .mcard:not([hidden])) .stage.pan { height: 64dvh; max-height: 64dvh; }
 body.fs.recortando #view-m .mwrap .stage.pan { height: 100dvh !important; max-height: 100dvh !important; }
 body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+/* mosaico: em tela estreita a faixa vai embaixo do desenho; em tela larga, coluna à esquerda com as quatro empilhadas */
+#view-m .mwrap > .mini-faixa { order: 2; }
+@media (min-width: 900px) {
+  body.rig-mosaico #view-m .mwrap { grid-template-columns: 210px minmax(0, 1fr); }
+  body.rig-mosaico #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: 210px minmax(0, 1fr) 300px; }
+  #view-m .mwrap > .mini-faixa { order: 0; grid-template-columns: minmax(0, 1fr); margin-top: 0; align-self: start; }
+  #view-m .mwrap > .mini-faixa .mini { height: max(120px, calc((100dvh - 168px) / 4)); }
+}
+body.fs #view-m .mini-faixa { display: none !important; }

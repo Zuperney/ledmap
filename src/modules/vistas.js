@@ -2,7 +2,7 @@
 // cada vista 2D mostra e edita um plano do palco: Frente (X e altura, giro Z), Topo (X e recuo, giro Y),
 // Esquerda/Direita (fundo e altura, giro X). A 3D mostra a montagem no espaço, no lugar do desenho, e acompanha
 // as edições do cartão; tocar num painel abre o cartão dele. Navegação ‹ Frente ›: as setas passam pelas 5.
-// "Todas as vistas" (Visão ▾): a escolhida fica grande e as outras quatro numa faixa embaixo, ao vivo; tocar num
+// "Todas as vistas" (Visão ▾): a escolhida fica grande e as outras quatro numa coluna à esquerda, ao vivo; tocar num
 // painel numa miniatura o seleciona, tocar no título da miniatura a traz para o lugar da grande.
 import { save, set_vistaM, vistaM, selected } from "./core.js";
 import { fitM } from "./rig.js";
@@ -100,7 +100,7 @@ function montarMosaico() {
     faixa = document.createElement("div");
     faixa.id = "m-mini";
     faixa.className = "mini-faixa";
-    $("view-m").appendChild(faixa);
+    $("view-m").querySelector(".mwrap").prepend(faixa); // coluna à esquerda do desenho (embaixo, em tela estreita)
     faixa.addEventListener("click", function (e) {
       var tit = e.target.closest(".mini-t");
       if (tit) { irParaVista(tit.getAttribute("data-v")); return; }
