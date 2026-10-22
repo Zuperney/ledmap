@@ -227,3 +227,16 @@ body.fs .mcard { display: none; }
 .mini-g { fill: none; stroke: var(--fg); stroke-opacity: .25; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .mini-p.sel .mini-c, .mini-p.sel .mini-f { stroke: var(--fg); stroke-width: 2.5; fill-opacity: .6; }
 @media (max-width: 899px) { .mini-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mini { height: 150px; } }
+/* Recortar: o cartão sai e o desenho fica com a largura toda; a barra fica presa no topo do desenho */
+body.recortando #view-m .mcard { display: none !important; }
+body.recortando #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+.rec-barra { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 16px); padding: 6px 6px 6px 12px; background: var(--panel); border: 1px solid var(--imag); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); font-size: 12px; color: var(--fg); }
+.rec-barra[hidden] { display: none; }
+.rec-barra .btn { flex: none; background: var(--imag); color: var(--bg); border-color: var(--imag); }
+/* Tela cheia: o cartão do painel vai para baixo do desenho, com os campos lado a lado */
+body.fs #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+body.fs #view-m .mcard { display: block; position: static; max-height: none; border-radius: 6px; box-shadow: none; }
+body.fs #view-m .mcard[hidden], body.fs.recortando #view-m .mcard { display: none !important; }
+body.fs #view-m .mwrap:has(> .mcard:not([hidden])) .stage.pan { height: 64dvh; max-height: 64dvh; }
+body.fs.recortando #view-m .mwrap .stage.pan { height: 100dvh !important; max-height: 100dvh !important; }
+body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }

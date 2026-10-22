@@ -196,8 +196,13 @@ function setRecorte(on) {
     var b = document.getElementById("m-rec");
     b.setAttribute("aria-pressed", String(on));
     tiles.forEach(function (t) { gM[t.id].classList.toggle("recorte", on); });
-    if (on) { mudou = false; pmsg("Toque nos gabinetes para tirar ou devolver; arraste para vários. Toque em Recortar de novo para salvar."); }
-    else if (mudou) { mudou = false; concluirRecorte(); }
+    // recortando, o cartão sai e o desenho fica com a largura toda; a barra fixa no topo diz o que fazer e conclui
+    document.body.classList.toggle("recortando", on);
+    document.getElementById("m-rec-barra").hidden = !on;
+    if (on) {
+      mudou = false;
+      document.getElementById("m-rec-txt").textContent = "Recortando" + (selected ? " o painel " + selected : "") + ": toque nos gabinetes para tirar ou devolver; arraste para vários.";
+    } else if (mudou) { mudou = false; concluirRecorte(); }
   }
 
 // sair da aba Rig (ou do projeto) com o Recortar ligado grava o recorte
@@ -363,6 +368,9 @@ export function init() {
     limparMselM(); if (selected) select(null);
   });
   document.getElementById("m-rec").addEventListener("click", function () { setRecorte(!recorte); });
+  document.getElementById("m-rec-ok").addEventListener("click", function () { setRecorte(false); });
+  // Esc conclui o recorte e para aí (sem também sair da tela cheia)
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && recorte) { e.preventDefault(); e.stopImmediatePropagation(); setRecorte(false); } }, true);
   document.getElementById("m-dup").addEventListener("click", function () { if (selected && tById[selected]) duplicarPainel(selected); });
   document.getElementById("m-prop").addEventListener("click", function () { if (selected && tById[selected]) openAdd(selected); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modoSel) sairModoSel(); });
