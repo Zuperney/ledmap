@@ -1,7 +1,7 @@
 // Vista 3D (só para olhar): desenhada a partir dos dados do Rig — posição, tamanho, recuo, giro e recortes.
 // Não tem dados próprios: editar continua no Rig (cartão, alça, arrastar). Carregada sob demanda (three.js à parte).
 // A frente de cada painel recebe a imagem da Montagem (entrada) com o test card escolhido, como o UV map do disguise.
-// Duas formas: tela cheia (botão 3D) e embutida no Rig (a vista "3D" do seletor), que acompanha as edições ao vivo
+// Aparece embutida no Rig (a vista "3D" do seletor ou a miniatura do mosaico), acompanha as edições ao vivo
 // e seleciona o painel tocado (o cartão abre ao lado).
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -12,7 +12,7 @@ import { saveFile, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { PROF, pivo, normal } from "./espaco.js";
 
-var telaCheia = null, noRig = null;
+var noRig = null;
 
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
@@ -40,13 +40,6 @@ function texturaPainel(img, t) {
   tx.colorSpace = THREE.SRGBColorSpace;
   tx.anisotropy = 4;
   return tx;
-}
-
-// tela cheia (botão 3D do Rig)
-export function abrir3D() {
-  if (telaCheia) return;
-  if (!tiles.length) { pmsg("Adicione painéis para ver em 3D."); return; }
-  telaCheia = criar(document.body, { telaCheia: true, aoFechar: function () { telaCheia = null; } });
 }
 
 // embutida no Rig: ocupa o lugar do desenho 2D; acompanha as edições e seleciona pelo toque

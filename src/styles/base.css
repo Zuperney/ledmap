@@ -65,7 +65,8 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .alca-b:active { cursor: grabbing; }
 .alca-t { fill: var(--fg); font-family: var(--font-data); font-weight: 600; dominant-baseline: central; stroke: var(--panel); stroke-width: 0.08; paint-order: stroke; pointer-events: none; }
 .vnav { display: inline-flex; gap: 2px; }
-.vnav #m-vista { max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* largura fixa: o nome da vista muda (3D, Frente, Esquerda) e as setas não podem sair do lugar entre um clique e outro */
+.vnav #m-vista { width: 7.5em; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 .laco { fill: var(--imag); fill-opacity: .08; stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
 .furo { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; stroke-opacity: .6; }
 .scr.recorte { cursor: crosshair; }

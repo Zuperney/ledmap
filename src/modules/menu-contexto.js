@@ -2,7 +2,7 @@
 // Sobre um painel: o que dá para fazer com ele (ou com a seleção, se ele estiver nela).
 // No vazio: + Painel, Enquadrar, Mover, Grade, 3D. Atalhos: Ctrl+D duplica, F2 edita o painel selecionado.
 import { selected, painelById, pnome, tiles, groups, gname, save, gravarVivo } from "./core.js";
-import { itensVistas } from "./vistas.js";
+import { itensVistas, irParaVista } from "./vistas.js";
 import { multiLista, iniciarSelecaoC, movendoC } from "./canvas-edicao.js";
 import { colocarNaScreen } from "./screen-cartao.js";
 import { tById } from "./exportar.js";
@@ -116,7 +116,7 @@ function itensVazio() {
     { t: editM ? "Desligar Mover" : "Ligar Mover", fn: function () { $("m-edit").click(); } },
     "-",
     { t: ($("btn-grid-m").getAttribute("aria-pressed") === "true" ? "Esconder" : "Mostrar") + " grade", fn: function () { $("btn-grid-m").click(); } },
-    { t: "Vista 3D", fn: function () { $("m-3d").click(); } }
+    { t: "Vista 3D", fn: function () { irParaVista("3d"); } }
   ].filter(Boolean);
 }
 

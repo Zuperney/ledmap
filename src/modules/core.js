@@ -52,7 +52,7 @@ export function migrarVistasAntigas(lista, vistasAntigas) {
   });
   return feitos;
 }
-function r2(v) { return Math.round(v * 100) / 100; }
+function r2(v) { return Math.round(v * 1000) / 1000; }
 let NS, FLOOR, CW, CH, STORE, PITCH, EXTRA_MAX, EXTRAS, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
 
 
@@ -67,18 +67,18 @@ export function snapDim(v, m) {
 
 export function mnum(v) {
     v = Number(v);
-    return isFinite(v) && Math.abs(v) <= 300 ? Math.round(v * 100) / 100 : null;
+    return isFinite(v) && Math.abs(v) <= 300 ? Math.round(v * 1000) / 1000 : null;
   }
 
-// posição (m) com centímetro: paredes e teto de projetos antigos ficam longe do centro e fora da grade de 0,5 m
-function cm(v, lo, hi) { v = Number(v); return isFinite(v) && v >= lo && v <= hi ? Math.round(v * 100) / 100 : null; }
+// posição (m) com milímetro (a régua dos campos chega a 1 mm); paredes e teto de projetos antigos ficam longe do centro
+function mm(v, lo, hi) { v = Number(v); return isFinite(v) && v >= lo && v <= hi ? Math.round(v * 1000) / 1000 : null; }
 
 export function cleanExtra(x) {
     if (!x || typeof x !== "object") return null;
     var id = String(x.id == null ? "" : x.id);
     if (!/^\d{1,3}$/.test(id)) return null;
     var kind = Object.prototype.hasOwnProperty.call(PITCH, x.kind) ? x.kind : "imag";
-    var g = GAB[String(x.cab)] || cabDe({ kind: kind }), cab = g.id, mx = cm(x.mx, -200, 200), my = cm(x.my, -50, 100);
+    var g = GAB[String(x.cab)] || cabDe({ kind: kind }), cab = g.id, mx = mm(x.mx, -200, 200), my = mm(x.my, -50, 100);
     var w = snapDim(x.w, g.mw), h = snapDim(x.h, g.mh);
     if (w === null || h === null || mx === null || my === null) return null;
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
@@ -169,7 +169,7 @@ function calcRes(s, g) {
 export function existe(q, c, r) { return !q.fora[c + ":" + r]; }
 
 // profundidade do painel em metros: 0 = no plano da montagem; positivo = recuado (para trás); negativo = avançado
-export function profundidade(v) { v = Number(v); return isFinite(v) && Math.abs(v) <= 200 ? Math.round(v * 100) / 100 : 0; }
+export function profundidade(v) { v = Number(v); return isFinite(v) && Math.abs(v) <= 200 ? Math.round(v * 1000) / 1000 : 0; }
 
 // retângulos (m, y do chão para cima) dos gabinetes que existem num painel, no quadro do plano dele
 export function gabinetesFisicos(t) {

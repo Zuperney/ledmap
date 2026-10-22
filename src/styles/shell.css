@@ -206,3 +206,24 @@ body.fs .mcard { display: none; }
 #view-c .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
 @media (min-width: 900px) { #view-c .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; } }
 .mc-chip.fora { color: var(--bad); border-color: var(--bad); }
+/* régua de escalas dos campos (clique longo): escolhe a escala subindo/descendo, arrasta para os lados */
+.regua { position: fixed; z-index: 90; min-width: 92px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 4px; font: 600 12px var(--font-data); user-select: none; pointer-events: none; }
+.regua-v { padding: 4px 8px; color: var(--fg); border-bottom: 1px solid var(--line); margin-bottom: 2px; text-align: center; }
+.regua-l { height: 26px; line-height: 26px; padding: 0 10px; color: var(--muted); border-radius: 5px; text-align: center; }
+.regua-l.on { background: var(--imag); color: var(--bg); }
+/* mosaico "Todas as vistas": faixa embaixo do Rig com as outras quatro vistas, ao vivo */
+.mini-faixa { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.mini-faixa[hidden] { display: none; }
+.mini { position: relative; height: 190px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+.mini-t { flex: none; align-self: stretch; text-align: left; padding: 4px 8px; font: 700 12px var(--font-display); color: var(--fg); background: transparent; border: 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.mini-t:hover { background: var(--bg); }
+.mini-svg { flex: 1; min-height: 0; width: 100%; display: block; }
+.mini-3d-palco { position: relative; flex: 1; min-height: 0; }
+.mini .v3d-bar { display: none; }
+.mini-chao { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-p { cursor: pointer; }
+.mini-c { fill: var(--cor, var(--imag)); fill-opacity: .35; stroke: var(--cor, var(--imag)); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-f { fill: var(--cor, var(--imag)); fill-opacity: .3; stroke: var(--cor, var(--imag)); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-g { fill: none; stroke: var(--fg); stroke-opacity: .25; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-p.sel .mini-c, .mini-p.sel .mini-f { stroke: var(--fg); stroke-width: 2.5; fill-opacity: .6; }
+@media (max-width: 899px) { .mini-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mini { height: 150px; } }
