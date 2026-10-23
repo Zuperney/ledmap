@@ -160,10 +160,15 @@ input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-i
 .v3d-palco { position: relative; flex: 1; min-height: 0; touch-action: none; }
 .v3d-palco canvas { display: block; }
 body.com-3d { overflow: hidden; }
+/* 3D embutido no Rig (vista "3D" do seletor): ocupa o lugar do desenho 2D; o cartão do painel continua ao lado */
+.v3d.v3d-rig { position: absolute; inset: 0; z-index: 4; }
+.v3d-rig .v3d-bar { padding: 4px 6px; }
+body.rig-3d #view-m .hud, body.rig-3d #view-m .stagebox > .badge, body.rig-3d #m-edit-panel { display: none !important; }
+body.rig-3d #view-m .stagebox { min-height: max(360px, calc(100dvh - 150px)); } /* a altura da tela, como a coluna das miniaturas */
 
 /* Rig: desenho + cartão do painel (ao lado no computador, subindo de baixo no celular) */
 #view-m .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
-@media (min-width: 900px) { #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 900px) { #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) var(--col-card); } }
 .mcard { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 12px; }
 .mcard > div { display: flex; flex-direction: column; gap: 8px; }
 .mc-head { display: flex; align-items: center; gap: 8px; }
@@ -199,5 +204,55 @@ body.fs .mcard { display: none; }
 .cmi[data-arm="1"] { background: var(--bad); color: #fff; }
 .cmsep { height: 1px; background: var(--line); margin: 4px 2px; }
 #view-c .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
-@media (min-width: 900px) { #view-c .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 900px) { #view-c .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) var(--col-card); } }
 .mc-chip.fora { color: var(--bad); border-color: var(--bad); }
+/* régua de escalas dos campos (clique longo): escolhe a escala subindo/descendo, arrasta para os lados */
+.regua { position: fixed; z-index: 90; min-width: 92px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 4px; font: 600 12px var(--font-data); user-select: none; pointer-events: none; }
+.regua-v { padding: 4px 8px; color: var(--fg); border-bottom: 1px solid var(--line); margin-bottom: 2px; text-align: center; }
+.regua-l { height: 26px; line-height: 26px; padding: 0 10px; color: var(--muted); border-radius: 5px; text-align: center; }
+.regua-l.on { background: var(--imag); color: var(--bg); }
+/* mosaico "Todas as vistas": faixa embaixo do Rig com as outras quatro vistas, ao vivo */
+.mini-faixa { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.mini-faixa[hidden] { display: none; }
+.mini { position: relative; height: 190px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+.mini-t { flex: none; align-self: stretch; text-align: left; padding: 4px 8px; font: 700 12px var(--font-display); color: var(--fg); background: transparent; border: 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.mini-t:hover { background: var(--bg); }
+.mini-svg { flex: 1; min-height: 0; width: 100%; display: block; }
+.mini-3d-palco { position: relative; flex: 1; min-height: 0; }
+.mini .v3d-bar { display: none; }
+.mini-chao { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-p { cursor: pointer; }
+.mini-c { fill: var(--cor, var(--imag)); fill-opacity: .35; stroke: var(--cor, var(--imag)); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-f { fill: var(--cor, var(--imag)); fill-opacity: .3; stroke: var(--cor, var(--imag)); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-g { fill: none; stroke: var(--fg); stroke-opacity: .25; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mini-p.sel .mini-c, .mini-p.sel .mini-f { stroke: var(--fg); stroke-width: 2.5; fill-opacity: .6; }
+@media (max-width: 899px) { .mini-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mini { height: 150px; } }
+/* Recortar: o cartão sai e o desenho fica com a largura toda; a barra fica presa no topo do desenho */
+body.recortando #view-m .mcard { display: none !important; }
+body.recortando #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+@media (min-width: 900px) { body.recortando.rig-mosaico #view-m .mwrap { grid-template-columns: var(--col-mini) minmax(0, 1fr) !important; } }
+.rec-barra { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 16px); padding: 6px 6px 6px 12px; background: var(--panel); border: 1px solid var(--imag); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); font-size: 12px; color: var(--fg); }
+.rec-barra[hidden] { display: none; }
+.rec-barra .btn { flex: none; background: var(--imag); color: var(--bg); border-color: var(--imag); }
+/* Tela cheia: o cartão do painel vai para baixo do desenho, com os campos lado a lado */
+body.fs #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+body.fs #view-m .mcard { display: block; position: static; max-height: none; border-radius: 6px; box-shadow: none; }
+body.fs #view-m .mcard[hidden], body.fs.recortando #view-m .mcard { display: none !important; }
+body.fs #view-m .mwrap:has(> .mcard:not([hidden])) .stage.pan { height: 64dvh; max-height: 64dvh; }
+body.fs.recortando #view-m .mwrap .stage.pan { height: 100dvh !important; max-height: 100dvh !important; }
+body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+/* mosaico: em tela estreita a faixa vai embaixo do desenho; em tela larga, coluna à esquerda com as quatro empilhadas */
+#view-m .mwrap > .mini-faixa { order: 2; }
+@media (min-width: 900px) {
+  body.rig-mosaico #view-m .mwrap { grid-template-columns: var(--col-mini) minmax(0, 1fr); }
+  body.rig-mosaico #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: var(--col-mini) minmax(0, 1fr) var(--col-card); }
+  #view-m .mwrap > .mini-faixa { order: 0; grid-template-columns: minmax(0, 1fr); margin-top: 0; align-self: start; }
+  #view-m .mwrap > .mini-faixa .mini { height: max(110px, calc((100dvh - 174px) / 5)); }
+}
+body.fs #view-m .mini-faixa { display: none !important; }
+/* abas de formulário e texto não esticam na tela larga (linhas longas e campos enormes cansam); as de desenho usam tudo */
+#view-p, #view-e, #view-r { max-width: 1200px; width: 100%; }
+/* a prévia da vista que está na área principal fica marcada */
+.mini.ativa { border-color: var(--imag); box-shadow: inset 0 0 0 1px var(--imag); }
+.mini.ativa .mini-t { color: var(--imag); }
+@media (max-width: 899px) { .mini-faixa { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }

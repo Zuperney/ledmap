@@ -1,56 +1,60 @@
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { GAB, cabDe, garantirGabs } from "./gabinetes.js";
+import { limpaGiro, limpaPivo, limpaVista, chaveGiro, deslocQuadro, deVistaAntiga } from "./espaco.js";
 
 let paineis = [];
-// Vistas de montagem: cada uma é um plano 2D do Rig (Frente, paredes, fundo, teto, piso) com posição no espaço.
-// A Frente ("") sempre existe. Cada painel guarda a vista em "pl". O 3D junta todas na posição real.
-let planos = [], vistaM = "";
-export var ORI = {
-  frente: { nome: "De frente (virada para o público)", curto: "frente" },
-  esq: { nome: "Parede do lado esquerdo (virada para a direita)", curto: "parede esquerda" },
-  dir: { nome: "Parede do lado direito (virada para a esquerda)", curto: "parede direita" },
-  tras: { nome: "De costas (virada para o fundo)", curto: "de costas" },
-  teto: { nome: "Teto (virada para baixo, vista de baixo)", curto: "teto" },
-  piso: { nome: "Piso (virada para cima, vista de cima)", curto: "piso" }
-};
-export function limpaPlanos(l) {
-  var out = [], vistos = {};
-  (Array.isArray(l) ? l : []).forEach(function (p) {
-    if (!p || typeof p.id !== "string" || !/^v\d{1,4}$/.test(p.id) || vistos[p.id] || out.length >= 30) return;
-    vistos[p.id] = 1;
-    var n = function (v, lim) { v = Number(v); return isFinite(v) && Math.abs(v) <= lim ? Math.round(v * 100) / 100 : 0; };
-    out.push({ id: p.id, nome: (typeof p.nome === "string" && p.nome.trim() ? p.nome.trim() : "Vista").slice(0, 40), ori: ORI[p.ori] ? p.ori : "frente", ox: n(p.ox, 200), oy: n(p.oy, 100), oz: n(p.oz, 200) });
-  });
-  return out;
+// O Rig mostra o palco por uma de 4 vistas ortogonais (Frente, Topo, Esquerda, Direita: ver espaco.js).
+// Cada painel tem posição (mx, my, recuo z) e giro (rx, ry, rz em graus, em volta do pivô pv).
+let vistaM = "frente";
+
+// Planos (cabeamento e composição): painéis com o mesmo giro ficam num mesmo plano; o plano sem giro é o 0.
+// O número do plano é estável na sessão (só serve para separar planos, não é gravado).
+var numPlanos = { "0|0|0": 0 }, proxPlano = 1;
+export function planoDe(t) { var k = chaveGiro(t); if (!(k in numPlanos)) numPlanos[k] = proxPlano++; return numPlanos[k]; }
+
+// posição do painel no quadro do plano dele: x à esquerda, y do topo (para baixo) e profundidade.
+// Sem giro: o mesmo do Rig (mx, −(my + h), recuo). Planos diferentes nunca se encostam (o cabo entre eles conta como salto).
+export function quadro(t) {
+  var d = deslocQuadro(t);
+  return { x: t.mx + d[0], y: -(t.my + d[1] + t.h), z: (t.z || 0) - d[2] + planoDe(t) * 1000 };
 }
-export function planoById(id) { if (!id) return { id: "", nome: "Frente", ori: "frente", ox: 0, oy: 0, oz: 0 }; for (var k = 0; k < planos.length; k++) if (planos[k].id === id) return planos[k]; return null; }
-export function todosPlanos() { return [planoById("")].concat(planos); }
-export function noPlano(t) { return (t.pl || "") === vistaM; }
-export function idxPlano(id) { if (!id) return 0; for (var k = 0; k < planos.length; k++) if (planos[k].id === id) return k + 1; return 0; }
-export function horizontal(pl) { var p = planoById(pl || ""); return !!p && (p.ori === "teto" || p.ori === "piso"); }
-// profundidade usada pelo cabeamento: vistas diferentes nunca se encostam (o cabo entre elas conta como salto)
-export function zCabo(t) { return (t.z || 0) + idxPlano(t.pl) * 1000; }
-// x na imagem da Montagem (Composição): as vistas ficam lado a lado, na ordem, com 1 m entre elas; a Frente não se mexe
+export function zCabo(t) { return quadro(t).z; }
+
+// x e y (do chão) na imagem da Montagem (Composição): cada plano é desenhado de frente; os planos ficam lado a lado,
+// na ordem, com 1 m entre eles; o plano sem giro não se mexe
 export function mxMont(t) {
-  var faixas = {}, cursor = null, desl = {};
-  tiles.forEach(function (o) { var k = o.pl || ""; var f = faixas[k] || (faixas[k] = { x0: Infinity, x1: -Infinity }); f.x0 = Math.min(f.x0, o.mx); f.x1 = Math.max(f.x1, o.mx + o.w); });
-  todosPlanos().forEach(function (p) {
-    var f = faixas[p.id];
-    if (!f) return;
-    desl[p.id] = cursor === null ? 0 : cursor - f.x0;
-    cursor = f.x1 + desl[p.id] + 1;
+  var faixas = {}, desl = {}, cursor = null;
+  tiles.forEach(function (o) { var k = planoDe(o), x = quadro(o).x, f = faixas[k] || (faixas[k] = { x0: Infinity, x1: -Infinity }); f.x0 = Math.min(f.x0, x); f.x1 = Math.max(f.x1, x + o.w); });
+  Object.keys(faixas).map(Number).sort(function (a, b) { return a - b; }).forEach(function (k) {
+    var f = faixas[k];
+    desl[k] = cursor === null ? 0 : cursor - f.x0;
+    cursor = f.x1 + desl[k] + 1;
   });
-  return t.mx + (desl[t.pl || ""] || 0);
+  return quadro(t).x + (desl[planoDe(t)] || 0);
 }
+export function myMont(t) { return -quadro(t).y - t.h; }
+
+// Projetos de antes do giro tinham "vistas de montagem" (paredes, fundo, teto, piso): cada painel numa vista vira um
+// painel com o giro dela, no mesmo lugar do palco. Recebe a lista crua (mx, my, w, h, z, pl) e devolve os ids convertidos.
+export function migrarVistasAntigas(lista, vistasAntigas) {
+  var porId = {}, feitos = {};
+  (Array.isArray(vistasAntigas) ? vistasAntigas : []).forEach(function (v) { if (v && typeof v.id === "string") porId[v.id] = v; });
+  lista.forEach(function (x) {
+    if (!x || !x.pl) return;
+    var v = porId[x.pl];
+    if (v) {
+      var n = deVistaAntiga({ mx: Number(x.mx) || 0, my: Number(x.my) || 0, w: Number(x.w) || 0, h: Number(x.h) || 0, z: Number(x.z) || 0 }, v);
+      x.mx = r2(n.mx); x.my = r2(n.my); x.z = r2(n.z); x.rx = n.rx; x.ry = n.ry; x.rz = n.rz; x.pv = n.pv;
+      feitos[x.id] = 1;
+    }
+    x.pl = "";
+  });
+  return feitos;
+}
+function r2(v) { return Math.round(v * 1000) / 1000; }
 let NS, FLOOR, CW, CH, STORE, PITCH, EXTRA_MAX, EXTRAS, BASE, tiles, groups, nextG, active, groupMove, svgM, svgC, rowsEl, gM, gC, selected, i;
 
-function half(v, lo, hi) {
-    v = Number(v);
-    if (!isFinite(v)) return null;
-    v = Math.round(v * 2) / 2;
-    return v < lo || v > hi ? null : v;
-  }
 
 // Arredonda uma medida (m) para um número inteiro de gabinetes de lado m (0,5 a 30 m).
 export function snapDim(v, m) {
@@ -63,21 +67,24 @@ export function snapDim(v, m) {
 
 export function mnum(v) {
     v = Number(v);
-    return isFinite(v) && Math.abs(v) <= 100 ? Math.round(v * 100) / 100 : null;
+    return isFinite(v) && Math.abs(v) <= 300 ? Math.round(v * 1000) / 1000 : null;
   }
+
+// posição (m) com milímetro (a régua dos campos chega a 1 mm); paredes e teto de projetos antigos ficam longe do centro
+function mm(v, lo, hi) { v = Number(v); return isFinite(v) && v >= lo && v <= hi ? Math.round(v * 1000) / 1000 : null; }
 
 export function cleanExtra(x) {
     if (!x || typeof x !== "object") return null;
     var id = String(x.id == null ? "" : x.id);
     if (!/^\d{1,3}$/.test(id)) return null;
     var kind = Object.prototype.hasOwnProperty.call(PITCH, x.kind) ? x.kind : "imag";
-    var g = GAB[String(x.cab)] || cabDe({ kind: kind }), cab = g.id, mx = half(x.mx, -60, 60), my = half(x.my, -10, 30);
+    var g = GAB[String(x.cab)] || cabDe({ kind: kind }), cab = g.id, mx = mm(x.mx, -200, 200), my = mm(x.my, -50, 100);
     var w = snapDim(x.w, g.mw), h = snapDim(x.h, g.mh);
     if (w === null || h === null || mx === null || my === null) return null;
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), pl: typeof x.pl === "string" && /^v\d{1,4}$/.test(x.pl) ? x.pl : "", extra: true };
+    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), rx: limpaGiro(x.rx), ry: limpaGiro(x.ry), rz: limpaGiro(x.rz), pv: limpaPivo(x.pv), extra: true };
   }
 
 export function cleanExtras(list) {
@@ -114,12 +121,22 @@ export function gabsUsados(list) {
     return out;
   }
 
+// Recuo, giro e pivô mudam sem recarregar: são editados no painel (tiles) e copiados aqui para a definição (EXTRAS),
+// que é o que vai para o armazenamento e o JSON. A posição mx/my vai em "mpos" pelo save().
+// Quem muda esses campos chama gravarVivo antes do save (o save não copia sozinho: quando a lista de painéis é
+// trocada inteira, os tiles antigos sobrescreveriam os novos de mesmo número).
+export function gravarVivo(lista) {
+    var porId = {};
+    lista.forEach(function (t) { porId[t.id] = t; });
+    EXTRAS.forEach(function (x) { var t = porId[x.id]; if (t) ["z", "rx", "ry", "rz", "pv"].forEach(function (k) { x[k] = t[k]; }); });
+  }
+
 export function save() {
     histTick();
     try {
       var pos = {}, tg = {}, mpos = {}, tp = {};
       tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; tp[t.id] = t.pn || ""; });
-      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, planos: planos, vista: vistaM, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
+      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, vista: vistaM, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
     } catch (e) {}
   }
 
@@ -152,24 +169,26 @@ function calcRes(s, g) {
 export function existe(q, c, r) { return !q.fora[c + ":" + r]; }
 
 // profundidade do painel em metros: 0 = no plano da montagem; positivo = recuado (para trás); negativo = avançado
-export function profundidade(v) { v = Number(v); return isFinite(v) && Math.abs(v) <= 20 ? Math.round(v * 100) / 100 : 0; }
+export function profundidade(v) { v = Number(v); return isFinite(v) && Math.abs(v) <= 200 ? Math.round(v * 1000) / 1000 : 0; }
 
-// retângulos (m, y do chão para cima) dos gabinetes que existem num painel
+// retângulos (m, y do chão para cima) dos gabinetes que existem num painel, no quadro do plano dele
 export function gabinetesFisicos(t) {
-    var q = res(t), out = [];
+    var q = res(t), f = quadro(t), y0 = -f.y - t.h, out = [];
     for (var r = 0; r < q.rows; r++) for (var c = 0; c < q.cols; c++) {
       if (q.fora[c + ":" + r]) continue;
-      out.push({ x: t.mx + c * q.mw, y: t.my + (q.rows - 1 - r) * q.mh, w: q.mw, h: q.mh });
+      out.push({ x: f.x + c * q.mw, y: y0 + (q.rows - 1 - r) * q.mh, w: q.mw, h: q.mh });
     }
     return out;
   }
 
 // dois painéis se sobrepõem de verdade se algum gabinete de um cai em cima de um gabinete do outro
-// (um painel pode ocupar o recorte do outro: miolo recuado, janela, moldura com conteúdo atrás)
+// (um painel pode ocupar o recorte do outro: miolo recuado, janela, moldura com conteúdo atrás).
+// Só se compara no mesmo plano (mesmo giro); a profundidade não entra, como antes.
 export function sobrepoem(a, b) {
     var e = 0.001;
-    if ((a.pl || "") !== (b.pl || "")) return false; // vistas diferentes são planos diferentes
-    if (!(a.mx < b.mx + b.w - e && b.mx < a.mx + a.w - e && a.my < b.my + b.h - e && b.my < a.my + a.h - e)) return false;
+    if (planoDe(a) !== planoDe(b)) return false;
+    var fa = quadro(a), fb = quadro(b);
+    if (!(fa.x < fb.x + b.w - e && fb.x < fa.x + a.w - e && fa.y < fb.y + b.h - e && fb.y < fa.y + a.h - e)) return false;
     var gb = gabinetesFisicos(b);
     return gabinetesFisicos(a).some(function (p) {
       return gb.some(function (o) { return p.x < o.x + o.w - e && o.x < p.x + p.w - e && p.y < o.y + o.h - e && o.y < p.y + p.h - e; });
@@ -271,12 +290,22 @@ export function init() {
   PITCH = { imag: { name: "P5.9", px: 84 }, up: { name: "P5.9", px: 84 }, c: { name: "P3.9", px: 128 } };
   EXTRA_MAX = 200;
   EXTRAS = [];
+  var migrados = {};
   try {
       var s0 = JSON.parse(localStorage.getItem(STORE) || "null");
       if (s0) garantirGabs(s0.gabs);
-      if (s0 && Array.isArray(s0.extras)) EXTRAS = cleanExtras(s0.extras);
+      if (s0 && Array.isArray(s0.extras)) {
+        // vistas de montagem antigas: o painel numa delas é convertido com a posição final dele (mpos), que vai para a
+        // definição. Só esses: nos outros a definição fica como está (ela é comparada com o JSON ao importar).
+        var crus = s0.extras.map(function (x) {
+          var mp = s0.mpos && x && x.pl && s0.mpos[x.id];
+          return Array.isArray(mp) && mnum(mp[0]) !== null && mnum(mp[1]) !== null ? Object.assign({}, x, { mx: mnum(mp[0]), my: mnum(mp[1]) }) : x;
+        });
+        migrados = migrarVistasAntigas(crus, s0.planos);
+        EXTRAS = cleanExtras(crus);
+      }
     } catch (e) {}
-  BASE = EXTRAS.slice();
+  BASE = EXTRAS.map(function (x) { return Object.assign({}, x); }); // cópia: recuo e giro mudam em EXTRAS sem recarregar, e "Restaurar" volta a este
   tiles = BASE.map(function (s) { return Object.assign({}, s); });
   groups = [];
   nextG = 1;
@@ -291,19 +320,17 @@ export function init() {
         }
         tiles.forEach(function (t) {
           var mp = saved.mpos && saved.mpos[t.id];
-          if (Array.isArray(mp) && mnum(mp[0]) !== null && mnum(mp[1]) !== null) { t.mx = mnum(mp[0]); t.my = mnum(mp[1]); }
+          if (!migrados[t.id] && Array.isArray(mp) && mnum(mp[0]) !== null && mnum(mp[1]) !== null) { t.mx = mnum(mp[0]); t.my = mnum(mp[1]); }
           var sp = saved.pos && saved.pos[t.id];
           if (sp) { t.cx = saved.pos[t.id][0]; t.cy = saved.pos[t.id][1]; }
           if (saved.tg && Object.prototype.hasOwnProperty.call(saved.tg, t.id)) t.grp = saved.tg[t.id] || "";
           if (saved.tp && typeof saved.tp[t.id] === "string") t.pn = saved.tp[t.id];
         });
         paineis = limpaPaineis(saved.paineis);
-        planos = limpaPlanos(saved.planos);
-        vistaM = typeof saved.vista === "string" && planoById(saved.vista) ? saved.vista : "";
+        vistaM = limpaVista(saved.vista); // ids de vistas de montagem antigas ("v1"…) voltam para a Frente
       }
     } catch (e) {}
-  tiles.forEach(function (t) { if (t.pn && !painelById(t.pn)) t.pn = ""; if (t.pl && !planoById(t.pl)) t.pl = ""; });
-  EXTRAS.forEach(function (x) { if (x.pl && !planoById(x.pl)) x.pl = ""; });
+  tiles.forEach(function (t) { if (t.pn && !painelById(t.pn)) t.pn = ""; });
   podarPaineis();
   tiles.forEach(function (t) {
       if (t.grp && !groups.some(function (g) { return g.id === t.grp; })) t.grp = "";
@@ -314,13 +341,13 @@ export function init() {
   gM = {};
   gC = {};
   selected = null;
+  if (Object.keys(migrados).length) save(); // grava já no formato novo (sem as vistas antigas)
 }
 
 export { tiles, FLOOR, svgM, gM, selected, svgC, CW, CH, gC, rowsEl, groups, PITCH, active, nextG, groupMove, BASE, EXTRAS, STORE, EXTRA_MAX, paineis };
 export function set_paineis(v) { paineis = v; return v; }
-export { planos, vistaM };
-export function set_planos(v) { planos = v; return v; }
-export function set_vistaM(v) { vistaM = planoById(v) ? v : ""; return vistaM; }
+export { vistaM };
+export function set_vistaM(v) { vistaM = limpaVista(v); return vistaM; }
 export function set_selected(v) { selected = v; return v; }
 export function set_active(v) { active = v; return v; }
 export function set_nextG(v) { nextG = v; return v; }

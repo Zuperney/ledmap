@@ -2,7 +2,7 @@
 //   Montagem (entrada): os painéis nas posições do Rig, numa escala única (px por metro) — onde o conteúdo é feito.
 //   Composição (saída): os painéis nas posições da aba Screen, em px nativos — o que vai para o processador.
 // Não tem posição própria: test card por painel, regiões das duas pontas e proporção.
-import { tiles, groups, gname, members, res, nf, fmt, painelById, pnome, existe, mxMont } from "./core.js";
+import { tiles, groups, gname, members, res, nf, fmt, painelById, pnome, existe, mxMont, myMont } from "./core.js";
 import { chave, projetoAtivo } from "./projetos.js";
 import { cabDe } from "./gabinetes.js";
 import { ports, routes, cellEl, owners, pcolor, portById } from "./cabeamento.js";
@@ -65,14 +65,14 @@ function escalaMont() {
 function geo(t, S, minX, topo) {
   var q = res(t);
   return {
-    ent: { x: Math.round((mxMont(t) - minX) * S), y: Math.round((topo - t.my - t.h) * S), w: Math.round(q.cols * q.mw * S), h: Math.round(q.rows * q.mh * S) },
+    ent: { x: Math.round((mxMont(t) - minX) * S), y: Math.round((topo - myMont(t) - t.h) * S), w: Math.round(q.cols * q.mw * S), h: Math.round(q.rows * q.mh * S) },
     sai: { x: t.cx, y: t.cy, w: q.w, h: q.h }
   };
 }
 
 function itensDoEscopo() {
   var list = cfg.escopo ? members(cfg.escopo) : tiles.slice(), S = escalaMont(), minX = Infinity, topo = -Infinity;
-  tiles.forEach(function (t) { minX = Math.min(minX, mxMont(t)); topo = Math.max(topo, t.my + t.h); });
+  tiles.forEach(function (t) { minX = Math.min(minX, mxMont(t)); topo = Math.max(topo, myMont(t) + t.h); });
   return list.map(function (t) {
     var q = res(t), g = geo(t, S, minX, topo), r = cfg.modo === "mont" ? g.ent : g.sai;
     return { t: t, q: q, ent: g.ent, sai: g.sai, x: r.x, y: r.y, w: r.w, h: r.h, sx: r.w / q.w, sy: r.h / q.h };
@@ -206,7 +206,7 @@ function unidades(items) {
   Object.keys(por).forEach(function (pn) {
     if (por[pn].length < 2) return;
     var gabs = {}, n = 0, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    por[pn].forEach(function (it) { gabs[it.t.cab] = 1; n += it.q.n; x0 = Math.min(x0, mxMont(it.t)); x1 = Math.max(x1, mxMont(it.t) + it.t.w); y0 = Math.min(y0, it.t.my); y1 = Math.max(y1, it.t.my + it.t.h); });
+    por[pn].forEach(function (it) { gabs[it.t.cab] = 1; n += it.q.n; x0 = Math.min(x0, mxMont(it.t)); x1 = Math.max(x1, mxMont(it.t) + it.t.w); y0 = Math.min(y0, myMont(it.t)); y1 = Math.max(y1, myMont(it.t) + it.t.h); });
     out.push({ p: painelById(pn), items: por[pn], r: caixa(por[pn].map(function (it) { return it.ent; })), gab: n, tipos: Object.keys(gabs).length, mw: x1 - x0, mh: y1 - y0 });
   });
   return out;

@@ -38,25 +38,6 @@
     </div>
   </div>
 </div>
-<div class="modal" id="vista-modal" role="dialog" aria-modal="true" aria-labelledby="v-title" hidden>
-  <div class="box">
-    <h2 id="v-title">Nova vista de montagem</h2>
-    <p class="sub">Uma vista é um plano 2D para painéis que não ficam de frente para o público: paredes de uma borda de campo, fundo, teto, piso. Ela é desenhada como quem olha para ela; o 3D junta tudo no lugar.</p>
-    <label class="fld">Nome <input type="text" id="v-nome" maxlength="40" autocomplete="off"></label>
-    <label class="fld">Orientação <select id="v-ori"></select></label>
-    <p class="sub">Onde fica o ponto 0 desta vista no palco. O 0 da Frente é o centro do palco, no chão.</p>
-    <div class="three">
-      <label class="fld">X (m) <input type="number" id="v-x" step="0.5" inputmode="decimal" title="Negativo = à esquerda, positivo = à direita (como o público vê)"></label>
-      <label class="fld">Altura (m) <input type="number" id="v-y" step="0.5" inputmode="decimal"></label>
-      <label class="fld">Profundidade (m) <input type="number" id="v-z" step="0.5" inputmode="decimal" title="Negativo = para o fundo, positivo = para o público"></label>
-    </div>
-    <div class="err" id="v-err" role="alert"></div>
-    <div class="acts">
-      <button class="btn" id="v-cancel">Cancelar</button>
-      <button class="btn" id="v-ok" aria-pressed="true">Criar</button>
-    </div>
-  </div>
-</div>
 <div class="modal" id="gab-modal" role="dialog" aria-modal="true" aria-labelledby="gab-h" hidden>
   <div class="box gab-box">
     <div id="gab-v-lista">
@@ -219,8 +200,7 @@
     <div class="bar">
       <button class="btn" id="add-open">+ Painel</button>
       <button class="btn" id="m-edit" aria-pressed="false" title="Ligado: arrastar move os painéis. Desligado: arrastar só navega">Mover</button>
-      <button class="btn" id="m-3d" title="Ver a montagem em 3D (só para olhar; editar continua aqui)">3D</button>
-      <span class="vnav" role="group" aria-label="Vistas de montagem">
+      <span class="vnav" role="group" aria-label="Vista: Frente, Topo, Esquerda, Direita">
         <button class="btn" id="m-vant" aria-label="Vista anterior">‹</button>
         <button class="btn" id="m-vista">Frente ▾</button>
         <button class="btn" id="m-vprox" aria-label="Próxima vista">›</button>
@@ -230,6 +210,7 @@
         <div class="dd-m keep" hidden>
           <button class="mi" id="btn-grid-m" aria-pressed="true">Grade</button>
           <button class="mi" id="m-cab" aria-pressed="false">Cabos</button>
+          <button class="mi" id="m-mosaico" aria-pressed="false" title="A vista escolhida grande e as outras quatro (Frente, Topo, Esquerda, Direita, 3D) numa faixa embaixo">Todas as vistas</button>
         </div>
       </div>
       <div class="dd">
@@ -243,9 +224,12 @@
       </div>
     </div>
     <div class="medit" id="m-edit-panel" hidden>
-      <span class="who">Arraste os painéis · grupo se move junto</span>
+      <span class="who">Arraste os painéis · grupo se move junto · o círculo gira o selecionado</span>
       <label>Passo
         <select id="m-snap"><option value="0.1">0,1 m</option><option value="0.25">0,25 m</option><option value="0.5" selected>0,5 m</option><option value="1">1 m</option></select>
+      </label>
+      <label title="Passo da alça de giro (o círculo acima do painel selecionado)">Giro
+        <select id="m-gpasso"><option value="1">1°</option><option value="5" selected>5°</option><option value="15">15°</option><option value="45">45°</option><option value="90">90°</option></select>
       </label>
       <button class="btn" id="m-magnet" aria-pressed="true">Ímã</button>
       <button class="btn" id="m-reset">Restaurar posições</button>
@@ -261,6 +245,7 @@
         <button class="btn" id="fs-m" aria-label="Tela cheia" title="Tela cheia">⤢</button>
 </div></div>
       <div class="badge"><div class="stat" id="stat-m"></div></div>
+      <div class="rec-barra" id="m-rec-barra" role="status" hidden><span id="m-rec-txt"></span><button class="btn" id="m-rec-ok" type="button">Concluir recorte</button></div>
       <div class="m-vazio" id="m-vazio" hidden><button class="btn" id="add-open3">+ Adicionar o primeiro painel</button></div>
     </div>
     <aside class="mcard" id="m-card" hidden aria-label="Painel selecionado">
@@ -268,14 +253,18 @@
         <div class="mc-head"><span class="n" id="mc-n"></span><input type="text" id="mc-nome" maxlength="40" autocomplete="off" aria-label="Nome do painel"><button class="btn mc-x" id="mc-fechar" aria-label="Fechar">✕</button></div>
         <div class="mc-tags" id="mc-tags"></div>
         <p class="mc-info" id="mc-info"></p>
+        <p class="mc-info mc-palco" id="mc-palco" title="Onde a frente do painel fica no palco, com o giro: X da esquerda para a direita, altura do chão e recuo (positivo = para trás, negativo = à frente)"></p>
         <div class="mc-campos">
           <label>Largura (m) <input type="number" id="mc-w" step="0.05" min="0.05" inputmode="decimal"></label>
           <label>Altura (m) <input type="number" id="mc-h" step="0.05" min="0.05" inputmode="decimal"></label>
-          <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
+          <label><span id="m-x-l">X (m)</span> <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
           <label><span id="m-y-l">Y do chão (m)</span> <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
-          <label>Recuo (m) <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
+          <label><span id="mc-z-l">Recuo (m)</span> <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
           <label>Screen <select id="mc-scr" aria-label="Screen do painel"></select></label>
-          <label id="mc-vista-l" style="grid-column: 1 / -1" hidden>Vista de montagem <select id="mc-vista" aria-label="Vista de montagem do painel"></select></label>
+          <label title="Inclina para frente ou para trás (ajuste na vista Esquerda ou Direita)">Giro X (°) <input type="number" id="mc-rx" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Abre como lateral em V ou L (ajuste na vista Topo)">Giro Y (°) <input type="number" id="mc-ry" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Gira no próprio plano (ajuste na vista Frente)">Giro Z (°) <input type="number" id="mc-rz" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Ponto em volta do qual o painel gira. Trocar o pivô não tira o painel do lugar">Pivô <select id="mc-pv" aria-label="Pivô do giro"></select></label>
         </div>
         <div class="mc-acts">
           <button class="btn" id="m-prop">Editar</button>

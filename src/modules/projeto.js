@@ -1,5 +1,5 @@
 import { ID_V1, TELAS_V1, projetoAtivo } from "./projetos.js";
-import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis, gabsUsados, planos, set_planos, limpaPlanos, vistaM, set_vistaM } from "./core.js";
+import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis, gabsUsados, vistaM, set_vistaM, migrarVistasAntigas } from "./core.js";
 import { garantirGabs } from "./gabinetes.js";
 import { eletricaState, loadEletrica } from "./eletrica.js";
 import { compState, loadComp } from "./composicao.js";
@@ -22,9 +22,8 @@ export function buildProject() {
       projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "", obs: a.obs || "" }; })(),
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
       paineis: paineis.map(function (p) { return { id: p.id, nome: p.name }; }),
-      vistas: planos.map(function (p) { return { id: p.id, nome: p.nome, ori: p.ori, ox: p.ox, oy: p.oy, oz: p.oz }; }),
       vistaAtual: vistaM,
-      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, vista: e.pl || "" }; }),
+      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, giroX: e.rx || 0, giroY: e.ry || 0, giroZ: e.rz || 0, pivo: e.pv || "c" }; }),
       gabinetes: gabsUsados(EXTRAS),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
@@ -77,15 +76,29 @@ export function applyProject(o) {
     if (o && typeof o === "object" && o.tipo === "mapa-telas-led") o = converterV1(o);
     if (!o || typeof o !== "object" || o.tipo !== "ledmap") throw new Error("Este arquivo não é um projeto do Led Map.");
     garantirGabs(o.gabinetes);
-    // vistas de montagem antes dos painéis (o painel aponta para a vista dele)
-    set_planos(limpaPlanos(o.vistas));
-    set_vistaM(typeof o.vistaAtual === "string" ? o.vistaAtual : "");
+    set_vistaM(o.vistaAtual);
+    // projetos de antes do giro: painéis em vistas de montagem (paredes, teto...) viram painéis girados no mesmo lugar.
+    // A conversão usa a posição final de cada painel (a de "telas") e devolve a posição nova para as duas listas.
+    // (o JSON não é alterado: ele volta inteiro depois da recarga e seria convertido de novo em cima do convertido)
+    var telasPos = {}, migrados = {}, posMig = {};
+    (Array.isArray(o.telas) ? o.telas : []).forEach(function (t) { if (t && typeof t.id === "string") telasPos[t.id] = t; });
     if (Array.isArray(o.extras)) {
-      var ne = cleanExtras(o.extras.map(function (x) {
-        return x && typeof x === "object" ? { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes, z: x.profundidade, pl: x.vista } : null;
-      }));
-      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(","), e.z || 0, e.pl || ""]; })); };
-      if (sig(ne) !== sig(EXTRAS)) {
+      var crus = o.extras.map(function (x) {
+        if (!x || typeof x !== "object") return null;
+        var tp = telasPos[String(x.id)], c = { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes, z: x.profundidade, rx: x.giroX, ry: x.giroY, rz: x.giroZ, pv: x.pivo, pl: x.vista };
+        if (x.vista && tp && mnum(tp.mx) !== null && mnum(tp.my) !== null) { c.mx = tp.mx; c.my = tp.my; }
+        return c;
+      });
+      migrados = migrarVistasAntigas(crus.filter(Boolean), o.vistas);
+      crus.forEach(function (c) { if (c && migrados[c.id]) posMig[String(c.id)] = { mx: c.mx, my: c.my }; });
+      var ne = cleanExtras(crus);
+      // estrutura (o que exige recriar o desenho) × campos vivos (recuo, giro e pivô: aplicados no lugar)
+      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(",")]; })); };
+      if (sig(ne) === sig(EXTRAS)) {
+        var vivos = {};
+        ne.forEach(function (x) { vivos[x.id] = x; });
+        EXTRAS.concat(tiles).forEach(function (t) { var x = vivos[t.id]; if (x) ["z", "rx", "ry", "rz", "pv"].forEach(function (k) { t[k] = x[k]; }); });
+      } else {
         var prevEx = EXTRAS;
         set_EXTRAS(ne);
         if (!commitAndReload("c", JSON.stringify(o))) { set_EXTRAS(prevEx); throw new Error("Não consegui criar os painéis neste navegador."); }
@@ -104,7 +117,8 @@ export function applyProject(o) {
       if (!t || typeof t.id !== "string" || !tById[t.id]) return;
       var x = whole(t.x, -20000, 20000), y = whole(t.y, -20000, 20000);
       if (x === null || y === null) return;
-      nt[t.id] = { x: x, y: y, grp: (typeof t.screen === "string" && gseen[t.screen]) ? t.screen : "", pn: typeof t.painel === "string" ? t.painel : "", mx: mnum(t.mx), my: mnum(t.my) };
+      var pm = posMig[t.id] || t;
+      nt[t.id] = { x: x, y: y, grp: (typeof t.screen === "string" && gseen[t.screen]) ? t.screen : "", pn: typeof t.painel === "string" ? t.painel : "", mx: mnum(pm.mx), my: mnum(pm.my) };
       count++;
     });
     if (!count && tiles.length) throw new Error("Nenhum painel reconhecido no arquivo.");
