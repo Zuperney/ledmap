@@ -1,6 +1,6 @@
 import { cabNome, corCab } from "./gabinetes.js";
 import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR, vistaM } from "./core.js";
-import { VISTAS, afim, encara, casco, caixaDe, noMundo, projetar } from "./espaco.js";
+import { VISTAS, afim, encara, casco, caixaDe, noMundo, projetar, extensao, PIVOS, limpaPivo } from "./espaco.js";
 import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, limiteRota, limiteTxt, oc } from "./cabeamento.js";
 import { boundsM } from "./rig.js";
 
@@ -454,11 +454,16 @@ function drawLayout(withCab) {
     return cv;
   }
 
+// x_m, y_chao_m e recuo_m: o canto do painel antes do giro (como sempre foram). As colunas do fim dizem onde a frente do
+// painel fica de verdade no palco, com o giro: X, altura e recuo (positivo = para trás) de onde começa até onde termina.
 function layoutCsv() {
-    var rows = [["painel", "nome", "pitch", "largura_m", "altura_m", "x_m", "y_chao_m", "gab_colunas", "gab_linhas", "resolucao_px", "pixels_total", "recuo_m"]];
+    var mm = function (v) { return String(Math.round(v * 1000) / 1000).replace(".", ","); };
+    var rows = [["painel", "nome", "pitch", "largura_m", "altura_m", "x_m", "y_chao_m", "gab_colunas", "gab_linhas", "resolucao_px", "pixels_total", "recuo_m",
+      "giro_x_graus", "giro_y_graus", "giro_z_graus", "pivo", "x_ini_m", "x_fim_m", "altura_ini_m", "altura_fim_m", "recuo_ini_m", "recuo_fim_m"]];
     tiles.forEach(function (t) {
-      var q = res(t);
-      rows.push([t.id, t.name, cabNome(t), fmt(t.w), fmt(t.h), fmt(t.mx), fmt(t.my), q.cols, q.rows, q.w + "x" + q.h, q.total, fmt(t.z || 0)]);
+      var q = res(t), e = extensao(t);
+      rows.push([t.id, t.name, cabNome(t), fmt(t.w), fmt(t.h), fmt(t.mx), fmt(t.my), q.cols, q.rows, q.w + "x" + q.h, q.total, fmt(t.z || 0),
+        mm(t.rx || 0), mm(t.ry || 0), mm(t.rz || 0), PIVOS[limpaPivo(t.pv)][2], mm(e.x0), mm(e.x1), mm(e.y0), mm(e.y1), mm(e.r0), mm(e.r1)]);
     });
     return csv(rows);
   }

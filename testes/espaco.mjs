@@ -1,5 +1,5 @@
 // Bancada do espaço do palco (giro, vistas, quadros e migração das vistas antigas): node testes/espaco.mjs
-import { matriz, aplicar, noMundo, afim, casco, caixa, deslocQuadro, trocarPivo, deVistaAntiga, limpaGiro, encara, profundidadeNaVista } from "../src/modules/espaco.js";
+import { matriz, aplicar, noMundo, afim, casco, caixa, deslocQuadro, trocarPivo, deVistaAntiga, limpaGiro, encara, profundidadeNaVista, extensao } from "../src/modules/espaco.js";
 
 var falhas = 0;
 function perto(a, b, msg) {
@@ -58,6 +58,14 @@ perto(encara(mt, "dir"), 1, "parede esquerda encara a vista Direita");
 var teto = Object.assign({ w: 4, h: 2 }, deVistaAntiga({ mx: 0, my: 0, w: 4, h: 2, z: 0 }, { ori: "teto", ox: 0, oy: 6, oz: 0 }));
 perto(encara(teto, "topo"), -1, "teto fica de costas para o Topo (virado para baixo)");
 perto(noMundo(teto, [teto.mx + 2, teto.my + 1, -teto.z])[1], 6, "teto na altura da vista antiga");
+
+// extensão no palco: o "Painel 4" do layout de teste (22 × 7 m, giro X 90°, pivô no centro, my −0,5) é um teto a 3 m
+var ext = extensao(painel({ mx: -11, my: -0.5, w: 22, h: 7, rx: 90 }));
+perto([ext.x0, ext.x1, ext.y0, ext.y1, ext.r0, ext.r1], [-11, 11, 3, 3, -3.5, 3.5], "teto: X −11 a 11, altura 3, recuo −3,5 a 3,5");
+var ext1 = extensao(painel({ mx: -11.02, my: 0, w: 10, h: 3, ry: 45 }));
+perto([ext1.x0, ext1.x1, ext1.r0, ext1.r1], [-9.556, -2.484, -3.536, 3.536], "lateral a 45° em volta do centro");
+var ext0 = extensao(painel({ mx: 2, my: 1, w: 4, h: 2, z: 0.5 }));
+perto([ext0.x0, ext0.x1, ext0.y0, ext0.y1, ext0.r0, ext0.r1], [2, 6, 1, 3, 0.5, 0.5], "sem giro: o retângulo do Rig");
 
 // ângulos
 perto(limpaGiro(190), -170, "190° = −170°");

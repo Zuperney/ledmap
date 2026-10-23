@@ -95,6 +95,20 @@ export function cantos(t, M) {
   return out;
 }
 
+// onde a frente do painel fica no palco, com o giro: X (esquerda → direita), altura e recuo (positivo = para trás),
+// de onde começa até onde termina. É o que o cartão e o CSV mostram em "No palco".
+export function extensao(t) {
+  var M = matriz(t), z = -(t.z || 0), e = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, r0: Infinity, r1: -Infinity };
+  [[t.mx, t.my], [t.mx + t.w, t.my], [t.mx, t.my + t.h], [t.mx + t.w, t.my + t.h]].forEach(function (c) {
+    var p = noMundo(t, [c[0], c[1], z], M);
+    e.x0 = Math.min(e.x0, p[0]); e.x1 = Math.max(e.x1, p[0]);
+    e.y0 = Math.min(e.y0, p[1]); e.y1 = Math.max(e.y1, p[1]);
+    e.r0 = Math.min(e.r0, -p[2]); e.r1 = Math.max(e.r1, -p[2]);
+  });
+  Object.keys(e).forEach(function (k) { e[k] = Math.round(e[k] * 1000) / 1000 || 0; });
+  return e;
+}
+
 // contorno do painel na vista (casco convexo da caixa projetada), em (U, V)
 export function casco(t, vista) {
   var p = cantos(t).map(function (c) { return projetar(vista, c); }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });

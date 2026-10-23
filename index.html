@@ -253,12 +253,13 @@
         <div class="mc-head"><span class="n" id="mc-n"></span><input type="text" id="mc-nome" maxlength="40" autocomplete="off" aria-label="Nome do painel"><button class="btn mc-x" id="mc-fechar" aria-label="Fechar">✕</button></div>
         <div class="mc-tags" id="mc-tags"></div>
         <p class="mc-info" id="mc-info"></p>
+        <p class="mc-info mc-palco" id="mc-palco" title="Onde a frente do painel fica no palco, com o giro: X da esquerda para a direita, altura do chão e recuo (positivo = para trás, negativo = à frente)"></p>
         <div class="mc-campos">
           <label>Largura (m) <input type="number" id="mc-w" step="0.05" min="0.05" inputmode="decimal"></label>
           <label>Altura (m) <input type="number" id="mc-h" step="0.05" min="0.05" inputmode="decimal"></label>
-          <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
+          <label><span id="m-x-l">X (m)</span> <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
           <label><span id="m-y-l">Y do chão (m)</span> <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
-          <label>Recuo (m) <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
+          <label><span id="mc-z-l">Recuo (m)</span> <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
           <label>Screen <select id="mc-scr" aria-label="Screen do painel"></select></label>
           <label title="Inclina para frente ou para trás (ajuste na vista Esquerda ou Direita)">Giro X (°) <input type="number" id="mc-rx" step="1" inputmode="decimal" placeholder="0"></label>
           <label title="Abre como lateral em V ou L (ajuste na vista Topo)">Giro Y (°) <input type="number" id="mc-ry" step="1" inputmode="decimal" placeholder="0"></label>

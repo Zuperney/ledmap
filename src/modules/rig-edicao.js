@@ -5,7 +5,7 @@ import { VISTAS, caixa, caixaDe, desprojetar, projetar, pivo, limpaGiro, encara 
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
-import { renderCartao } from "./rig-cartao.js";
+import { renderCartao, posCampos } from "./rig-cartao.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep, routes } from "./cabeamento.js";
 import { curTab } from "./abas.js";
@@ -352,9 +352,10 @@ export function init() {
         if (!t) return;
         var nx = mnum(document.getElementById("m-x").value), ny = mnum(document.getElementById("m-y").value);
         if (nx !== null && ny !== null) {
-          var dx = nx - t.mx, dy = ny - t.my;
+          // o campo mostra o pivô no palco (painel girado) ou o canto (sem giro): o painel e o grupo andam a diferença
+          var base = posCampos(t), dx = nx - base[0], dy = ny - base[1];
           membrosPainel(t.pn).forEach(function (o) { if (o !== t) { o.mx = mnum(o.mx + dx); o.my = mnum(o.my + dy); } });
-          t.mx = nx; t.my = ny; save();
+          t.mx = mnum(t.mx + dx); t.my = mnum(t.my + dy); save();
         }
         refreshM();
       });

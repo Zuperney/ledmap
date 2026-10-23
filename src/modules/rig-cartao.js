@@ -2,7 +2,7 @@
 // Três formas: um painel · vários selecionados · um grupo (aberto pela etiqueta do grupo).
 // Editar aqui é direto: nome, X/Y, recuo e Screen; tamanho e gabinete abrem o modal (Editar).
 import { tiles, selected, res, fmt, nf, EXTRAS, save, groups, gname, painelById, pnome, membrosPainel, mnum, vistaM, gravarVivo } from "./core.js";
-import { PIVOS, limpaGiro, limpaPivo, trocarPivo, caixaDe, temGiro } from "./espaco.js";
+import { PIVOS, limpaGiro, limpaPivo, trocarPivo, caixaDe, temGiro, pivo, extensao } from "./espaco.js";
 import { placeM, reordenarM, statM, desenharPaineis } from "./rig.js";
 import { cabOn, renderCabM } from "./rig-cabos.js";
 import { cabNome } from "./gabinetes.js";
@@ -26,6 +26,15 @@ function caixaRig(lista) {
   var c = caixaDe(lista, vistaM);
   return { x: c.u0, y: FLOOR - c.v1, w: c.u1 - c.u0, h: c.v1 - c.v0 };
 }
+
+// valores dos campos X e Y do cartão: o pivô no palco (painel girado) ou o canto de baixo à esquerda (sem giro).
+// O recuo do pivô é o próprio recuo do painel, então esse campo não muda.
+export function posCampos(t) {
+  if (!temGiro(t)) return [t.mx, t.my];
+  var P = pivo(t);
+  return [Math.round(P[0] * 1000) / 1000, Math.round(P[1] * 1000) / 1000];
+}
+function faixa(a, b) { return Math.abs(a - b) < 0.0005 ? fmt(a) : fmt(a) + " a " + fmt(b); }
 
 // recuo, giro e pivô mudam só o desenho e a geometria: redesenha sem recarregar a página
 function aplicarVivo(t) {
@@ -80,8 +89,15 @@ function cartaoUm(t) {
   $("mc-info").textContent = fmt(t.w) + " × " + fmt(t.h) + " m · " + cabNome(t) + " · " + (q.n < q.cols * q.rows ? q.n + " gab." : q.cols + " × " + q.rows + " = " + q.n + " gab.") + " · " + nf(q.w) + " × " + nf(q.h) + " px";
   if (document.activeElement !== $("mc-w")) $("mc-w").value = t.w;
   if (document.activeElement !== $("mc-h")) $("mc-h").value = t.h;
-  if (document.activeElement !== $("m-x")) $("m-x").value = t.mx;
-  if (document.activeElement !== $("m-y")) $("m-y").value = t.my;
+  // girado, a posição é a do pivô no palco (ele não sai do lugar quando o painel gira); sem giro, o canto de baixo à esquerda
+  var g = temGiro(t), P = posCampos(t);
+  $("m-x-l").textContent = g ? "Pivô X (m)" : "X (m)";
+  $("m-y-l").textContent = g ? "Pivô altura (m)" : "Y do chão (m)";
+  $("mc-z-l").textContent = g ? "Pivô recuo (m)" : "Recuo (m)";
+  if (document.activeElement !== $("m-x")) $("m-x").value = P[0];
+  if (document.activeElement !== $("m-y")) $("m-y").value = P[1];
+  var e = extensao(t);
+  $("mc-palco").textContent = "No palco: X " + faixa(e.x0, e.x1) + " · altura " + faixa(e.y0, e.y1) + " · recuo " + faixa(e.r0, e.r1) + " m";
   if (document.activeElement !== $("mc-z")) $("mc-z").value = t.z || "";
   opcoesScreen($("mc-scr"), t.grp);
   ["rx", "ry", "rz"].forEach(function (k) { if (document.activeElement !== $("mc-" + k)) $("mc-" + k).value = t[k] || ""; });
