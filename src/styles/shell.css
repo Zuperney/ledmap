@@ -247,8 +247,12 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
   body.rig-mosaico #view-m .mwrap { grid-template-columns: var(--col-mini) minmax(0, 1fr); }
   body.rig-mosaico #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: var(--col-mini) minmax(0, 1fr) var(--col-card); }
   #view-m .mwrap > .mini-faixa { order: 0; grid-template-columns: minmax(0, 1fr); margin-top: 0; align-self: start; }
-  #view-m .mwrap > .mini-faixa .mini { height: max(120px, calc((100dvh - 168px) / 4)); }
+  #view-m .mwrap > .mini-faixa .mini { height: max(110px, calc((100dvh - 174px) / 5)); }
 }
 body.fs #view-m .mini-faixa { display: none !important; }
 /* abas de formulário e texto não esticam na tela larga (linhas longas e campos enormes cansam); as de desenho usam tudo */
 #view-p, #view-e, #view-r { max-width: 1200px; width: 100%; }
+/* a prévia da vista que está na área principal fica marcada */
+.mini.ativa { border-color: var(--imag); box-shadow: inset 0 0 0 1px var(--imag); }
+.mini.ativa .mini-t { color: var(--imag); }
+@media (max-width: 899px) { .mini-faixa { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }

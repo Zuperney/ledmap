@@ -2,7 +2,7 @@
 // cada vista 2D mostra e edita um plano do palco: Frente (X e altura, giro Z), Topo (X e recuo, giro Y),
 // Esquerda/Direita (fundo e altura, giro X). A 3D mostra a montagem no espaço, no lugar do desenho, e acompanha
 // as edições do cartão; tocar num painel abre o cartão dele. Navegação ‹ Frente ›: as setas passam pelas 5.
-// "Todas as vistas" (Visão ▾): a escolhida fica grande e as outras quatro numa coluna à esquerda, ao vivo; tocar num
+// "Todas as vistas" (Visão ▾): a escolhida fica grande e as 5 prévias fixas numa coluna à esquerda, ao vivo; tocar num
 // painel numa miniatura o seleciona, tocar no título da miniatura a traz para o lugar da grande.
 import { save, set_vistaM, vistaM, selected } from "./core.js";
 import { fitM } from "./rig.js";
@@ -43,23 +43,22 @@ export function atualizarNav() {
 function guardar(chave, on) { try { if (on) localStorage.setItem(chave, "1"); else localStorage.removeItem(chave); } catch (e) {} }
 function guardar3D(on) { try { if (on) sessionStorage.setItem(CHAVE_3D, "1"); else sessionStorage.removeItem(CHAVE_3D); } catch (e) {} }
 
-// ---- onde o 3D fica: na área principal (vista 3D), numa miniatura (mosaico) ou fechado ----
-var alvo3D = null, seq3D = 0;
+// ---- o 3D pode estar em dois lugares ao mesmo tempo: a área principal (vista 3D) e a prévia 3D da coluna ----
+var seq3D = 0;
 function posicionar3D() {
-  var alvo = em3D ? $("svg-m").closest(".stagebox") : mosaico ? celula3D : null;
-  if (alvo === alvo3D) return;
-  alvo3D = alvo;
-  var n = ++seq3D;
-  if (!alvo) registrar3D(null);
+  var palco = $("svg-m").closest(".stagebox"), querPalco = em3D, querCelula = mosaico && !!celula3D, n = ++seq3D;
+  if (!querPalco && !querCelula) registrar3D(null);
   // o three.js fica num pedaço à parte: só baixa quando o 3D aparece em algum lugar
+  if (!querPalco && !querCelula && !import3D) return;
   import("./vista3d.js").then(function (m) {
+    import3D = true;
     if (n !== seq3D) return; // mudou de novo enquanto baixava
-    m.fechar3DNoRig();
-    if (!alvo) return;
-    if (!m.abrir3DNoRig(alvo)) { alvo3D = null; if (em3D) { em3D = false; document.body.classList.remove("rig-3d"); guardar3D(false); irParaVista("frente"); } return; }
-    registrar3D({ atualizar: m.atualizar3D, marcarSel: m.marcarSel3D });
-  }).catch(function () { if (alvo) pmsg("Não consegui carregar a Vista 3D. Confira a conexão e tente de novo."); });
+    if (querPalco) { if (!m.abrir3DNoRig(palco)) { setEm3D(false); irParaVista("frente"); return; } } else m.fechar3DNoRig(palco);
+    if (querCelula) m.abrir3DNoRig(celula3D); else if (celula3D) m.fechar3DNoRig(celula3D);
+    registrar3D(querPalco || querCelula ? { atualizar: m.atualizar3D, marcarSel: m.marcarSel3D } : null);
+  }).catch(function () { if (querPalco || querCelula) pmsg("Não consegui carregar a Vista 3D. Confira a conexão e tente de novo."); });
 }
+var import3D = false;
 
 function setEm3D(on) {
   em3D = on;
@@ -93,8 +92,8 @@ export function itensVistas() {
   });
 }
 
-// ---- mosaico: faixa com as quatro vistas que não estão na área principal ----
-var faixa = null, celula3D = null, minis = [];
+// ---- mosaico: as 5 prévias fixas, de cima para baixo Frente, Topo, Esquerda, Direita, 3D; a da área principal fica marcada ----
+var faixa = null, celula3D = null, minis = [], celulas = {};
 function montarMosaico() {
   if (!faixa) {
     faixa = document.createElement("div");
@@ -107,31 +106,29 @@ function montarMosaico() {
       var p = e.target.closest(".mini-p");
       if (p) { var id = p.getAttribute("data-id"); select(id === selected ? null : id); }
     });
+    TODAS.forEach(function (id) {
+      var c = document.createElement("div"); c.className = "mini" + (id === "3d" ? " mini-3d" : "");
+      var t = document.createElement("button"); t.type = "button"; t.className = "mini-t"; t.setAttribute("data-v", id);
+      t.textContent = nomeVista(id) + " ⤢"; t.title = "Levar " + nomeVista(id) + " para a área principal";
+      c.appendChild(t);
+      if (id === "3d") {
+        celula3D = document.createElement("div");
+        celula3D.className = "mini-3d-palco";
+        c.appendChild(celula3D);
+      } else {
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "mini-svg"); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        c.appendChild(svg);
+        minis.push({ svg: svg, v: id });
+      }
+      celulas[id] = c;
+      faixa.appendChild(c);
+    });
   }
   faixa.hidden = !mosaico;
   document.body.classList.toggle("rig-mosaico", mosaico);
-  var celula3DAntes = celula3D;
-  faixa.textContent = ""; minis = []; celula3D = null;
-  if (!mosaico) return;
-  TODAS.filter(function (id) { return id !== atual(); }).forEach(function (id) {
-    var c = document.createElement("div"); c.className = "mini" + (id === "3d" ? " mini-3d" : "");
-    var t = document.createElement("button"); t.type = "button"; t.className = "mini-t"; t.setAttribute("data-v", id);
-    t.textContent = nomeVista(id) + " ⤢"; t.title = "Trazer " + nomeVista(id) + " para a área principal";
-    c.appendChild(t);
-    if (id === "3d") {
-      // a célula do 3D é reaproveitada: refazer a faixa não fecha e reabre o 3D à toa
-      celula3D = celula3DAntes && alvo3D === celula3DAntes ? celula3DAntes : document.createElement("div");
-      celula3D.className = "mini-3d-palco";
-      c.appendChild(celula3D);
-    } else {
-      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("class", "mini-svg"); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      c.appendChild(svg);
-      minis.push({ svg: svg, v: id });
-      desenharMini(svg, id);
-    }
-    faixa.appendChild(c);
-  });
+  TODAS.forEach(function (id) { celulas[id].classList.toggle("ativa", id === atual()); });
+  if (mosaico) minis.forEach(function (m) { desenharMini(m.svg, m.v); });
 }
 
 // as miniaturas acompanham o Rig (agrupado num quadro)

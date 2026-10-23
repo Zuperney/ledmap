@@ -12,7 +12,7 @@ import { saveFile, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { PROF, pivo, normal } from "./espaco.js";
 
-var noRig = null;
+var abertos = []; // 3D abertos: { alvo, api }
 
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
@@ -42,17 +42,21 @@ function texturaPainel(img, t) {
   return tx;
 }
 
-// embutida no Rig: ocupa o lugar do desenho 2D; acompanha as edições e seleciona pelo toque
+// embutida no Rig: ocupa o lugar do desenho 2D ou a prévia 3D da coluna (podem estar as duas abertas);
+// acompanha as edições e seleciona pelo toque. Uma por lugar (alvo).
 export function abrir3DNoRig(alvo) {
-  if (noRig) return true;
-  noRig = criar(alvo, { aoFechar: function () { noRig = null; } });
-  return !!noRig;
+  if (abertos.some(function (a) { return a.alvo === alvo; })) return true;
+  var api = criar(alvo, { aoFechar: function () { abertos = abertos.filter(function (a) { return a.api !== api; }); } });
+  if (!api) return false;
+  abertos.push({ alvo: alvo, api: api });
+  return true;
 }
-export function fechar3DNoRig() { if (noRig) noRig.fechar(); }
-// algo mudou no Rig (posição, recuo, giro, pivô): a cena embutida se refaz (agrupado, para não refazer a cada passo)
-export function atualizar3D() { if (noRig) noRig.atualizar(); }
+// fecha a do lugar dado (ou todas, sem alvo)
+export function fechar3DNoRig(alvo) { abertos.filter(function (a) { return !alvo || a.alvo === alvo; }).forEach(function (a) { a.api.fechar(); }); }
+// algo mudou no Rig (posição, recuo, giro, pivô): as cenas se refazem (agrupado, para não refazer a cada passo)
+export function atualizar3D() { abertos.forEach(function (a) { a.api.atualizar(); }); }
 // a seleção mudou: o painel selecionado fica destacado
-export function marcarSel3D() { if (noRig) noRig.marcarSel(); }
+export function marcarSel3D() { abertos.forEach(function (a) { a.api.marcarSel(); }); }
 
 function criar(alvo, op) {
   var vivo = true, cheia = !!op.telaCheia;
@@ -209,6 +213,7 @@ function criar(alvo, op) {
 
   // ---- cubo de vistas no canto (como nos programas de 3D): acompanha a câmera; tocar numa face, aresta ou canto gira até lá ----
   var CUBO = 112, MARG = 10;
+  function medirCubo() { var h = palco.clientHeight || 300; CUBO = h < 260 ? 56 : 112; MARG = h < 260 ? 6 : 10; } // na prévia pequena, cubo menor
   var cenaCubo = new THREE.Scene(), camCubo = new THREE.OrthographicCamera(-0.9, 0.9, 0.9, -0.9, 0.1, 10);
   function face(txt) {
     var cv = document.createElement("canvas"); cv.width = cv.height = 128;
@@ -283,6 +288,7 @@ function criar(alvo, op) {
 
   function medir() {
     var w = palco.clientWidth || 300, h = palco.clientHeight || 300;
+    medirCubo();
     renderer.setSize(w, h, false);
     renderer.domElement.style.width = w + "px"; renderer.domElement.style.height = h + "px";
     camera.aspect = w / h; camera.updateProjectionMatrix(); pedir();
