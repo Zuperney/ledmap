@@ -164,11 +164,11 @@ body.com-3d { overflow: hidden; }
 .v3d.v3d-rig { position: absolute; inset: 0; z-index: 4; }
 .v3d-rig .v3d-bar { padding: 4px 6px; }
 body.rig-3d #view-m .hud, body.rig-3d #view-m .stagebox > .badge, body.rig-3d #m-edit-panel { display: none !important; }
-body.rig-3d #view-m .stagebox { min-height: max(360px, 62vh); }
+body.rig-3d #view-m .stagebox { min-height: max(360px, calc(100dvh - 150px)); } /* a altura da tela, como a coluna das miniaturas */
 
 /* Rig: desenho + cartão do painel (ao lado no computador, subindo de baixo no celular) */
 #view-m .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
-@media (min-width: 900px) { #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 900px) { #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) var(--col-card); } }
 .mcard { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 12px; }
 .mcard > div { display: flex; flex-direction: column; gap: 8px; }
 .mc-head { display: flex; align-items: center; gap: 8px; }
@@ -204,7 +204,7 @@ body.fs .mcard { display: none; }
 .cmi[data-arm="1"] { background: var(--bad); color: #fff; }
 .cmsep { height: 1px; background: var(--line); margin: 4px 2px; }
 #view-c .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
-@media (min-width: 900px) { #view-c .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 900px) { #view-c .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) var(--col-card); } }
 .mc-chip.fora { color: var(--bad); border-color: var(--bad); }
 /* régua de escalas dos campos (clique longo): escolhe a escala subindo/descendo, arrasta para os lados */
 .regua { position: fixed; z-index: 90; min-width: 92px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 4px; font: 600 12px var(--font-data); user-select: none; pointer-events: none; }
@@ -230,7 +230,7 @@ body.fs .mcard { display: none; }
 /* Recortar: o cartão sai e o desenho fica com a largura toda; a barra fica presa no topo do desenho */
 body.recortando #view-m .mcard { display: none !important; }
 body.recortando #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
-@media (min-width: 900px) { body.recortando.rig-mosaico #view-m .mwrap { grid-template-columns: 210px minmax(0, 1fr) !important; } }
+@media (min-width: 900px) { body.recortando.rig-mosaico #view-m .mwrap { grid-template-columns: var(--col-mini) minmax(0, 1fr) !important; } }
 .rec-barra { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 16px); padding: 6px 6px 6px 12px; background: var(--panel); border: 1px solid var(--imag); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); font-size: 12px; color: var(--fg); }
 .rec-barra[hidden] { display: none; }
 .rec-barra .btn { flex: none; background: var(--imag); color: var(--bg); border-color: var(--imag); }
@@ -244,9 +244,11 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
 /* mosaico: em tela estreita a faixa vai embaixo do desenho; em tela larga, coluna à esquerda com as quatro empilhadas */
 #view-m .mwrap > .mini-faixa { order: 2; }
 @media (min-width: 900px) {
-  body.rig-mosaico #view-m .mwrap { grid-template-columns: 210px minmax(0, 1fr); }
-  body.rig-mosaico #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: 210px minmax(0, 1fr) 300px; }
+  body.rig-mosaico #view-m .mwrap { grid-template-columns: var(--col-mini) minmax(0, 1fr); }
+  body.rig-mosaico #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: var(--col-mini) minmax(0, 1fr) var(--col-card); }
   #view-m .mwrap > .mini-faixa { order: 0; grid-template-columns: minmax(0, 1fr); margin-top: 0; align-self: start; }
   #view-m .mwrap > .mini-faixa .mini { height: max(120px, calc((100dvh - 168px) / 4)); }
 }
 body.fs #view-m .mini-faixa { display: none !important; }
+/* abas de formulário e texto não esticam na tela larga (linhas longas e campos enormes cansam); as de desenho usam tudo */
+#view-p, #view-e, #view-r { max-width: 1200px; width: 100%; }

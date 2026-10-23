@@ -1,5 +1,7 @@
 body { background: var(--bg); color: var(--fg); font-family: var(--font-data); padding-inline: 16px; padding-block: 20px 40px; }
-.wrap { max-width: 1120px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+/* largura toda do navegador: o desenho (Rig, Screen, cabeamento) ganha o espaço; colunas laterais crescem com a tela */
+:root { --col-mini: clamp(210px, 15vw, 320px); --col-card: clamp(300px, 20vw, 380px); }
+.wrap { max-width: none; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
 h1 { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1; margin: 0; letter-spacing: .01em; text-wrap: balance; }
 h2 { font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1; margin: 0; letter-spacing: .02em; }
 .sub { color: var(--muted); font-size: 12px; margin: 6px 0 0; }

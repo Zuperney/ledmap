@@ -28,10 +28,14 @@ export function fitM() {
   var topY = temp ? FLOOR - temp.v1 : FLOOR, botY = temp ? FLOOR - temp.v0 : FLOOR;
   b.x0 = -meia; b.x1 = meia;
   b.y0 = Math.min(-0.5, Math.floor(topY) - 1); b.y1 = Math.max(10, Math.ceil(botY) + 1.5);
+  // preenche a altura da área do desenho: com a tela larga, a proporção do palco deixaria uma faixa vazia embaixo.
+  // A área cresce para cima (mais grade acima dos painéis), no zoom 100% (largura do SVG = largura da área, mín. 680 px)
+  var st = svgM.parentNode, W = Math.max(st.clientWidth || 0, 680), H = parseFloat(getComputedStyle(st).maxHeight);
+  if (st.clientWidth && isFinite(H) && H > 0) { var alto = (b.x1 - b.x0) * H / W; if (b.y1 - b.y0 < alto) b.y0 = b.y1 - alto; }
   svgM.setAttribute("viewBox", [b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0].join(" "));
   gridM.textContent = "";
   var gx0 = -meia + 1, gx1 = meia - 1;
-  var gy0 = Math.min(0, Math.floor(topY)), gy1 = Math.max(FLOOR, Math.ceil(botY));
+  var gy0 = Math.min(0, Math.floor(topY), Math.ceil(b.y0)), gy1 = Math.max(FLOOR, Math.ceil(botY));
   var k;
   for (k = gx0; k <= gx1; k++) el("line", { x1: k, y1: gy0, x2: k, y2: gy1 }, gridM);
   for (k = gy0; k <= gy1; k++) el("line", { x1: gx0, y1: k, x2: gx1, y2: k }, gridM);
@@ -172,6 +176,13 @@ export function init() {
   tiles.forEach(placeM);
   reordenarM();
   pnLayer = el("g", { "class": "pnlayer" }, svgM);
+  // a janela mudou de largura (ou a coluna das miniaturas/cartão abriu): refaz a área para continuar preenchendo
+  var larg = 0, espera = null;
+  new ResizeObserver(function () {
+    var w = svgM.parentNode.clientWidth;
+    if (!w || Math.abs(w - larg) < 2) return;
+    larg = w; clearTimeout(espera); espera = setTimeout(fitM, 80);
+  }).observe(svgM.parentNode);
   guideMV = el("line", { "class": "guide off", x1: 0, y1: -100, x2: 0, y2: 100 }, svgM);
   guideMH = el("line", { "class": "guide off", x1: -100, y1: 0, x2: 100, y2: 0 }, svgM);
 }
