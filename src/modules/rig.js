@@ -2,7 +2,7 @@ import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis,
 import { corCab } from "./gabinetes.js";
 import { editM, onDownM, toggleMselM, limparMselM, modoSelM, ignorarCliqueM } from "./rig-edicao.js";
 import { select } from "./tabela.js";
-import { VISTAS, afim, casco, caixaDe, encara, profundidadeNaVista, temGiro } from "./espaco.js";
+import { VISTAS, afim, casco, caixa, caixaDe, encara, profundidadeNaVista, temGiro } from "./espaco.js";
 import { avisar3D } from "./ponte3d.js";
 
 let gridM, floorLine, eixoM, regua, boundsM, layerM, guideMV, guideMH, pnLayer;
@@ -11,7 +11,7 @@ let gridM, floorLine, eixoM, regua, boundsM, layerM, guideMV, guideMH, pnLayer;
 // y = FLOOR − V (V para cima). Na Frente sem giro é o desenho de sempre (x = metros, chão no FLOOR).
 // Cada painel tem o contorno da caixa projetada e a frente (gabinetes, recortes, rótulos) com a afim da vista;
 // visto de lado (a frente vira uma linha) fica só o contorno, com o número.
-var faceM = {}, cascoM = {}, rotM = {}, ztM = {};
+var faceM = {}, cascoM = {}, rotM = {}, ztM = {}, rotulosM = {};
 
 // legenda da vista, embaixo à esquerda: o que é a linha do zero e para onde fica o público
 var LEGENDA = {
@@ -54,9 +54,17 @@ export function fitM() {
 
 // quem está mais longe de quem olha é desenhado primeiro (fica atrás)
 export function reordenarM() {
-  tiles.map(function (t) { return { t: t, d: profundidadeNaVista(t, vistaM) }; })
-    .sort(function (a, b) { return a.d - b.d; })
-    .forEach(function (o) { layerM.appendChild(gM[o.t.id]); });
+  var ord = tiles.map(function (t) { return { t: t, d: profundidadeNaVista(t, vistaM), c: caixa(t, vistaM), f: Math.abs(encara(t, vistaM)) >= 0.08 }; })
+    .sort(function (a, b) { return a.d - b.d; });
+  ord.forEach(function (o, i) {
+    layerM.appendChild(gM[o.t.id]);
+    // escondido atrás de outro (o centro dele cai dentro de um painel mais perto de quem olha): os rótulos dele saem,
+    // senão os números e medidas dos dois se embaralham (ex.: laterais simétricas vistas de lado)
+    var cu = (o.c.u0 + o.c.u1) / 2, cv = (o.c.v0 + o.c.v1) / 2;
+    // (na Frente, um painel sem giro atrás de outro é o miolo recuado visto pelo recorte: mantém os rótulos)
+    var coberto = o.f && (vistaM !== "frente" || temGiro(o.t)) && ord.slice(i + 1).some(function (p) { return p.f && p.d > o.d + 1e-6 && cu > p.c.u0 && cu < p.c.u1 && cv > p.c.v0 && cv < p.c.v1; });
+    gM[o.t.id].classList.toggle("coberto", coberto);
+  });
 }
 
 export function statM() {
@@ -104,13 +112,30 @@ export function desenharFurosM(t) {
   });
 }
 
+// Painel visto por trás (de costas para quem olha): a frente desenhada fica espelhada — a grade e os recortes estão
+// certos (é como se vê por trás), mas os textos ficariam invertidos. O bloco de rótulos (número e medidas) é virado de
+// novo em volta do centro do painel: na horizontal ou na vertical, o que deixar o texto em pé e da esquerda para a
+// direita na tela (e as linhas na ordem de sempre).
+function desespelharTextos(t, A, costas) {
+  var rg = rotulosM[t.id];
+  if (!rg) return;
+  if (!costas) { rg.removeAttribute("transform"); return; }
+  // A = matrix(a b c d …): o x do painel vai para (a, b) na tela, o y (para baixo) para (c, d).
+  // Virando o y: (c, d) → (−c, −d); serve se o x continua para a direita e o y passa a descer na tela
+  var sx = 1, sy = 1;
+  if (A[0] > 0 && -A[3] > 0) sy = -1; else sx = -1;
+  var cx = t.w / 2, cy = t.h / 2;
+  rg.setAttribute("transform", "translate(" + cx + " " + cy + ") scale(" + sx + " " + sy + ") translate(" + -cx + " " + -cy + ")");
+}
+
 // põe o painel na vista atual: contorno, frente (afim) e rótulo de quando ele está de lado
 export function placeM(t) {
   var g = gM[t.id], f = faceM[t.id];
   if (!g || !f) return;
   avisar3D(); // toda mudança de lugar, recuo ou giro passa por aqui
-  var e = encara(t, vistaM), deLado = Math.abs(e) < 0.08;
-  f.setAttribute("transform", "matrix(" + afim(t, vistaM, FLOOR).join(" ") + ")");
+  var e = encara(t, vistaM), deLado = Math.abs(e) < 0.08, A = afim(t, vistaM, FLOOR);
+  f.setAttribute("transform", "matrix(" + A.join(" ") + ")");
+  desespelharTextos(t, A, e < 0);
   f.style.display = deLado ? "none" : "";
   var pts = casco(t, vistaM);
   cascoM[t.id].setAttribute("points", pts.map(function (p) { return p[0] + "," + (FLOOR - p[1]); }).join(" "));
@@ -147,22 +172,24 @@ export function init() {
     el("path", { "class": "cab", d: cabPath(rs.cols, rs.rows, rs.mw, rs.mh) }, f);
     furosM[s.id] = el("g", { "class": "furos" }, f);
     desenharFurosM(s);
-    ztM[s.id] = text(f, "ztag", s.w - 0.08, 0.32, 0.26, "");
+    var rg = el("g", { "class": "rotulos" }, f); // número e medidas: viram juntos quando o painel é visto por trás
+    rotulosM[s.id] = rg;
+    ztM[s.id] = text(rg, "ztag", s.w - 0.08, 0.32, 0.26, "");
     ztM[s.id].setAttribute("text-anchor", "end");
     var r = tall ? 0.6 : (s.w < 2 ? 0.45 : 0.38);
     var fs = tall ? 0.85 : (s.w < 2 ? 0.6 : 0.5);
     var bx = s.w / 2, by = s.h / 2;
     if (s.w >= 3 && tall) by = s.h / 2 - 0.7;
     if (s.w >= 3 && !tall) bx = 0.6;
-    el("circle", { "class": "badge", cx: bx, cy: by, r: r }, f);
-    text(f, "num", bx, by + 0.03, fs, s.id);
+    el("circle", { "class": "badge", cx: bx, cy: by, r: r }, rg);
+    text(rg, "num", bx, by + 0.03, fs, s.id);
     if (s.w >= 3 && tall) {
-      text(f, "dim-t", s.w / 2, s.h / 2 + 0.3, 0.5, fmt(s.w) + " × " + fmt(s.h) + " m");
-      text(f, "dim-t", s.w / 2, s.h / 2 + 0.95, 0.42, rs.w + " × " + rs.h + " px");
-      text(f, "dim-t", s.w / 2, s.h / 2 + 1.5, 0.42, (rs.n < rs.cols * rs.rows ? rs.n + " gab. (recortado)" : rs.cols + " × " + rs.rows + " gab."));
+      text(rg, "dim-t", s.w / 2, s.h / 2 + 0.3, 0.5, fmt(s.w) + " × " + fmt(s.h) + " m");
+      text(rg, "dim-t", s.w / 2, s.h / 2 + 0.95, 0.42, rs.w + " × " + rs.h + " px");
+      text(rg, "dim-t", s.w / 2, s.h / 2 + 1.5, 0.42, (rs.n < rs.cols * rs.rows ? rs.n + " gab. (recortado)" : rs.cols + " × " + rs.rows + " gab."));
     } else if (s.w >= 3) {
       var lbl = fmt(s.w) + " × " + fmt(s.h) + " m · " + rs.w + "×" + rs.h;
-      text(f, "dim-t", (s.w + 1.1) / 2, s.h / 2, Math.min(0.45, (s.w - 1.3) / (lbl.length * 0.62)), lbl);
+      text(rg, "dim-t", (s.w + 1.1) / 2, s.h / 2, Math.min(0.45, (s.w - 1.3) / (lbl.length * 0.62)), lbl);
     }
     rotM[s.id] = text(g, "lado-t", 0, 0, 0.42, s.id);
     gM[s.id] = g;

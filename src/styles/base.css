@@ -188,3 +188,5 @@ td.r, th.r { text-align: right; }
   .medit input[type=number] { font-size: 11px; width: 66px; padding: 4px; }
   .toast { font-size: 11px; }
 }
+/* painel escondido atrás de outro na vista: sem rótulos (não embaralha com os do painel da frente) */
+.scr.coberto .rotulos { display: none; }
