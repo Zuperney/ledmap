@@ -30,7 +30,9 @@ export function fitM() {
   b.y0 = Math.min(-0.5, Math.floor(topY) - 1); b.y1 = Math.max(10, Math.ceil(botY) + 1.5);
   // preenche a altura da área do desenho: com a tela larga, a proporção do palco deixaria uma faixa vazia embaixo.
   // A área cresce para cima (mais grade acima dos painéis), no zoom 100% (largura do SVG = largura da área, mín. 680 px)
+  // altura alvo: o limite da área (layout empilhado) ou, sem limite, a altura que ela tem (grade do Palco)
   var st = svgM.parentNode, W = Math.max(st.clientWidth || 0, 680), H = parseFloat(getComputedStyle(st).maxHeight);
+  if (!isFinite(H)) H = st.clientHeight;
   if (st.clientWidth && isFinite(H) && H > 0) { var alto = (b.x1 - b.x0) * H / W; if (b.y1 - b.y0 < alto) b.y0 = b.y1 - alto; }
   svgM.setAttribute("viewBox", [b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0].join(" "));
   gridM.textContent = "";
@@ -204,11 +206,11 @@ export function init() {
   reordenarM();
   pnLayer = el("g", { "class": "pnlayer" }, svgM);
   // a janela mudou de largura (ou a coluna das miniaturas/cartão abriu): refaz a área para continuar preenchendo
-  var larg = 0, espera = null;
+  var larg = 0, alt = 0, espera = null;
   new ResizeObserver(function () {
-    var w = svgM.parentNode.clientWidth;
-    if (!w || Math.abs(w - larg) < 2) return;
-    larg = w; clearTimeout(espera); espera = setTimeout(fitM, 80);
+    var w = svgM.parentNode.clientWidth, h = svgM.parentNode.clientHeight;
+    if (!w || (Math.abs(w - larg) < 2 && Math.abs(h - alt) < 2)) return;
+    larg = w; alt = h; clearTimeout(espera); espera = setTimeout(fitM, 80);
   }).observe(svgM.parentNode);
   guideMV = el("line", { "class": "guide off", x1: 0, y1: -100, x2: 0, y2: 100 }, svgM);
   guideMH = el("line", { "class": "guide off", x1: -100, y1: 0, x2: 100, y2: 0 }, svgM);

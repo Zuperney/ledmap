@@ -5,7 +5,7 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 
 ## Já feito
 
-- A aba Rig agora se chama **Palco** (nome provisório; no código ela continua sendo a vista "m" e os módulos rig*.js). A interface dela vai ser refeita no estilo Illustrator/Affinity: ferramentas à esquerda, opções da ferramenta em cima, propriedades e camadas à direita.
+- A aba Rig agora se chama **Palco** (nome provisório; no código ela continua sendo a vista "m" e os módulos rig*.js). Fase 1 da interface nova (estilo Illustrator/Affinity) feita: em tela larga o Palco é uma grade que ocupa a janela, com ferramentas à esquerda (Selecionar V, Navegar H, Girar R, Painel P, Recortar C; Grade, Cabos e Prévias), opções da ferramenta em cima (passo, ímã, passo do giro, Exportar e a ajuda "?"), estúdio à direita (Propriedades = o cartão do painel; Camadas = grupos e painéis, tocar seleciona) e estado embaixo; as vistas ‹ Frente › ficam no canto do desenho (atalhos 1 a 5, F enquadra). O botão Mover saiu: Selecionar e Girar arrastam, Navegar só move a vista; a alça de giro aparece só no Girar. A gaveta de painéis some no Palco em tela larga. Em tela estreita fica empilhado (fase 4 cuida do celular). Próximas: Painel por arraste, Medir, Camadas com ocultar/travar/reordenar.
 
 **Base e publicação**
 - App em Vite (módulos ES), PWA instalável, deploy automático no GitHub Pages (Source = GitHub Actions).

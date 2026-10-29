@@ -52,7 +52,7 @@ export function makeViewer(stage, svg, ids, onPinch, minW, conteudo) {
       var c = alvo && typeof alvo.w === "number" ? alvo : (conteudo && conteudo()), vb = svg.viewBox.baseVal;
       if (!c || !(c.w > 0) || !(c.h > 0) || !vb || !vb.width) { setZoom(stage.clientWidth / baseW()); stage.scrollLeft = 0; stage.scrollTop = 0; return; }
       var m = Math.max(c.w, c.h) * 0.06, W = stage.clientWidth || 300;
-      var maxH = parseFloat(getComputedStyle(stage).maxHeight), H = isFinite(maxH) && maxH > 0 ? Math.min(maxH, window.innerHeight * 0.85) : window.innerHeight * 0.6;
+      var maxH = parseFloat(getComputedStyle(stage).maxHeight), H = isFinite(maxH) && maxH > 0 ? Math.min(maxH, window.innerHeight * 0.85) : (stage.clientHeight || window.innerHeight * 0.6);
       c = { x: c.x - m, y: c.y - m, w: c.w + 2 * m, h: c.h + 2 * m };
       zoom = clampZ(Math.min(W * vb.width / (baseW() * c.w), H * vb.width / (baseW() * c.h)));
       apply();

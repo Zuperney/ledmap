@@ -32,6 +32,7 @@ import { init as init_menu_contexto } from "./modules/menu-contexto.js";
 import { init as init_screen_cartao } from "./modules/screen-cartao.js";
 import { init as init_vistas } from "./modules/vistas.js";
 import { init as init_campos } from "./modules/campos.js";
+import { init as init_palco } from "./modules/palco.js";
 
 init_core();
 init_rig();
@@ -59,6 +60,7 @@ init_menu_contexto();
 init_screen_cartao();
 init_vistas();
 init_campos();
+init_palco();
 init_ui();
 
 iniciarTemas();

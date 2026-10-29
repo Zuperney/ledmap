@@ -44,6 +44,9 @@ export function syncMPanel() {
 // Só o painel selecionado gira (o grupo não vai junto). Com os outros dois giros em zero o ângulo é exato;
 // com eles, a alça muda o valor do eixo da vista e o desenho mostra o resultado.
 var alca = null, giro = null, RAIO = 1.1;
+// a alça só aparece com a ferramenta Girar do Palco (com Selecionar, arrastar move sem a alça no caminho)
+var alcaLigada = false;
+export function setAlcaLigada(on) { alcaLigada = !!on; desenharAlca(); }
 function anguloTela(e, px, py) { var w = toWorldM(e); return Math.atan2(-(w.y - py), w.x - px); }
 export function desenharAlca() {
     if (!svgM) return;
@@ -55,7 +58,7 @@ export function desenharAlca() {
       alca.txt = text(alca, "alca-t", 0, 0, 0.34, "");
       alca.bot.addEventListener("pointerdown", iniciarGiro);
     }
-    var t = selected && tById[selected], on = !!(editM && t && !recorte && mselM.length < 2);
+    var t = selected && tById[selected], on = !!(editM && alcaLigada && t && !recorte && mselM.length < 2);
     alca.style.display = on ? "" : "none";
     if (!on) return;
     svgM.appendChild(alca); // por cima de tudo
