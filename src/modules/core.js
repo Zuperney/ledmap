@@ -232,7 +232,7 @@ export function cabPath(cols, rows, cw, ch) {
 export function limpaPaineis(l) {
     var out = [], seen = {};
     (Array.isArray(l) ? l : []).forEach(function (p) {
-      if (p && typeof p.id === "string" && /^a\d{1,6}$/.test(p.id) && !seen[p.id]) { seen[p.id] = 1; out.push({ id: p.id, name: typeof p.name === "string" ? p.name.slice(0, 40) : "" }); }
+      if (p && typeof p.id === "string" && /^a\d{1,6}$/.test(p.id) && !seen[p.id]) { seen[p.id] = 1; out.push({ id: p.id, name: typeof p.name === "string" ? p.name.slice(0, 40) : "", rx: limpaGiro(p.rx), ry: limpaGiro(p.ry), rz: limpaGiro(p.rz) }); } // giro do grupo como um todo
     });
     return out;
   }

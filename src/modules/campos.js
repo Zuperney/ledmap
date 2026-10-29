@@ -13,7 +13,8 @@ var ESCALAS = {
   g: [[45, "45°"], [15, "15°"], [1, "1°"], [0.1, "0,1°"]]
 };
 // tipo de cada campo: m = metros, g = graus, w/h = tamanho (anda de gabinete em gabinete)
-var CAMPOS = { "m-x": "m", "m-y": "m", "mc-z": "m", "mc-rx": "g", "mc-ry": "g", "mc-rz": "g", "mc-w": "w", "mc-h": "h" };
+var CAMPOS = { "m-x": "m", "m-y": "m", "mc-z": "m", "mc-rx": "g", "mc-ry": "g", "mc-rz": "g", "mc-w": "w", "mc-h": "h",
+  "mc-gx": "m", "mc-gy": "m", "mc-gz": "m", "mc-grx": "g", "mc-gry": "g", "mc-grz": "g" }; // os do grupo também
 var LINHA = 30, PX_POR_PASSO = 8;
 
 function num(inp) { var v = Number(String(inp.value || 0).replace(",", ".")); return isFinite(v) ? v : 0; }

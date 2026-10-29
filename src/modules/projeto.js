@@ -21,7 +21,7 @@ export function buildProject() {
       exportadoEm: new Date().toISOString(),
       projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "", obs: a.obs || "" }; })(),
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
-      paineis: paineis.map(function (p) { return { id: p.id, nome: p.name }; }),
+      paineis: paineis.map(function (p) { return { id: p.id, nome: p.name, giroX: p.rx || 0, giroY: p.ry || 0, giroZ: p.rz || 0 }; }),
       vistaAtual: vistaM,
       extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, giroX: e.rx || 0, giroY: e.ry || 0, giroZ: e.rz || 0, pivo: e.pv || "c" }; }),
       gabinetes: gabsUsados(EXTRAS),
@@ -141,7 +141,7 @@ export function applyProject(o) {
       nCab += nr[pt.id].length;
     });
 
-    set_paineis(limpaPaineis((Array.isArray(o.paineis) ? o.paineis : []).map(function (p) { return p && { id: p.id, name: p.nome }; })));
+    set_paineis(limpaPaineis((Array.isArray(o.paineis) ? o.paineis : []).map(function (p) { return p && { id: p.id, name: p.nome, rx: p.giroX, ry: p.giroY, rz: p.giroZ }; })));
     tiles.forEach(function (t) {
       var n = nt[t.id];
       if (n) {

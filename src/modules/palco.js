@@ -7,7 +7,7 @@ import { tiles, selected, paineis, membrosPainel, pnome, fmt } from "./core.js";
 import { corCab } from "./gabinetes.js";
 import { setEditM, setAlcaLigada } from "./rig-edicao.js";
 import { select } from "./tabela.js";
-import { abrirGrupo } from "./rig-cartao.js";
+import { abrirGrupo, abrirMembro } from "./rig-cartao.js";
 import { irParaVista } from "./vistas.js";
 import { ouvirRig } from "./ponte3d.js";
 import { pmsg } from "./exportar.js";
@@ -37,6 +37,7 @@ function aplicar() {
     b.setAttribute("aria-pressed", String(b.getAttribute("data-tool") === ferramenta));
     b.disabled = em3; // no 3D, mover e girar são pelo cartão
   });
+  document.body.classList.toggle("p-navegar", !em3 && ferramenta === "navegar"); // cursor de mãozinha no desenho
   var ctx = em3 ? "3d" : ferramenta;
   $("m-ferr").textContent = em3 ? "Vista 3D" : NOMES[ferramenta];
   document.querySelectorAll("#m-ctx .p-grp").forEach(function (g) {
@@ -116,7 +117,7 @@ export function init() {
     var g = li.getAttribute("data-grupo");
     if (g) { var m = membrosPainel(g); if (m.length) select(m[0].id); abrirGrupo(g); aba("prop"); return; }
     var id = li.getAttribute("data-id");
-    if (id) select(id === selected ? null : id);
+    if (id) { if (li.classList.contains("mem")) abrirMembro(id); else select(id === selected ? null : id); } // painel de grupo: edita só ele
   });
   $("m-ajuda").addEventListener("click", function () {
     var on = !document.body.classList.contains("p-ajuda");

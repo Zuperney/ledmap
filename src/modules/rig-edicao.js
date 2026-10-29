@@ -1,11 +1,12 @@
-import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, novoPainel, podarPaineis, res, existe, EXTRAS, vistaM, el, text, gravarVivo } from "./core.js";
+import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, painelById, novoPainel, podarPaineis, res, existe, EXTRAS, vistaM, el, text, gravarVivo } from "./core.js";
 import { updInsp } from "./gaveta.js";
 import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis, desenharFurosM, reordenarM, faceM } from "./rig.js";
-import { VISTAS, caixa, caixaDe, desprojetar, projetar, pivo, limpaGiro, encara } from "./espaco.js";
+import { VISTAS, caixa, caixaDe, desprojetar, projetar, pivo, limpaGiro, encara, matrizEixo } from "./espaco.js";
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
-import { renderCartao, posCampos } from "./rig-cartao.js";
+import { renderCartao, posCampos, grupoAberto, membroAbertoId, aplicarVivoLista } from "./rig-cartao.js";
+import { caixaGrupo, girarGrupo } from "./grupos.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep, routes } from "./cabeamento.js";
 import { curTab } from "./abas.js";
@@ -62,20 +63,25 @@ export function desenharAlca() {
     alca.style.display = on ? "" : "none";
     if (!on) return;
     svgM.appendChild(alca); // por cima de tudo
-    var V = VISTAS[vistaM], P = projetar(vistaM, pivo(t)), px = P[0], py = FLOOR - P[1];
+    // grupo selecionado como um painel: a alça gira o grupo inteiro em volta do centro dele
+    var pn = grupoAberto(), cg = pn && caixaGrupo(pn);
+    var V = VISTAS[vistaM], P = projetar(vistaM, cg ? cg.centro : pivo(t)), px = P[0], py = FLOOR - P[1];
     var a = giro ? giro.a : Math.PI / 2, bx = px + RAIO * Math.cos(a), by = py - RAIO * Math.sin(a);
     alca.piv.setAttribute("cx", px); alca.piv.setAttribute("cy", py);
     alca.bot.setAttribute("cx", bx); alca.bot.setAttribute("cy", by);
     alca.linha.setAttribute("x1", px); alca.linha.setAttribute("y1", py); alca.linha.setAttribute("x2", bx); alca.linha.setAttribute("y2", by);
     alca.txt.setAttribute("x", bx + 0.35); alca.txt.setAttribute("y", by);
-    alca.txt.textContent = "Giro " + V.eixo.slice(1).toUpperCase() + " " + fmt(t[V.eixo] || 0) + "°";
+    alca.txt.textContent = cg ? "Grupo " + (giro && giro.grupo ? (giro.aplicado > 0 ? "+" : "") + fmt(giro.aplicado) + "°" : "↻") : "Giro " + V.eixo.slice(1).toUpperCase() + " " + fmt(t[V.eixo] || 0) + "°";
   }
 function iniciarGiro(e) {
     var t = selected && tById[selected];
     if (!t) return;
     e.stopPropagation(); e.preventDefault();
-    var P = projetar(vistaM, pivo(t)), px = P[0], py = FLOOR - P[1], a = anguloTela(e, px, py), V = VISTAS[vistaM];
-    giro = { t: t, eixo: V.eixo, sinal: V.sinal, v0: t[V.eixo] || 0, px: px, py: py, ult: a, acc: 0, a: a };
+    var pn = grupoAberto(), cg = pn && caixaGrupo(pn);
+    var P = projetar(vistaM, cg ? cg.centro : pivo(t)), px = P[0], py = FLOOR - P[1], a = anguloTela(e, px, py), V = VISTAS[vistaM];
+    giro = { t: t, eixo: V.eixo, sinal: V.sinal, v0: t[V.eixo] || 0, px: px, py: py, ult: a, acc: 0, a: a, grupo: cg ? pn : null, w: V.w, aplicado: 0 };
+    // grupo: guarda como estava no começo; cada passo gira a partir daqui (um arredondamento só, sem acumular erro)
+    if (cg) { var pg = painelById(pn); giro.ini = membrosPainel(pn).map(function (m) { return { t: m, mx: m.mx, my: m.my, z: m.z, rx: m.rx, ry: m.ry, rz: m.rz }; }); giro.gIni = { rx: pg.rx, ry: pg.ry, rz: pg.rz }; }
     alca.bot.setPointerCapture(e.pointerId);
   }
 function moverGiro(e) {
@@ -83,6 +89,16 @@ function moverGiro(e) {
     if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI;
     giro.ult = a; giro.acc += d; giro.a = a;
     var passo = Number(document.getElementById("m-gpasso").value) || 5;
+    if (giro.grupo) {
+      // o grupo gira em volta do eixo de quem olha (exato em qualquer vista): anti-horário na tela = positivo
+      var g = Math.round(giro.acc * 180 / Math.PI / passo) * passo;
+      if (g !== giro.aplicado) {
+        giro.ini.forEach(function (o) { o.t.mx = o.mx; o.t.my = o.my; o.t.z = o.z; o.t.rx = o.rx; o.t.ry = o.ry; o.t.rz = o.rz; });
+        Object.assign(painelById(giro.grupo), giro.gIni);
+        var lista = girarGrupo(giro.grupo, matrizEixo(giro.w, g)); giro.aplicado = g; lista.forEach(placeM); reordenarM(); statM(); desenharPaineis(); renderCartao(); if (cabOn) renderCabM(); }
+      desenharAlca();
+      return;
+    }
     var alvo = limpaGiro(Math.round((giro.v0 + giro.sinal * giro.acc * 180 / Math.PI) / passo) * passo);
     if (alvo !== (giro.t[giro.eixo] || 0)) {
       giro.t[giro.eixo] = alvo;
@@ -93,7 +109,7 @@ function moverGiro(e) {
   }
 function fimGiro() {
     if (!giro) return;
-    gravarVivo([giro.t]);
+    if (!giro.grupo) gravarVivo([giro.t]); // o do grupo já gravou cada passo
     giro = null; ignorarAte = performance.now() + 350;
     save(); fitM(); desenharAlca();
   }
@@ -137,7 +153,12 @@ export function toggleMselM(id) {
 export function limparMselM() { if (mselM.length) { mselM = []; marcarMsel(); } }
 
 // painéis que o botão Excluir apaga: a multisseleção ou o painel selecionado
-export function selecaoM() { return mselM.length ? mselM.slice() : (selected && tById[selected] ? [selected] : []); }
+export function selecaoM() {
+    if (mselM.length) return mselM.slice();
+    var pn = grupoAberto(); // o grupo selecionado como um painel: excluir leva o grupo inteiro
+    if (pn) return membrosPainel(pn).map(function (t) { return t.id; });
+    return selected && tById[selected] ? [selected] : [];
+  }
 
 function syncGrupo() { renderCartao(); }
 
@@ -239,7 +260,7 @@ export function onDownM(e, t) {
     if (!naSel) { limparMselM(); select(t.id); }
     var conj = {};
     (naSel ? mselM.map(function (id) { return tById[id]; }).filter(Boolean) : [t]).forEach(function (o) {
-      (o.pn ? membrosPainel(o.pn) : [o]).forEach(function (m) { conj[m.id] = m; });
+      (o.pn && membroAbertoId() !== o.id ? membrosPainel(o.pn) : [o]).forEach(function (m) { conj[m.id] = m; }); // aberto sozinho: só ele
     });
     conj[t.id] = t;
     var lista = Object.keys(conj).map(function (k) { return conj[k]; });

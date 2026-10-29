@@ -51,7 +51,9 @@ export function init() {
       if (!tiles.length) return null;
       var c = caixaDe(tiles, vistaM), y0 = FLOOR - c.v1, y1 = FLOOR - c.v0;
       return { x: c.u0, y: y0, w: c.u1 - c.u0, h: Math.max(y1, FLOOR) - y0 }; // inclui o chão (a frente, no Topo)
-    });
+    },
+    // Navegar: com o "Mover" desligado, arrastar com o botão esquerdo move a vista
+    { arrastarEsq: function () { return document.getElementById("m-edit").getAttribute("aria-pressed") !== "true"; } });
   cabOn = false;
   ovlM = el("g", {}, svgM);
   btnCab = document.getElementById("m-cab");

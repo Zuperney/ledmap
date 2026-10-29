@@ -149,6 +149,48 @@ export function deslocQuadro(t) {
   return [q[0] - P[0], q[1] - P[1], q[2] - P[2]];
 }
 
+// ---- giro de um conjunto (grupo girado como um painel só) ----
+// matriz → ângulos (graus) na mesma ordem YXZ: M = Ry·Rx·Rz → M[1][2] = −sen x, M[0][2]/M[2][2] = tg y, M[1][0]/M[1][1] = tg z
+export function deMatriz(M) {
+  var sx = Math.max(-1, Math.min(1, -M[1][2])), x = Math.asin(sx), y, z;
+  if (Math.abs(sx) < 0.999999) { y = Math.atan2(M[0][2], M[2][2]); z = Math.atan2(M[1][0], M[1][1]); }
+  else { y = Math.atan2(-M[2][0], M[0][0]); z = 0; } // inclinado a ±90°: Y e Z giram no mesmo eixo, fica tudo no Y
+  return { rx: limpaGiro(x / RAD), ry: limpaGiro(y / RAD), rz: limpaGiro(z / RAD) };
+}
+export function matrizDe(rx, ry, rz) { return matriz({ rx: rx, ry: ry, rz: rz }); }
+export function transposta(M) { return [[M[0][0], M[1][0], M[2][0]], [M[0][1], M[1][1], M[2][1]], [M[0][2], M[1][2], M[2][2]]]; }
+export function multiplicar(A, B) { return mul(A, B).map(function (l) { return l.map(limpo); }); }
+// giro em volta de um eixo do palco (vetor unitário), em graus
+export function matrizEixo(eixo, graus) {
+  var a = graus * RAD, c = Math.cos(a), s = Math.sin(a), t = 1 - c, x = eixo[0], y = eixo[1], z = eixo[2];
+  return [[t * x * x + c, t * x * y - s * z, t * x * z + s * y], [t * x * y + s * z, t * y * y + c, t * y * z - s * x], [t * x * z - s * y, t * y * z + s * x, t * z * z + c]].map(function (l) { return l.map(limpo); });
+}
+
+// gira cada painel da lista pela matriz Rd em volta do ponto C do palco: o giro de cada um soma o Rd (Rd·R) e o pivô
+// dele vai para C + Rd·(P − C). Devolve, por painel, os campos novos { mx, my, z, rx, ry, rz } (não altera a lista).
+export function girarConjunto(lista, Rd, C) {
+  return lista.map(function (t) {
+    var g = deMatriz(mul(Rd, matriz(t))), P = pivo(t), d = aplicar(Rd, [P[0] - C[0], P[1] - C[1], P[2] - C[2]]);
+    var P2 = [C[0] + d[0], C[1] + d[1], C[2] + d[2]], f = PIVOS[limpaPivo(t.pv)];
+    return { mx: P2[0] - t.w * f[0], my: P2[1] - t.h * f[1], z: -P2[2], rx: g.rx, ry: g.ry, rz: g.rz };
+  });
+}
+
+// caixa de um conjunto no quadro dele (girado por Rg): os cantos de todos os painéis levados para o quadro (Rgᵀ),
+// o retângulo que envolve e o centro de volta no palco. É o "painel" que o grupo forma: medidas e pivô estáveis
+// (girar o grupo não muda a caixa no quadro dele).
+export function caixaConjunto(lista, Rg) {
+  var Rt = transposta(Rg), lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  lista.forEach(function (t) {
+    var M = matriz(t), z = -(t.z || 0);
+    [[t.mx, t.my], [t.mx + t.w, t.my], [t.mx, t.my + t.h], [t.mx + t.w, t.my + t.h]].forEach(function (c) {
+      var q = aplicar(Rt, noMundo(t, [c[0], c[1], z], M));
+      for (var k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], q[k]); hi[k] = Math.max(hi[k], q[k]); }
+    });
+  });
+  return { centro: aplicar(Rg, [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2]), w: hi[0] - lo[0], h: hi[1] - lo[1], d: hi[2] - lo[2] };
+}
+
 // trocar o pivô sem o painel sair do lugar: devolve o mx, my e recuo novos
 export function trocarPivo(t, pv) {
   var M = matriz(t), P = pivo(t), P2 = pivo({ mx: t.mx, my: t.my, w: t.w, h: t.h, z: t.z, pv: pv });

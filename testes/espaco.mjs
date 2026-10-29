@@ -1,5 +1,5 @@
 // Bancada do espaço do palco (giro, vistas, quadros e migração das vistas antigas): node testes/espaco.mjs
-import { matriz, aplicar, noMundo, afim, casco, caixa, deslocQuadro, trocarPivo, deVistaAntiga, limpaGiro, encara, profundidadeNaVista, extensao } from "../src/modules/espaco.js";
+import { matriz, aplicar, noMundo, afim, casco, caixa, deslocQuadro, trocarPivo, deVistaAntiga, limpaGiro, encara, profundidadeNaVista, extensao, deMatriz, matrizDe, matrizEixo, girarConjunto, caixaConjunto } from "../src/modules/espaco.js";
 
 var falhas = 0;
 function perto(a, b, msg) {
@@ -66,6 +66,24 @@ var ext1 = extensao(painel({ mx: -11.02, my: 0, w: 10, h: 3, ry: 45 }));
 perto([ext1.x0, ext1.x1, ext1.r0, ext1.r1], [-9.556, -2.484, -3.536, 3.536], "lateral a 45° em volta do centro");
 var ext0 = extensao(painel({ mx: 2, my: 1, w: 4, h: 2, z: 0.5 }));
 perto([ext0.x0, ext0.x1, ext0.y0, ext0.y1, ext0.r0, ext0.r1], [2, 6, 1, 3, 0.5, 0.5], "sem giro: o retângulo do Rig");
+
+// matriz → ângulos e volta
+[[10, 20, 30], [-40, 75, 5], [0, -120, 0], [90, 0, 0], [33.3, -10, 170]].forEach(function (g) {
+  var d = deMatriz(matrizDe(g[0], g[1], g[2]));
+  perto(matrizDe(d.rx, d.ry, d.rz).flat(), matrizDe(g[0], g[1], g[2]).flat(), "ângulos " + g.join("/") + " voltam à mesma matriz");
+});
+
+// grupo girado como um painel: dois painéis lado a lado girados juntos em Y 90° em volta do centro do conjunto
+var A = painel({ mx: -4, my: 0, w: 4, h: 2, pv: "c" }), B = painel({ mx: 0, my: 0, w: 4, h: 2, pv: "c" });
+var cx0 = caixaConjunto([A, B], matrizDe(0, 0, 0));
+perto([cx0.w, cx0.h, cx0.d], [8, 2, 0], "caixa do conjunto sem giro: 8 × 2 m");
+var gir = girarConjunto([A, B], matrizEixo([0, 1, 0], 90), cx0.centro);
+var A2 = Object.assign({}, A, gir[0]), B2 = Object.assign({}, B, gir[1]);
+perto([A2.ry, B2.ry], [90, 90], "os dois ganham o giro do grupo");
+perto(noMundo(A2, [A2.mx + 4, A2.my, -A2.z]), noMundo(B2, [B2.mx, B2.my, -B2.z]), "a junta entre eles continua encostada");
+perto(noMundo(A2, [A2.mx, A2.my, -A2.z]), [0, 0, 4], "a ponta esquerda foi para a frente (Z +4)");
+var cx1 = caixaConjunto([A2, B2], matrizDe(0, 90, 0));
+perto([cx1.w, cx1.h, cx1.d].concat(cx1.centro), [8, 2, 0, 0, 1, 0], "no quadro do grupo a caixa não muda, e o centro fica no lugar");
 
 // ângulos
 perto(limpaGiro(190), -170, "190° = −170°");

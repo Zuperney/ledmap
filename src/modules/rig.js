@@ -4,6 +4,7 @@ import { editM, onDownM, toggleMselM, limparMselM, modoSelM, ignorarCliqueM } fr
 import { select } from "./tabela.js";
 import { VISTAS, afim, casco, caixa, caixaDe, encara, profundidadeNaVista, temGiro } from "./espaco.js";
 import { avisar3D } from "./ponte3d.js";
+import { abrirMembro } from "./rig-cartao.js";
 
 let gridM, floorLine, eixoM, regua, boundsM, layerM, guideMV, guideMH, pnLayer;
 
@@ -201,6 +202,7 @@ export function init() {
       if (!editM) { limparMselM(); select(selected === s.id ? null : s.id); }
     });
     g.addEventListener("pointerdown", function (e) { onDownM(e, s); });
+    g.addEventListener("dblclick", function () { if (s.pn) abrirMembro(s.id); }); // painel de um grupo: edita só ele
   });
   tiles.forEach(placeM);
   reordenarM();

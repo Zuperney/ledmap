@@ -1,8 +1,10 @@
 // Cartão do Rig: tocar num painel (no desenho ou na lista) mostra o que dá para fazer com ele.
-// Três formas: um painel · vários selecionados · um grupo (aberto pela etiqueta do grupo).
+// Três formas: um painel · vários selecionados · um grupo. Tocar num painel que está num grupo seleciona o grupo,
+// que se comporta como um painel só (centro, giro, medidas); duplo clique (ou tocar nele na lista) edita só aquele painel.
 // Editar aqui é direto: nome, X/Y, recuo e Screen; tamanho e gabinete abrem o modal (Editar).
 import { tiles, selected, res, fmt, nf, EXTRAS, save, groups, gname, painelById, pnome, membrosPainel, mnum, vistaM, gravarVivo } from "./core.js";
-import { PIVOS, limpaGiro, limpaPivo, trocarPivo, caixaDe, temGiro, pivo, extensao } from "./espaco.js";
+import { PIVOS, limpaGiro, limpaPivo, trocarPivo, caixaDe, temGiro, pivo, extensao, matrizDe, multiplicar, transposta } from "./espaco.js";
+import { rotGrupo, caixaGrupo, moverGrupo, girarGrupo, extensaoGrupo } from "./grupos.js";
 import { placeM, reordenarM, statM, desenharPaineis } from "./rig.js";
 import { cabOn, renderCabM } from "./rig-cabos.js";
 import { cabNome } from "./gabinetes.js";
@@ -16,10 +18,15 @@ import { twoStep } from "./cabeamento.js";
 import { mselLista, modoSelM, iniciarSelecao, sairModoSel, desagrupar, refreshM, desenharAlca } from "./rig-edicao.js";
 import { FLOOR } from "./core.js";
 
-var grupoFoco = null; // id do grupo aberto no cartão (pela etiqueta)
+var grupoFoco = null; // id do grupo aberto no cartão
+var membroAberto = null; // painel de um grupo aberto para editar sozinho (duplo clique)
 function $(id) { return document.getElementById(id); }
 
-export function abrirGrupo(pn) { grupoFoco = painelById(pn) ? pn : null; renderCartao(); }
+export function abrirGrupo(pn) { grupoFoco = painelById(pn) ? pn : null; membroAberto = null; renderCartao(); }
+export function grupoAberto() { return grupoFoco; }
+export function membroAbertoId() { return membroAberto; }
+// entra no grupo: seleciona e edita só este painel
+export function abrirMembro(id) { membroAberto = id; grupoFoco = null; select(id); renderCartao(); }
 
 // retângulo (unidades do desenho do Rig, na vista atual) de uma lista de painéis, para o "Ir até"
 function caixaRig(lista) {
@@ -41,6 +48,12 @@ function aplicarVivo(t) {
   placeM(t); reordenarM(); statM(); desenharPaineis(); desenharAlca();
   if (cabOn) renderCabM();
   gravarVivo([t]); save(); renderCartao();
+}
+// o mesmo para vários painéis (o grupo)
+export function aplicarVivoLista(lista) {
+  lista.forEach(placeM); reordenarM(); statM(); desenharPaineis(); desenharAlca();
+  if (cabOn) renderCabM();
+  gravarVivo(lista); save(); renderCartao();
 }
 
 function chip(txt, cls, onClick) {
@@ -64,6 +77,9 @@ export function renderCartao() {
   if (!card) return;
   var varios = mselLista().length >= 2 || modoSelM();
   var t = selected && tById[selected];
+  if (membroAberto && membroAberto !== selected) membroAberto = null;
+  // painel de um grupo: o grupo é o que fica selecionado (a não ser que o painel tenha sido aberto sozinho)
+  if (!varios && t && t.pn && painelById(t.pn) && membroAberto !== t.id) grupoFoco = t.pn;
   if (grupoFoco && !painelById(grupoFoco)) grupoFoco = null;
   if (grupoFoco && t && t.pn !== grupoFoco) grupoFoco = null;
   var modo = varios ? "varios" : grupoFoco ? "grupo" : t ? "um" : "";
@@ -116,15 +132,19 @@ function cartaoVarios() {
   $("mc-vdel").disabled = !n;
 }
 
+// cartão do grupo: o grupo como um painel só (medidas e centro no quadro dele, giro do grupo, onde fica no palco)
 function cartaoGrupo(p) {
-  var m = membrosPainel(p.id), x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, gabs = {}, ng = 0;
-  m.forEach(function (t) { x0 = Math.min(x0, t.mx); x1 = Math.max(x1, t.mx + t.w); y0 = Math.min(y0, t.my); y1 = Math.max(y1, t.my + t.h); gabs[t.cab] = 1; ng += res(t).n; });
+  var m = membrosPainel(p.id), gabs = {}, ng = 0, cx = caixaGrupo(p.id), e = extensaoGrupo(p.id);
+  m.forEach(function (t) { gabs[t.cab] = 1; ng += res(t).n; });
   var nome = $("mc-gnome");
   nome.placeholder = pnome({ id: p.id, name: "" });
   if (document.activeElement !== nome) nome.value = p.name || "";
-  $("mc-ginfo").textContent = m.length + " painéis · " + fmt(x1 - x0) + " × " + fmt(y1 - y0) + " m · " + ng + " gab. · " + Object.keys(gabs).length + (Object.keys(gabs).length === 1 ? " gabinete" : " gabinetes");
+  $("mc-ginfo").textContent = m.length + " painéis · " + fmt(cx.w) + " × " + fmt(cx.h) + (cx.d > 0.005 ? " × " + fmt(cx.d) : "") + " m · " + ng + " gab. · " + Object.keys(gabs).length + (Object.keys(gabs).length === 1 ? " gabinete" : " gabinetes");
+  $("mc-gpalco").textContent = "No palco: X " + faixa(e.x0, e.x1) + " · altura " + faixa(e.y0, e.y1) + " · recuo " + faixa(e.r0, e.r1) + " m";
+  var v = { "mc-gx": cx.centro[0], "mc-gy": cx.centro[1], "mc-gz": -cx.centro[2], "mc-grx": p.rx || 0, "mc-gry": p.ry || 0, "mc-grz": p.rz || 0 };
+  Object.keys(v).forEach(function (id) { if (document.activeElement !== $(id)) $(id).value = Math.round(v[id] * 1000) / 1000 || (id.indexOf("mc-gr") === 0 || id === "mc-gz" ? "" : 0); });
   var box = $("mc-gmembros"); box.textContent = "";
-  m.forEach(function (t) { box.appendChild(chip(t.id + " · " + t.name, "", function () { grupoFoco = null; select(t.id); })); });
+  m.forEach(function (t) { box.appendChild(chip(t.id + " · " + t.name, "", function () { abrirMembro(t.id); })); });
 }
 
 export function init() {
@@ -209,6 +229,26 @@ export function init() {
     if (!p) return;
     p.name = $("mc-gnome").value.trim().slice(0, 40);
     save(); refreshM(); atualizarTags(); renderCartao();
+  });
+  // grupo como um painel: mover o centro desloca todos; o giro gira todos em volta do centro (sem recarregar)
+  ["mc-gx", "mc-gy", "mc-gz"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      var p = painelById(grupoFoco), cx = p && caixaGrupo(p.id);
+      if (!cx) return;
+      var x = mnum($("mc-gx").value), y = mnum($("mc-gy").value), r = mnum($("mc-gz").value || 0);
+      if (x === null || y === null || r === null) { renderCartao(); return; }
+      aplicarVivoLista(moverGrupo(p.id, [x - cx.centro[0], y - cx.centro[1], -r - cx.centro[2]]));
+    });
+  });
+  ["mc-grx", "mc-gry", "mc-grz"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      var p = painelById(grupoFoco);
+      if (!p) return;
+      var n = { rx: limpaGiro($("mc-grx").value || 0), ry: limpaGiro($("mc-gry").value || 0), rz: limpaGiro($("mc-grz").value || 0) };
+      if (n.rx === (p.rx || 0) && n.ry === (p.ry || 0) && n.rz === (p.rz || 0)) { renderCartao(); return; }
+      // a diferença entre o giro novo e o atual: Rd = R(novo) · R(atual)ᵀ
+      aplicarVivoLista(girarGrupo(p.id, multiplicar(matrizDe(n.rx, n.ry, n.rz), transposta(rotGrupo(p)))));
+    });
   });
   $("mc-gdes").addEventListener("click", function () { var pn = grupoFoco; grupoFoco = null; desagrupar(pn); });
   $("mc-gdup").addEventListener("click", function () { var m = membrosPainel(grupoFoco); if (m.length) duplicarPainel(m[0].id); });

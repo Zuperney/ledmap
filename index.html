@@ -310,6 +310,17 @@
       <div id="mc-grupo" hidden>
         <div class="mc-head"><span class="mc-gtag">Grupo</span><input type="text" id="mc-gnome" maxlength="40" autocomplete="off" aria-label="Nome do grupo"><button class="btn mc-x" id="mc-gfechar" aria-label="Fechar">✕</button></div>
         <p class="mc-info" id="mc-ginfo"></p>
+        <p class="mc-info mc-palco" id="mc-gpalco" title="Onde o grupo fica no palco: X, altura do chão e recuo (positivo = para trás)"></p>
+        <div class="mc-campos">
+          <label title="Centro do grupo, da esquerda para a direita">Centro X (m) <input type="number" id="mc-gx" step="0.05" inputmode="decimal"></label>
+          <label title="Altura do centro do grupo">Centro altura (m) <input type="number" id="mc-gy" step="0.05" inputmode="decimal"></label>
+          <label title="Recuo do centro do grupo (positivo = para trás)">Centro recuo (m) <input type="number" id="mc-gz" step="0.05" inputmode="decimal" placeholder="0"></label>
+          <span></span>
+          <label title="Inclina o grupo inteiro">Giro X (°) <input type="number" id="mc-grx" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Abre o grupo inteiro em V ou L">Giro Y (°) <input type="number" id="mc-gry" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Gira o grupo inteiro no próprio plano">Giro Z (°) <input type="number" id="mc-grz" step="1" inputmode="decimal" placeholder="0"></label>
+        </div>
+        <p class="mc-info">Painéis do grupo (toque para editar só um; no desenho, duplo clique):</p>
         <div class="mc-tags" id="mc-gmembros"></div>
         <div class="mc-acts">
           <button class="btn" id="mc-gdup">Duplicar grupo</button>

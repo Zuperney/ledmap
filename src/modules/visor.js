@@ -11,7 +11,8 @@ import { drag, set_drag } from "./canvas-edicao.js";
 let viewC;
 
 // conteudo(): retângulo (unidades do svg) que o Enquadrar deve mostrar inteiro; sem ele, volta à largura da vista
-export function makeViewer(stage, svg, ids, onPinch, minW, conteudo) {
+// opcoes.arrastarEsq(): se arrastar com o botão esquerdo move a vista (no Palco, a ferramenta Navegar)
+export function makeViewer(stage, svg, ids, onPinch, minW, conteudo, opcoes) {
     var zoom = 1, locked = false;
     var $ = function (id) { return document.getElementById(id); };
     var label = $(ids.label), btnLock = $(ids.lock);
@@ -100,6 +101,44 @@ export function makeViewer(stage, svg, ids, onPinch, minW, conteudo) {
     function pend(e) { delete ptrs[e.pointerId]; if (keys().length < 2) pinch = null; }
     stage.addEventListener("pointerup", pend);
     stage.addEventListener("pointercancel", pend);
+
+    // ---- arrastar a vista com o mouse (como nos programas de desenho) ----
+    // Botão do meio ou Espaço segurado: sempre. Botão esquerdo: só quando arrastarEsq() diz (a ferramenta Navegar do Palco).
+    // Um toque sem arrastar continua sendo clique (seleciona); depois de arrastar, o clique que vem em seguida é ignorado.
+    // No dedo fica a rolagem nativa. A vista anda pela rolagem da área (com o zoom em que o desenho cabe, não sobra para onde ir).
+    var pan = null, espaco = false, semCliqueAte = 0;
+    function digitando(e) { var t = e.target; return t && (/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName || "") || t.isContentEditable); }
+    document.addEventListener("keydown", function (e) {
+      if (e.code !== "Space" || digitando(e) || !stage.offsetParent) return;
+      e.preventDefault(); // sem rolar a página nem apertar o botão em foco
+      if (!espaco) { espaco = true; stage.classList.add("arrastavel"); }
+    });
+    document.addEventListener("keyup", function (e) { if (e.code === "Space") { espaco = false; stage.classList.remove("arrastavel"); } });
+    stage.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "touch") return;
+      var meio = e.button === 1, esq = e.button === 0 && (espaco || (!locked && opcoes && opcoes.arrastarEsq && opcoes.arrastarEsq()));
+      if (!meio && !esq) return;
+      pan = { x: e.clientX, y: e.clientY, sl: stage.scrollLeft, st: stage.scrollTop, moveu: false, id: e.pointerId };
+      // meio e Espaço não chegam às ferramentas (nada de mover painel ou laçar por baixo)
+      if (meio || espaco) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+    stage.addEventListener("pointermove", function (e) {
+      if (!pan || e.pointerId !== pan.id) return;
+      var dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+      if (!pan.moveu) { if (Math.hypot(dx, dy) < 4) return; pan.moveu = true; stage.classList.add("arrastando"); try { stage.setPointerCapture(pan.id); } catch (er) {} }
+      stage.scrollLeft = pan.sl - dx; stage.scrollTop = pan.st - dy;
+      e.stopPropagation();
+    }, true);
+    function fimPan(e) {
+      if (!pan || (e && e.pointerId !== pan.id)) return;
+      if (pan.moveu) semCliqueAte = performance.now() + 300;
+      pan = null; stage.classList.remove("arrastando");
+    }
+    stage.addEventListener("pointerup", fimPan, true);
+    stage.addEventListener("pointercancel", fimPan, true);
+    stage.addEventListener("click", function (e) { if (performance.now() < semCliqueAte) { e.stopPropagation(); e.preventDefault(); } }, true);
+    stage.addEventListener("auxclick", function (e) { if (e.button === 1) e.preventDefault(); }); // sem a rolagem automática do meio
+
     return { apply: apply, setLock: setLock, enquadrar: enquadrar };
   }
 

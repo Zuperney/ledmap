@@ -312,3 +312,7 @@ body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px;
 .v3d-bar-fora select, .v3d-bar-fora .btn { font-size: 12px; }
 #m-ctx3d { display: inline-flex; }
 .v3d-rot { align-self: center; margin-left: 6px; color: var(--muted); font-size: 11px; }
+/* arrastar a vista: Espaço segurado mostra a mãozinha; arrastando, a mão fechada */
+.stage.arrastavel, .stage.arrastavel * { cursor: grab !important; }
+.stage.arrastando, .stage.arrastando * { cursor: grabbing !important; }
+body.p-navegar #view-m .stage, body.p-navegar #view-m .stage .scr { cursor: grab; }
