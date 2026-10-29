@@ -40,7 +40,7 @@ export function updInsp() {
     var t = selected && tById[selected], info = document.getElementById("insp-info");
     if (!t || !info) return;
     var q = res(t);
-    info.textContent = fmt(t.w) + "×" + fmt(t.h) + " m · " + q.w + "×" + q.h + " px · " + q.cols + "×" + q.rows + " gab · Rig " + fmt(t.mx) + "," + fmt(t.my) + " · Canvas " + t.cx + "," + t.cy;
+    info.textContent = fmt(t.w) + "×" + fmt(t.h) + " m · " + q.w + "×" + q.h + " px · " + q.cols + "×" + q.rows + " gab · Palco " + fmt(t.mx) + "," + fmt(t.my) + " · Canvas " + t.cx + "," + t.cy;
   }
 
 export function init() {

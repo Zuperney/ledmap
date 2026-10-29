@@ -351,7 +351,7 @@ export function centralizarRig() {
     var f = faixa(aqui, true), d = -Math.round((f.x0 + f.x1) / 2 * 2) / 2;
     if (!d) { pmsg("O desenho já está centralizado no eixo 0."); return; }
     aqui.forEach(function (t) { t.mx = r2(t.mx + d); });
-    try { localStorage.setItem("ledmap-msg", "Rig centralizado no eixo 0."); } catch (e) {}
+    try { localStorage.setItem("ledmap-msg", "Palco centralizado no eixo 0."); } catch (e) {}
     if (!commitAndReload(curTab)) { aqui.forEach(function (t) { t.mx = r2(t.mx - d); }); pmsg("Não consegui salvar neste navegador."); }
   }
 
