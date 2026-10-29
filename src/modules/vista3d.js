@@ -44,9 +44,10 @@ function texturaPainel(img, t) {
 
 // embutida no Rig: ocupa o lugar do desenho 2D ou a prévia 3D da coluna (podem estar as duas abertas);
 // acompanha as edições e seleciona pelo toque. Uma por lugar (alvo).
-export function abrir3DNoRig(alvo) {
+// opcoes.barraEm: onde pôr as opções do 3D (Cor por painel, Frente, 3/4, Topo, Foto); no Palco, a barra de opções de cima
+export function abrir3DNoRig(alvo, opcoes) {
   if (abertos.some(function (a) { return a.alvo === alvo; })) return true;
-  var api = criar(alvo, { aoFechar: function () { abertos = abertos.filter(function (a) { return a.api !== api; }); } });
+  var api = criar(alvo, { barraEm: opcoes && opcoes.barraEm, aoFechar: function () { abertos = abertos.filter(function (a) { return a.api !== api; }); } });
   if (!api) return false;
   abertos.push({ alvo: alvo, api: api });
   return true;
@@ -69,10 +70,12 @@ function criar(alvo, op) {
   var bFrente = el("button", "btn", "Frente"), b34 = el("button", "btn", "3/4"), bTopo = el("button", "btn", "Topo"), bFoto = el("button", "btn", "Foto (PNG)");
   var botoes = [bFrente, b34, bTopo, bFoto], bFechar = null;
   if (cheia) { bFechar = el("button", "btn", "Fechar"); botoes.push(bFechar); }
-  botoes.forEach(function (b) { b.type = "button"; barra.appendChild(b); });
+  botoes.forEach(function (b) { b.type = "button"; if (b === bFrente && op.barraEm) barra.appendChild(el("span", "v3d-rot", "Câmera")); barra.appendChild(b); });
   barra.appendChild(el("span", "v3d-dica", cheia ? "Arraste para girar · pinça ou roda para aproximar · dois dedos ou botão direito para mover · toque no cubo para escolher a vista"
     : "Toque num painel para editar no cartão · arraste para girar · pinça ou roda aproxima · botão direito move · cubo escolhe a vista"));
-  box.appendChild(barra); box.appendChild(palco);
+  // as opções vão para fora (a barra de cima do Palco) quando pedido; senão ficam em cima do próprio 3D
+  if (op.barraEm) { barra.classList.add("v3d-bar-fora"); op.barraEm.appendChild(barra); } else box.appendChild(barra);
+  box.appendChild(palco);
   alvo.appendChild(box);
   if (cheia) document.body.classList.add("com-3d");
 
@@ -80,7 +83,7 @@ function criar(alvo, op) {
   try {
     renderer = new THREE.WebGLRenderer({ antialias: (window.devicePixelRatio || 1) < 2, preserveDrawingBuffer: true });
   } catch (e) {
-    box.remove(); if (cheia) document.body.classList.remove("com-3d");
+    box.remove(); barra.remove(); if (cheia) document.body.classList.remove("com-3d");
     pmsg("Este aparelho não conseguiu abrir o 3D (WebGL indisponível).");
     return null;
   }
@@ -306,7 +309,7 @@ function criar(alvo, op) {
     if (anim) cancelAnimationFrame(anim);
     renderer.dispose();
     if (cheia) { document.removeEventListener("keydown", tecla, true); document.body.classList.remove("com-3d"); }
-    box.remove();
+    box.remove(); barra.remove();
     op.aoFechar();
   }
   function tecla(e) { if (e.key === "Escape") { e.stopImmediatePropagation(); fechar(); } }

@@ -342,3 +342,9 @@ body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px;
 .mini-t { display: flex; align-items: center; gap: 6px; }
 .mini-t svg { width: 18px; height: 18px; flex: none; }
 .mini.ativa .mini-t svg { color: var(--imag); }
+/* opções do 3D na barra de cima do Palco (em vez de uma barra própria por cima do desenho) */
+.v3d-bar.v3d-bar-fora { display: inline-flex; flex-wrap: nowrap; gap: 6px; padding: 0; background: none; border: 0; }
+.v3d-bar-fora .v3d-tit, .v3d-bar-fora .v3d-dica { display: none; }
+.v3d-bar-fora select, .v3d-bar-fora .btn { font-size: 12px; }
+#m-ctx3d { display: inline-flex; }
+.v3d-rot { align-self: center; margin-left: 6px; color: var(--muted); font-size: 11px; }

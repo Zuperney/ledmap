@@ -53,7 +53,7 @@ function posicionar3D() {
   import("./vista3d.js").then(function (m) {
     import3D = true;
     if (n !== seq3D) return; // mudou de novo enquanto baixava
-    if (querPalco) { if (!m.abrir3DNoRig(palco)) { setEm3D(false); irParaVista("frente"); return; } } else m.fechar3DNoRig(palco);
+    if (querPalco) { if (!m.abrir3DNoRig(palco, { barraEm: $("m-ctx3d") })) { setEm3D(false); irParaVista("frente"); return; } } else m.fechar3DNoRig(palco);
     if (querCelula) m.abrir3DNoRig(celula3D); else if (celula3D) m.fechar3DNoRig(celula3D);
     registrar3D(querPalco || querCelula ? { atualizar: m.atualizar3D, marcarSel: m.marcarSel3D } : null);
   }).catch(function () { if (querPalco || querCelula) pmsg("Não consegui carregar a Vista 3D. Confira a conexão e tente de novo."); });
