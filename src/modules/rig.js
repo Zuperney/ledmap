@@ -205,7 +205,7 @@ export function init() {
   tiles.forEach(placeM);
   reordenarM();
   pnLayer = el("g", { "class": "pnlayer" }, svgM);
-  // a janela mudou de largura (ou a coluna das miniaturas/cartão abriu): refaz a área para continuar preenchendo
+  // a janela mudou de largura (ou o estúdio mudou de tamanho): refaz a área para continuar preenchendo
   var larg = 0, alt = 0, espera = null;
   new ResizeObserver(function () {
     var w = svgM.parentNode.clientWidth, h = svgM.parentNode.clientHeight;

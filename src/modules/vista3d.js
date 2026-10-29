@@ -1,7 +1,7 @@
 // Vista 3D (só para olhar): desenhada a partir dos dados do Rig — posição, tamanho, recuo, giro e recortes.
 // Não tem dados próprios: editar continua no Rig (cartão, alça, arrastar). Carregada sob demanda (three.js à parte).
 // A frente de cada painel recebe a imagem da Montagem (entrada) com o test card escolhido, como o UV map do disguise.
-// Aparece embutida no Rig (a vista "3D" do seletor ou a miniatura do mosaico), acompanha as edições ao vivo
+// Aparece embutida no Palco (a vista "3D"), no lugar do desenho; acompanha as edições ao vivo
 // e seleciona o painel tocado (o cartão abre ao lado).
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";

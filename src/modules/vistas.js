@@ -1,18 +1,14 @@
-// Vistas do Rig: Frente, Topo, Esquerda e Direita, ortogonais (ver espaco.js), e 3D. Todos os painéis aparecem em todas;
+// Vistas do Palco: Frente, Topo, Esquerda e Direita, ortogonais (ver espaco.js), e 3D. Todos os painéis aparecem em todas;
 // cada vista 2D mostra e edita um plano do palco: Frente (X e altura, giro Z), Topo (X e recuo, giro Y),
 // Esquerda/Direita (fundo e altura, giro X). A 3D mostra a montagem no espaço, no lugar do desenho, e acompanha
 // as edições do cartão; tocar num painel abre o cartão dele. As 5 aparecem como ícones de casinha no canto do desenho (teclas 1 a 5).
-// Prévias (botão no fim das ferramentas): a escolhida fica grande e as 5 prévias fixas numa coluna à esquerda, ao vivo; tocar num
-// painel numa miniatura o seleciona, tocar no título da miniatura a traz para o lugar da grande.
-import { save, set_vistaM, vistaM, selected } from "./core.js";
+import { save, set_vistaM, vistaM } from "./core.js";
 import { fitM } from "./rig.js";
 import { renderCabM, viewM } from "./rig-cabos.js";
 import { syncMPanel, setEditM, editM } from "./rig-edicao.js";
 import { VISTAS, ORDEM_VISTAS } from "./espaco.js";
-import { registrar3D, ouvirRig } from "./ponte3d.js";
+import { registrar3D } from "./ponte3d.js";
 import { pmsg } from "./exportar.js";
-import { select } from "./tabela.js";
-import { desenharMini, marcarMini } from "./mini.js";
 import { ICONES_VISTA } from "./icones-vista.js";
 
 function $(id) { return document.getElementById(id); }
@@ -26,8 +22,7 @@ var DICA = {
 };
 var TODAS = ORDEM_VISTAS.concat(["3d"]);
 var CHAVE_3D = "ledmap-rig-3d"; // a vista 3D continua aberta depois das recargas (adicionar, excluir painel…)
-var CHAVE_MOSAICO = "ledmap-mosaico"; // preferência do aparelho
-var em3D = false, mosaico = false;
+var em3D = false;
 
 export function nomeVista(id) { return id === "3d" ? "3D" : VISTAS[id] ? VISTAS[id].nome : "Frente"; }
 function atual() { return em3D ? "3d" : vistaM; }
@@ -36,29 +31,25 @@ export function atualizarNav() {
   // ícones de casinha (como no SketchUp): o da vista na tela fica marcado
   document.querySelectorAll("#m-vistas button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-v") === atual())); });
   $("m-edit").disabled = em3D; // mover e girar com a alça são do 2D; no 3D, o cartão
-  var b = $("m-mosaico");
-  if (b) b.setAttribute("aria-pressed", String(mosaico));
 }
 
-function guardar(chave, on) { try { if (on) localStorage.setItem(chave, "1"); else localStorage.removeItem(chave); } catch (e) {} }
 function guardar3D(on) { try { if (on) sessionStorage.setItem(CHAVE_3D, "1"); else sessionStorage.removeItem(CHAVE_3D); } catch (e) {} }
 
-// ---- o 3D pode estar em dois lugares ao mesmo tempo: a área principal (vista 3D) e a prévia 3D da coluna ----
-var seq3D = 0;
+// ---- o 3D aparece no lugar do desenho; as opções dele vão para a barra de cima ----
+var seq3D = 0, import3D = false;
 function posicionar3D() {
-  var palco = $("svg-m").closest(".stagebox"), querPalco = em3D, querCelula = mosaico && !!celula3D, n = ++seq3D;
-  if (!querPalco && !querCelula) registrar3D(null);
-  // o three.js fica num pedaço à parte: só baixa quando o 3D aparece em algum lugar
-  if (!querPalco && !querCelula && !import3D) return;
+  var palco = $("svg-m").closest(".stagebox"), quer = em3D, n = ++seq3D;
+  if (!quer) registrar3D(null);
+  // o three.js fica num pedaço à parte: só baixa quando o 3D abre
+  if (!quer && !import3D) return;
   import("./vista3d.js").then(function (m) {
     import3D = true;
     if (n !== seq3D) return; // mudou de novo enquanto baixava
-    if (querPalco) { if (!m.abrir3DNoRig(palco, { barraEm: $("m-ctx3d") })) { setEm3D(false); irParaVista("frente"); return; } } else m.fechar3DNoRig(palco);
-    if (querCelula) m.abrir3DNoRig(celula3D); else if (celula3D) m.fechar3DNoRig(celula3D);
-    registrar3D(querPalco || querCelula ? { atualizar: m.atualizar3D, marcarSel: m.marcarSel3D } : null);
-  }).catch(function () { if (querPalco || querCelula) pmsg("Não consegui carregar a Vista 3D. Confira a conexão e tente de novo."); });
+    if (!quer) { m.fechar3DNoRig(palco); return; }
+    if (!m.abrir3DNoRig(palco, { barraEm: $("m-ctx3d") })) { setEm3D(false); irParaVista("frente"); return; }
+    registrar3D({ atualizar: m.atualizar3D, marcarSel: m.marcarSel3D });
+  }).catch(function () { if (quer) pmsg("Não consegui carregar a Vista 3D. Confira a conexão e tente de novo."); });
 }
-var import3D = false;
 
 function setEm3D(on) {
   em3D = on;
@@ -77,7 +68,6 @@ export function irParaVista(id) {
     if (viewM) viewM.enquadrar();
   }
   atualizarNav();
-  montarMosaico();
   posicionar3D();
 }
 
@@ -85,60 +75,6 @@ export function itensVistas() {
   return TODAS.map(function (id) {
     return { t: (id === atual() ? "● " : "○ ") + nomeVista(id) + " · " + DICA[id], fn: function () { irParaVista(id); } };
   });
-}
-
-// ---- mosaico: as 5 prévias fixas, de cima para baixo Frente, Topo, Esquerda, Direita, 3D; a da área principal fica marcada ----
-var faixa = null, celula3D = null, minis = [], celulas = {};
-function montarMosaico() {
-  if (!faixa) {
-    faixa = document.createElement("div");
-    faixa.id = "m-mini";
-    faixa.className = "mini-faixa";
-    $("view-m").querySelector(".mwrap").prepend(faixa); // coluna à esquerda do desenho (embaixo, em tela estreita)
-    faixa.addEventListener("click", function (e) {
-      var tit = e.target.closest(".mini-t");
-      if (tit) { irParaVista(tit.getAttribute("data-v")); return; }
-      var p = e.target.closest(".mini-p");
-      if (p) { var id = p.getAttribute("data-id"); select(id === selected ? null : id); }
-    });
-    TODAS.forEach(function (id) {
-      var c = document.createElement("div"); c.className = "mini" + (id === "3d" ? " mini-3d" : "");
-      var t = document.createElement("button"); t.type = "button"; t.className = "mini-t"; t.setAttribute("data-v", id);
-      t.innerHTML = ICONES_VISTA[id] + "<span></span>"; t.lastChild.textContent = nomeVista(id); t.title = "Levar " + nomeVista(id) + " para a área principal";
-      c.appendChild(t);
-      if (id === "3d") {
-        celula3D = document.createElement("div");
-        celula3D.className = "mini-3d-palco";
-        c.appendChild(celula3D);
-      } else {
-        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("class", "mini-svg"); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        c.appendChild(svg);
-        minis.push({ svg: svg, v: id });
-      }
-      celulas[id] = c;
-      faixa.appendChild(c);
-    });
-  }
-  faixa.hidden = !mosaico;
-  document.body.classList.toggle("rig-mosaico", mosaico);
-  TODAS.forEach(function (id) { celulas[id].classList.toggle("ativa", id === atual()); });
-  if (mosaico) minis.forEach(function (m) { desenharMini(m.svg, m.v); });
-}
-
-// as miniaturas acompanham o Rig (agrupado num quadro)
-var pedido = 0;
-ouvirRig(function (tipo) {
-  if (!mosaico || !minis.length) return;
-  if (tipo === "sel") { minis.forEach(function (m) { marcarMini(m.svg); }); return; }
-  if (pedido) return;
-  pedido = requestAnimationFrame(function () { pedido = 0; minis.forEach(function (m) { desenharMini(m.svg, m.v); }); });
-});
-
-function alternarMosaico() {
-  mosaico = !mosaico;
-  guardar(CHAVE_MOSAICO, mosaico);
-  atualizarNav(); montarMosaico(); posicionar3D();
 }
 
 export function init() {
@@ -152,10 +88,9 @@ export function init() {
     b.addEventListener("click", function () { irParaVista(id); });
     grupo.appendChild(b);
   });
-  $("m-mosaico").addEventListener("click", alternarMosaico);
-  try { mosaico = localStorage.getItem(CHAVE_MOSAICO) === "1"; } catch (e) {}
+  try { localStorage.removeItem("ledmap-mosaico"); } catch (e) {} // preferência das prévias, que saíram
   var volta = false;
   try { volta = sessionStorage.getItem(CHAVE_3D) === "1"; } catch (e) {}
   if (volta) setEm3D(true);
-  atualizarNav(); montarMosaico(); posicionar3D();
+  atualizarNav(); posicionar3D();
 }
