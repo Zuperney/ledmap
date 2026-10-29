@@ -1,5 +1,7 @@
 body { background: var(--bg); color: var(--fg); font-family: var(--font-data); padding-inline: 16px; padding-block: 20px 40px; }
-.wrap { max-width: 1120px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+/* largura toda do navegador: o desenho (Rig, Screen, cabeamento) ganha o espaço; colunas laterais crescem com a tela */
+:root { --col-mini: clamp(210px, 15vw, 320px); --col-card: clamp(300px, 20vw, 380px); }
+.wrap { max-width: none; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
 h1 { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1; margin: 0; letter-spacing: .01em; text-wrap: balance; }
 h2 { font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1; margin: 0; letter-spacing: .02em; }
 .sub { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
@@ -50,10 +52,23 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .scr.frente rect.body { fill-opacity: .4; stroke-width: 2.5; }
 .ztag { fill: var(--fg); font-family: var(--font-data); font-weight: 500; pointer-events: none; stroke: var(--panel); stroke-width: 0.06; paint-order: stroke; }
 .eixo0 { stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; opacity: .55; pointer-events: none; }
-.scr.outra-vista { display: none; }
-body.vista-horizontal #svg-m .floor { display: none; }
+/* contorno da caixa do painel na vista (mostra a espessura e o painel de lado); a frente vai por cima */
+.scr .casco { fill: var(--cor, var(--imag)); fill-opacity: .1; stroke: var(--cor, var(--imag)); stroke-opacity: .6; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.scr.de-lado .casco { fill-opacity: .45; stroke-opacity: 1; stroke-width: 2; }
+.scr.de-lado.sel .casco, .scr.de-lado.msel .casco { stroke: var(--fg); stroke-width: 3; }
+.scr.costas .face { opacity: .45; }
+.scr .lado-t { display: none; fill: var(--fg); font-family: var(--font-display); font-weight: 700; text-anchor: middle; dominant-baseline: central; stroke: var(--panel); stroke-width: 0.08; paint-order: stroke; }
+.scr.de-lado .lado-t, .scr.obliquo .lado-t { display: inline; }
+.scr.obliquo .face text, .scr.obliquo .face .badge { display: none; }
+/* alça de giro: pivô, haste e botão de arrastar */
+.alca-l { stroke: var(--fg); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-dasharray: 4 3; pointer-events: none; }
+.alca-p { fill: var(--fg); pointer-events: none; }
+.alca-b { fill: var(--imag); stroke: var(--fg); stroke-width: 2; vector-effect: non-scaling-stroke; cursor: grab; }
+.alca-b:active { cursor: grabbing; }
+.alca-t { fill: var(--fg); font-family: var(--font-data); font-weight: 600; dominant-baseline: central; stroke: var(--panel); stroke-width: 0.08; paint-order: stroke; pointer-events: none; }
 .vnav { display: inline-flex; gap: 2px; }
-.vnav #m-vista { max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* largura fixa: o nome da vista muda (3D, Frente, Esquerda) e as setas não podem sair do lugar entre um clique e outro */
+.vnav #m-vista { width: 7.5em; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 .laco { fill: var(--imag); fill-opacity: .08; stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
 .furo { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; stroke-opacity: .6; }
 .scr.recorte { cursor: crosshair; }
@@ -173,3 +188,5 @@ td.r, th.r { text-align: right; }
   .medit input[type=number] { font-size: 11px; width: 66px; padding: 4px; }
   .toast { font-size: 11px; }
 }
+/* painel escondido atrás de outro na vista: sem rótulos (não embaralha com os do painel da frente) */
+.scr.coberto .rotulos { display: none; }

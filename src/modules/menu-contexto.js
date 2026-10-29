@@ -1,14 +1,14 @@
 // Menu do clique direito no Rig (computador e app de desktop): as ações do painel sem ir até o cartão.
 // Sobre um painel: o que dá para fazer com ele (ou com a seleção, se ele estiver nela).
 // No vazio: + Painel, Enquadrar, Mover, Grade, 3D. Atalhos: Ctrl+D duplica, F2 edita o painel selecionado.
-import { selected, painelById, pnome, tiles, groups, gname, planos, todosPlanos, vistaM } from "./core.js";
-import { moverParaVista, itensVistas } from "./vistas.js";
+import { selected, painelById, pnome, tiles, groups, gname, save, gravarVivo } from "./core.js";
+import { itensVistas, irParaVista } from "./vistas.js";
 import { multiLista, iniciarSelecaoC, movendoC } from "./canvas-edicao.js";
 import { colocarNaScreen } from "./screen-cartao.js";
 import { tById } from "./exportar.js";
 import { select } from "./tabela.js";
 import { openAdd, duplicarPainel, excluirPaineis, espelharPaineis, duplicarEspelhado, centralizarRig } from "./telas.js";
-import { mselLista, iniciarSelecao, desagrupar, editM } from "./rig-edicao.js";
+import { mselLista, iniciarSelecao, desagrupar, editM, refreshM } from "./rig-edicao.js";
 import { abrirGrupo } from "./rig-cartao.js";
 
 var menu = null;
@@ -83,7 +83,6 @@ function itensPainel(t) {
       { t: "Agrupar (" + sel.length + ")", fn: function () { $("m-grp").click(); } },
       { t: "Espelhar", sub: opcoesEspelho(sel, false) },
       { t: "Duplicar espelhado", sub: opcoesEspelho(sel, true) },
-      planos.length ? { t: "Mover para a vista", sub: todosPlanos().filter(function (v) { return v.id !== vistaM; }).map(function (v) { return { t: v.nome, fn: function () { moverParaVista(sel, v.id); } }; }) } : null,
       "-",
       { t: "Excluir " + sel.length + " painéis", perigo: true, confirmar: "Confirmar exclusão", fn: function () { excluirPaineis(sel); } }
     ].filter(Boolean);
@@ -102,7 +101,7 @@ function itensPainel(t) {
     itens.push({ t: "Abrir " + pnome(p), fn: function () { sel1(); abrirGrupo(p.id); } });
     itens.push({ t: "Desagrupar", fn: function () { desagrupar(p.id); } });
   }
-  if (planos.length) itens.push({ t: "Mover para a vista", sub: todosPlanos().filter(function (v) { return v.id !== (t.pl || ""); }).map(function (v) { return { t: v.nome, fn: function () { moverParaVista([t.id], v.id); } }; }) });
+  if (t.rx || t.ry || t.rz) itens.push({ t: "Zerar giro", fn: function () { sel1(); t.rx = t.ry = t.rz = 0; gravarVivo([t]); refreshM(); save(); } });
   if (tiles.length > 1) itens.push({ t: "Selecionar vários…", fn: function () { sel1(); iniciarSelecao(); } });
   itens.push("-", { t: "Excluir painel", perigo: true, confirmar: "Confirmar exclusão", fn: function () { excluirPaineis([t.id]); } });
   return itens;
@@ -113,11 +112,11 @@ function itensVazio() {
     { t: "+ Adicionar painel", fn: function () { openAdd(); } },
     { t: "Enquadrar tudo", fn: function () { $("m-zfit").click(); } },
     tiles.length ? { t: "Centralizar no eixo 0", fn: centralizarRig } : null,
-    { t: "Vistas de montagem", sub: itensVistas() },
+    { t: "Vista", sub: itensVistas() },
     { t: editM ? "Desligar Mover" : "Ligar Mover", fn: function () { $("m-edit").click(); } },
     "-",
     { t: ($("btn-grid-m").getAttribute("aria-pressed") === "true" ? "Esconder" : "Mostrar") + " grade", fn: function () { $("btn-grid-m").click(); } },
-    { t: "Vista 3D", fn: function () { $("m-3d").click(); } }
+    { t: "Vista 3D", fn: function () { irParaVista("3d"); } }
   ].filter(Boolean);
 }
 

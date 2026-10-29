@@ -1,4 +1,4 @@
-import { res, tiles, groups, nf, bbox, el, text, existe, zCabo } from "./core.js";
+import { res, tiles, groups, nf, bbox, el, text, existe, quadro } from "./core.js";
 import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
@@ -75,11 +75,13 @@ export function distribuirAuto(escopo) {
     var alvo = {}, cels = [], travado = {};
     tiles.forEach(function (t) { if (escopo === "*" || (escopo === "_" ? !t.grp : escopo.indexOf("t:") === 0 ? "t:" + t.id === escopo : t.grp === escopo)) alvo[t.id] = 1; });
     ports.forEach(function (p) { if (p.fixa) (routes[p.id] || []).forEach(function (k) { travado[k] = 1; }); });
+    var qd = {};
+    tiles.forEach(function (t) { qd[t.id] = quadro(t); });
     Object.keys(cellEl).forEach(function (k) {
       if (travado[k]) return;
-      var c = cellEl[k], q = res(c.t);
-      // x, y, w, h = montagem (m, y de cima para baixo): ordem e vizinhança do cabo; ax.. = canvas (px): área da porta
-      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(c.t.mx + c.c * q.mw), y: m4(-(c.t.my + c.t.h) + c.r * q.mh), z: zCabo(c.t), w: q.mw, h: q.mh, ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch });
+      var c = cellEl[k], q = res(c.t), f = qd[c.t.id];
+      // x, y, w, h = montagem (m, y de cima para baixo, no plano do painel): ordem e vizinhança do cabo; ax.. = canvas (px): área da porta
+      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(f.x + c.c * q.mw), y: m4(f.y + c.r * q.mh), z: f.z, w: q.mw, h: q.mh, ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch });
     });
     if (!cels.length) return { portas: 0, gabinetes: 0, aviso: "Não há gabinetes nesse escopo." };
     var grupos = {}, ordem = [];
@@ -100,8 +102,8 @@ export function distribuirAuto(escopo) {
         g.forEach(function (c) {
           if (vistos[c.t.id]) return;
           vistos[c.t.id] = 1;
-          var q = res(c.t);
-          telasG.push({ id: c.t.id, x: c.t.mx, y: m4(-(c.t.my + c.t.h)), z: zCabo(c.t), w: q.mw * q.cols, h: q.mh * q.rows, k: { x: c.t.cx, y: c.t.cy, w: q.cw * q.cols, h: q.ch * q.rows } });
+          var q = res(c.t), f = qd[c.t.id];
+          telasG.push({ id: c.t.id, x: m4(f.x), y: m4(f.y), z: f.z, w: q.mw * q.cols, h: q.mh * q.rows, k: { x: c.t.cx, y: c.t.cy, w: q.cw * q.cols, h: q.ch * q.rows } });
         });
         aglomerados(telasG).forEach(function (ag) {
           var ids = {}; ag.forEach(function (t) { ids[t.id] = 1; });
@@ -184,8 +186,8 @@ function routeLoad(route) { return areaRet(route.map(cellRet)); }
 
 // posição do gabinete na montagem (m, y de cima para baixo) e no canvas: para diagnóstico e área
 function cellFis(k) {
-    var c = cellEl[k], t = c.t, q = res(t), a = cellRet(k);
-    return { x: t.mx + c.c * q.mw, y: -(t.my + t.h) + c.r * q.mh, z: zCabo(t), w: q.mw, h: q.mh, ax: a.ax, ay: a.ay, aw: a.aw, ah: a.ah };
+    var c = cellEl[k], t = c.t, q = res(t), a = cellRet(k), f = quadro(t);
+    return { x: f.x + c.c * q.mw, y: f.y + c.r * q.mh, z: f.z, w: q.mw, h: q.mh, ax: a.ax, ay: a.ay, aw: a.aw, ah: a.ah };
   }
 
 // rota com poucos gabinetes ou com cabo atravessando vão (gabinetes seguidos que não se encostam na montagem)
@@ -250,7 +252,7 @@ var linhasK = {}, botoesK = {}, quadroK = 0;
 
 // posições que afetam linhas (canvas) e diagnóstico (montagem, profundidade, vista)
 function geoSig() {
-    return tiles.map(function (t) { return t.id + "," + t.cx + "," + t.cy + "," + t.mx + "," + t.my + "," + t.h + "," + zCabo(t); }).join(";");
+    return tiles.map(function (t) { var f = quadro(t); return t.id + "," + t.cx + "," + t.cy + "," + f.x + "," + f.y + "," + f.z; }).join(";");
   }
 
 // agrupa vários redesenhos num quadro só (traçar com o dedo dispara muitos pointermove por quadro)

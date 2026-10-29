@@ -1,5 +1,6 @@
 import { GABINETES, GAB, gabPadrao } from "./gabinetes.js";
-import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS, bbox, membrosPainel, novoPainel, painelById, pnome, paineis, set_paineis, noPlano, vistaM } from "./core.js";
+import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS, bbox, membrosPainel, novoPainel, painelById, pnome, paineis, set_paineis, vistaM, gravarVivo } from "./core.js";
+import { caixa, caixaDe, limpaGiro } from "./espaco.js";
 import { ksave, kflush, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
@@ -36,15 +37,29 @@ function updatePrev() {
     aPrev.textContent = "Gabinete " + fmt(g.mw * 100) + " × " + fmt(g.mh * 100) + " cm · painel final " +fmt(q.cols * g.mw) + " × " + fmt(q.rows * g.mh) + " m · " + q.cols + " × " + q.rows + " gabinetes (" + (q.cols * q.rows) + ") · " + q.w + " × " + q.h + " px · " + nf(q.total) + " px no total";
   }
 
-export function freeM(w, h) {
-    function hitAt(x, y) { return tiles.some(function (b) { if (!noPlano(b)) return false; return x < b.mx + b.w && b.mx < x + w && y < b.my + b.h && b.my < y + h; }); }
+// espaço livre de w × h na vista (padrão Frente), olhando o contorno de todos os painéis nela (U para a direita, V para cima)
+export function freeM(w, h, vista) {
+    vista = vista || "frente";
+    var cx = tiles.map(function (b) { return caixa(b, vista); });
+    function hitAt(x, y) { return cx.some(function (b) { return x < b.u1 - 1e-6 && b.u0 < x + w - 1e-6 && y < b.v1 - 1e-6 && b.v0 < y + h - 1e-6; }); }
     var x, y;
-    // o x = 0 é o centro do palco: procura o espaço livre mais perto do centro, linha a linha a partir do chão
+    // o 0 fica no meio: procura o espaço livre mais perto dele, linha a linha a partir do chão
     function xs(lim) { var l = []; for (var k = -lim; k <= lim - w + 1e-9; k += 0.5) l.push(k); return l.sort(function (p, q) { return Math.abs(p + w / 2) - Math.abs(q + w / 2) || q - p; }); }
     var perto = xs(14), longe = xs(60);
     for (y = 0; y <= 8 - h + 1e-9; y += 0.5) for (var i = 0; i < perto.length; i++) if (!hitAt(perto[i], y)) return { x: perto[i], y: y };
     for (y = 0; y <= 30 - h + 1e-9; y += 0.5) for (var j = 0; j < longe.length; j++) if (!hitAt(longe[j], y)) return { x: longe[j], y: y };
     return null;
+  }
+
+// painel novo de frente para quem olha a vista atual. Frente e Topo: sem giro, no chão, perto do centro.
+// Esquerda/Direita: virado para essa lateral (giro Y de −90° ou 90°), fora do conjunto, no espaço livre dessa vista.
+function posNova(w, h) {
+    if (vistaM !== "esq" && vistaM !== "dir") { var f = freeM(w, h); return f && { mx: f.x, my: f.y, z: 0, ry: 0 }; }
+    var l = freeM(w, h, vistaM);
+    if (!l) return null;
+    var tudo = tiles.length ? caixaDe(tiles, "frente") : { u0: 0, u1: 0 };
+    var esq = vistaM === "esq", X = esq ? tudo.u0 - 1 : tudo.u1 + 1, Zc = (esq ? 1 : -1) * (l.x + w / 2);
+    return { mx: X - w / 2, my: l.y, z: -Zc, ry: esq ? -90 : 90, pv: "c" };
   }
 
 export function freeC(t) {
@@ -131,10 +146,10 @@ export function init() {
       var id = nextExtraId();
       if (Number(id) > 999) { aErr.textContent = "Numeração esgotada."; return; }
       var w = Number(aW.value), h = Number(aH.value);
-      var fm = freeM(w, h);
+      var fm = posNova(w, h);
       if (!fm) { aErr.textContent = "Sem espaço livre na montagem."; return; }
-      var fc = freeC({ w: w, h: h, kind: "imag", cab: aCab.value, mx: fm.x, my: fm.y });
-      var c = cleanExtra({ id: id, name: aName.value, kind: "imag", cab: aCab.value, w: w, h: h, mx: fm.x, my: fm.y, cx: fc.x, cy: fc.y, grp: "", pl: vistaM });
+      var fc = freeC({ w: w, h: h, kind: "imag", cab: aCab.value, mx: fm.mx, my: fm.my });
+      var c = cleanExtra({ id: id, name: aName.value, kind: "imag", cab: aCab.value, w: w, h: h, mx: fm.mx, my: fm.my, z: fm.z, ry: fm.ry, pv: fm.pv, cx: fc.x, cy: fc.y, grp: "" });
       if (!c) { aErr.textContent = "Dimensões ou posição fora do limite (até 30 m de largura e altura)."; return; }
       EXTRAS.push(c);
       if (!commitAndReload(curTab + ":" + id)) {
@@ -181,7 +196,7 @@ export function duplicarPainel(id) {
     if (orig) { novoG = novoPainel(); novoG.name = (pnome(orig) + " cópia").slice(0, 40); }
     var falhou = mem.some(function (m, i) {
       var nid = String(base + i), mx = Math.round((m.mx + dx) * 100) / 100, my = Math.round((m.my + dy) * 100) / 100;
-      var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "", off: m.off, z: m.z, pl: m.pl || "" });
+      var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "", off: m.off, z: m.z, rx: m.rx, ry: m.ry, rz: m.rz, pv: m.pv });
       if (!c) return true;
       EXTRAS.push(c);
       // entra também em tiles para o save() gravar a posição exata e o grupo antes de recarregar
@@ -237,6 +252,15 @@ function offEspelhado(t, dir) {
     });
   }
 
+// giro e pivô espelhados: no eixo X (esquerda ↔ direita) o Y e o Z trocam de sinal e o pivô troca de lado;
+// no eixo Y (de cabeça para baixo) o X e o Z trocam de sinal e o pivô troca cima ↔ baixo
+var PV_H = { tl: "tr", tr: "tl", l: "r", r: "l", bl: "br", br: "bl" }, PV_V = { tl: "bl", bl: "tl", t: "b", b: "t", tr: "br", br: "tr" };
+function giroEspelhado(t, v) {
+    var pv = t.pv || "c";
+    return v ? { rx: limpaGiro(-(t.rx || 0)), ry: t.ry || 0, rz: limpaGiro(-(t.rz || 0)), pv: PV_V[pv] || pv }
+      : { rx: t.rx || 0, ry: limpaGiro(-(t.ry || 0)), rz: limpaGiro(-(t.rz || 0)), pv: PV_H[pv] || pv };
+  }
+
 // os painéis e, se algum estiver num grupo, o grupo inteiro
 function comGrupos(ids) {
     var set = {};
@@ -273,6 +297,7 @@ export function espelharPaineis(ids, modo) {
       if (modo === "x") t.mx = r2(-(t.mx + t.w));
       else if (modo === "proprio") t.mx = r2(fr.x0 + fr.x1 - (t.mx + t.w));
       else t.my = r2(fr.y0 + fr.y1 - (t.my + t.h));
+      Object.assign(t, giroEspelhado(t, v));
       if (v) t.cy = Math.round(fc.y0 + fc.y1 - (t.cy + q.h));
       else t.cx = Math.round(fc.x0 + fc.x1 - (t.cx + q.w));
       if ((t.off || []).length) {
@@ -282,6 +307,7 @@ export function espelharPaineis(ids, modo) {
         comRecorte.push(t.id);
       }
     });
+    gravarVivo(S); // o giro e o pivô espelhados vão para a definição
     var tirou = comRecorte.length ? limparRotasDe(comRecorte) : 0;
     gravarEAbrir(S[0].id, (S.length === 1 ? "Painel " + S[0].id + " espelhado " : S.length + " painéis espelhados ") + NOME_MODO[modo] + "." + (tirou ? " As rotas de cabo dos recortados foram limpas." : ""));
   }
@@ -307,7 +333,7 @@ export function duplicarEspelhado(ids, modo) {
       else my = r2(2 * fr.y1 - (m.my + m.h));
       if (v) cy = Math.round(2 * tudo.y1 - (m.cy + q.h));
       else cx = Math.round(2 * tudo.x1 - (m.cx + q.w));
-      var c = cleanExtra({ id: nid, name: (m.name + " (espelho)").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: cx, cy: cy, grp: m.grp || "", off: offEspelhado(m, v ? "v" : "h"), z: m.z, pl: m.pl || "" });
+      var c = cleanExtra(Object.assign({ id: nid, name: (m.name + " (espelho)").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: cx, cy: cy, grp: m.grp || "", off: offEspelhado(m, v ? "v" : "h"), z: m.z }, giroEspelhado(m, v)));
       if (!c) return true;
       EXTRAS.push(c);
       tiles.push(Object.assign({}, c, { mx: mx, my: my, pn: m.pn ? novos[m.pn] || "" : "" }));
@@ -320,7 +346,7 @@ export function duplicarEspelhado(ids, modo) {
 
 // leva o desenho do Rig para o centro: o meio do conjunto fica no x = 0 (projetos feitos antes do eixo no centro)
 export function centralizarRig() {
-    var aqui = tiles.filter(noPlano);
+    var aqui = tiles.slice();
     if (!aqui.length) return;
     var f = faixa(aqui, true), d = -Math.round((f.x0 + f.x1) / 2 * 2) / 2;
     if (!d) { pmsg("O desenho já está centralizado no eixo 0."); return; }
