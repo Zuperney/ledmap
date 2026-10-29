@@ -334,3 +334,11 @@ body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px;
   body.fs #view-m.palco .stage.pan { height: 100%; max-height: none; }
   body.fs #view-m.palco > .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
 }
+/* vistas: ícones de casinha (como no SketchUp) no canto do desenho e nos títulos das prévias */
+.vicons { display: inline-flex; gap: 2px; }
+.vbtn { width: 34px; height: 32px; display: grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--fg); cursor: pointer; }
+.vbtn:hover { background: var(--bg); border-color: var(--line); }
+.vbtn[aria-pressed="true"] { background: var(--imag); color: var(--bg); border-color: var(--imag); }
+.mini-t { display: flex; align-items: center; gap: 6px; }
+.mini-t svg { width: 18px; height: 18px; flex: none; }
+.mini.ativa .mini-t svg { color: var(--imag); }

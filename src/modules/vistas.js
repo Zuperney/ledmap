@@ -1,19 +1,19 @@
 // Vistas do Rig: Frente, Topo, Esquerda e Direita, ortogonais (ver espaco.js), e 3D. Todos os painéis aparecem em todas;
 // cada vista 2D mostra e edita um plano do palco: Frente (X e altura, giro Z), Topo (X e recuo, giro Y),
 // Esquerda/Direita (fundo e altura, giro X). A 3D mostra a montagem no espaço, no lugar do desenho, e acompanha
-// as edições do cartão; tocar num painel abre o cartão dele. Navegação ‹ Frente ›: as setas passam pelas 5.
-// "Todas as vistas" (Visão ▾): a escolhida fica grande e as 5 prévias fixas numa coluna à esquerda, ao vivo; tocar num
+// as edições do cartão; tocar num painel abre o cartão dele. As 5 aparecem como ícones de casinha no canto do desenho (teclas 1 a 5).
+// Prévias (botão no fim das ferramentas): a escolhida fica grande e as 5 prévias fixas numa coluna à esquerda, ao vivo; tocar num
 // painel numa miniatura o seleciona, tocar no título da miniatura a traz para o lugar da grande.
 import { save, set_vistaM, vistaM, selected } from "./core.js";
 import { fitM } from "./rig.js";
 import { renderCabM, viewM } from "./rig-cabos.js";
 import { syncMPanel, setEditM, editM } from "./rig-edicao.js";
 import { VISTAS, ORDEM_VISTAS } from "./espaco.js";
-import { abrirMenu } from "./menu-contexto.js";
 import { registrar3D, ouvirRig } from "./ponte3d.js";
 import { pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
 import { desenharMini, marcarMini } from "./mini.js";
+import { ICONES_VISTA } from "./icones-vista.js";
 
 function $(id) { return document.getElementById(id); }
 
@@ -33,8 +33,8 @@ export function nomeVista(id) { return id === "3d" ? "3D" : VISTAS[id] ? VISTAS[
 function atual() { return em3D ? "3d" : vistaM; }
 
 export function atualizarNav() {
-  $("m-vista").textContent = nomeVista(atual()) + " ▾";
-  $("m-vista").title = "Vista " + nomeVista(atual()) + ": " + DICA[atual()] + ". Toque para trocar";
+  // ícones de casinha (como no SketchUp): o da vista na tela fica marcado
+  document.querySelectorAll("#m-vistas button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-v") === atual())); });
   $("m-edit").disabled = em3D; // mover e girar com a alça são do 2D; no 3D, o cartão
   var b = $("m-mosaico");
   if (b) b.setAttribute("aria-pressed", String(mosaico));
@@ -81,11 +81,6 @@ export function irParaVista(id) {
   posicionar3D();
 }
 
-function passo(d) {
-  var i = TODAS.indexOf(atual());
-  irParaVista(TODAS[(i + d + TODAS.length) % TODAS.length]);
-}
-
 export function itensVistas() {
   return TODAS.map(function (id) {
     return { t: (id === atual() ? "● " : "○ ") + nomeVista(id) + " · " + DICA[id], fn: function () { irParaVista(id); } };
@@ -109,7 +104,7 @@ function montarMosaico() {
     TODAS.forEach(function (id) {
       var c = document.createElement("div"); c.className = "mini" + (id === "3d" ? " mini-3d" : "");
       var t = document.createElement("button"); t.type = "button"; t.className = "mini-t"; t.setAttribute("data-v", id);
-      t.textContent = nomeVista(id) + " ⤢"; t.title = "Levar " + nomeVista(id) + " para a área principal";
+      t.innerHTML = ICONES_VISTA[id] + "<span></span>"; t.lastChild.textContent = nomeVista(id); t.title = "Levar " + nomeVista(id) + " para a área principal";
       c.appendChild(t);
       if (id === "3d") {
         celula3D = document.createElement("div");
@@ -147,9 +142,16 @@ function alternarMosaico() {
 }
 
 export function init() {
-  $("m-vant").addEventListener("click", function () { passo(-1); });
-  $("m-vprox").addEventListener("click", function () { passo(1); });
-  $("m-vista").addEventListener("click", function () { var r = this.getBoundingClientRect(); abrirMenu(r.left, r.bottom + 4, itensVistas()); });
+  var grupo = $("m-vistas");
+  TODAS.forEach(function (id, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "vbtn"; b.setAttribute("data-v", id);
+    b.innerHTML = ICONES_VISTA[id];
+    b.title = nomeVista(id) + " (" + (i + 1) + "): " + DICA[id];
+    b.setAttribute("aria-label", nomeVista(id));
+    b.addEventListener("click", function () { irParaVista(id); });
+    grupo.appendChild(b);
+  });
   $("m-mosaico").addEventListener("click", alternarMosaico);
   try { mosaico = localStorage.getItem(CHAVE_MOSAICO) === "1"; } catch (e) {}
   var volta = false;
