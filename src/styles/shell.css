@@ -325,3 +325,39 @@ body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px;
 .stage.arrastavel, .stage.arrastavel * { cursor: grab !important; }
 .stage.arrastando, .stage.arrastando * { cursor: grabbing !important; }
 body.p-navegar #view-m .stage, body.p-navegar #view-m .stage .scr { cursor: grab; }
+
+/* ---- Etapa 2: os controles do desenho saem de cima dele (faixa de baixo, junto do estado) ---- */
+.p-estado .hud.p-ctrl { position: static; margin-left: auto; padding: 0; background: none; border: 0; box-shadow: none; }
+.p-estado .p-cursor + .hud.p-ctrl { margin-left: 8px; }
+.p-estado .hud.p-ctrl .btn { padding: 2px 7px; }
+.p-estado .hud.p-ctrl span { font-size: 11px; }
+.oficina > .p-estado { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 6px 6px; }
+
+/* ---- Etapa 2: abas com desenho no mesmo molde do Palco (tela larga): opções em cima, desenho, estado embaixo e
+   o painel de propriedades à direita, tudo na altura da janela ---- */
+@media (min-width: 900px) {
+  .oficina { display: grid; gap: 0; height: var(--palco-alto, calc(100dvh - 60px));
+    grid-template-columns: minmax(0, 1fr) var(--col-card); grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "topo topo" "main lado" "estado lado";
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
+  .oficina[hidden] { display: none; }
+  .oficina > .of-topo { grid-area: topo; display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .oficina > .of-topo .bar { margin: 0; }
+  .oficina > .mwrap { grid-area: main; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) !important; gap: 0; }
+  .oficina .stagebox { min-height: 0; height: 100%; }
+  .oficina .stage.pan { height: 100%; max-height: none; border: 0; border-radius: 0; }
+  .oficina .ncomp { border: 0; border-radius: 0; padding: 8px; overflow: auto; }
+  .oficina > .p-estado { grid-area: estado; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+  .oficina > .of-lado { grid-area: lado; min-height: 0; overflow: auto; padding: 10px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+  .oficina > .of-lado .mcard { position: static; max-height: none; box-shadow: none; border-radius: 6px; }
+  .oficina > .of-lado .screens { margin: 0; }
+  .oficina > .of-lado .msg:empty { display: none; }
+  .oficina > .of-lado .e-root { margin-top: 0; }
+  body[data-aba="k"] .drawer { display: none; }
+  body[data-aba="k"] .wrap, body[data-aba="n"] .wrap { padding-bottom: 0; }
+  body.fs .oficina { height: 100dvh; border: 0; border-radius: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "main" "estado"; }
+  body.fs .oficina > .of-topo, body.fs .oficina > .of-lado { display: none; }
+  body.fs .oficina .stage.pan { height: 100%; max-height: none; }
+  /* abas sem desenho: a largura toda */
+  #view-p, #view-e, #view-r { max-width: none; }
+}

@@ -5,6 +5,7 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 
 ## Já feito
 
+- **Etapa 2 do PLANO.md (layout).** Em tela larga, Screen, Cabeamento e Composição seguem o molde do Palco e ocupam a altura da janela: opções em cima, desenho no meio, painel de propriedades à direita (Screen: painel selecionado e Screens; Cabeamento: portas, sinal, distribuição e a porta aberta; Composição: as regiões) e faixa de estado embaixo. Os controles do desenho (zoom, Enquadrar, tela cheia, Travar) saíram de cima do desenho e ficam nessa faixa, em todas as abas com desenho. Projeto, Elétrica e Caderno usam a largura toda. Em tela cheia ficam só o desenho e a faixa.
 - **Etapa 1 do PLANO.md (regras de transformação, eixos e barra de vistas).** Posição, pin e giro seguem regras rígidas, com testes obrigatórios em `testes/transformacoes.mjs`:
   - árvore Palco → Grupo → Painel; o grupo tem pin próprio (um dos 9 pontos da caixa dos membros) e giro, e os membros guardam valores relativos ao grupo. Girar ou mover o grupo muda só o grupo; agrupar, desagrupar e trocar o pin não movem nada;
   - os campos do cartão são sempre o pin (X, altura, recuo). Girar não move o pin, e mudar a medida cresce a partir dele. O pin padrão é o meio da borda de baixo: um painel a 2,5 m girado 90° em X vira um teto a 2,5 m;

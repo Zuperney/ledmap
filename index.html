@@ -148,7 +148,8 @@
     <p class="note">Os projetos ficam só neste navegador. Exporte para guardar uma cópia em arquivo (JSON). Importar abre o arquivo como um projeto novo.</p>
   </section>
 
-  <section class="view" id="view-n" role="tabpanel" aria-labelledby="tab-n" hidden>
+  <section class="view oficina" id="view-n" role="tabpanel" aria-labelledby="tab-n" hidden>
+    <div class="of-topo">
     <div class="bar">
       <div class="seg" role="group" aria-label="Modo">
         <button class="btn" id="n-m-mont" aria-pressed="false" title="Entrada: os painéis como o público vê, onde o conteúdo é feito">Montagem</button>
@@ -165,11 +166,14 @@
         </div>
       </div>
     </div>
+    </div>
+    <div class="mwrap">
     <div class="stagebox ncomp">
       <canvas id="n-cv" role="img" aria-label="Prévia da composição com o test card"></canvas>
-      <div class="badge"><div class="stat" id="n-stat"></div></div>
     </div>
-    <div id="n-root" class="e-root"></div>
+    </div>
+    <div class="p-estado"><div class="stat" id="n-stat"></div></div>
+    <aside class="of-lado" aria-label="Regiões"><div id="n-root" class="e-root"></div></aside>
   </section>
 
   <section class="view" id="view-e" role="tabpanel" aria-labelledby="tab-e" hidden>
@@ -248,13 +252,6 @@
     <div class="mwrap">
     <div class="stagebox">
     <div class="stage pan"><svg id="svg-m" viewBox="-1 -0.5 29 10.5" role="img" aria-label="Palco: os painéis LED em escala, na vista escolhida"></svg></div>
-      <div class="hud"><button class="btn" id="m-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do palco">
-  <button class="btn" id="m-zout" aria-label="Diminuir zoom">−</button>
-  <span id="m-zlabel">100%</span>
-  <button class="btn" id="m-zin" aria-label="Aumentar zoom">+</button>
-  <button class="btn" id="m-zfit" title="Mostrar todos os painéis (F)">Enquadrar</button>
-        <button class="btn" id="fs-m" aria-label="Tela cheia" title="Tela cheia">⤢</button>
-</div></div>
       <div class="rec-barra" id="m-rec-barra" role="status" hidden><span id="m-rec-txt"></span><button class="btn" id="m-rec-ok" type="button">Concluir recorte</button></div>
       <div class="m-vazio" id="m-vazio" hidden><button class="btn" id="add-open3">+ Adicionar o primeiro painel</button></div>
     </div>
@@ -336,11 +333,19 @@
       </div>
       <div class="p-pane" id="m-pane-cam" hidden><ul class="p-camadas" id="m-camadas" aria-label="Grupos e painéis"></ul></div>
     </aside>
-    <div class="p-estado"><div class="stat" id="stat-m"></div><span class="p-cursor" id="m-cursor" aria-live="off" title="Onde o cursor está no palco (Z = recuo, positivo para trás)"></span></div>
+    <div class="p-estado"><div class="stat" id="stat-m"></div><span class="p-cursor" id="m-cursor" aria-live="off" title="Onde o cursor está no palco (Z = recuo, positivo para trás)"></span>
+      <div class="hud p-ctrl"><button class="btn" id="m-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do palco">
+  <button class="btn" id="m-zout" aria-label="Diminuir zoom">−</button>
+  <span id="m-zlabel">100%</span>
+  <button class="btn" id="m-zin" aria-label="Aumentar zoom">+</button>
+  <button class="btn" id="m-zfit" title="Mostrar todos os painéis (F)">Enquadrar</button>
+        <button class="btn" id="fs-m" aria-label="Tela cheia" title="Tela cheia">⤢</button>
+</div></div></div>
     <div class="legend" id="m-ports" hidden></div>
   </section>
 
-  <section class="view" id="view-c" role="tabpanel" aria-labelledby="tab-c" hidden>
+  <section class="view oficina" id="view-c" role="tabpanel" aria-labelledby="tab-c" hidden>
+    <div class="of-topo">
     <div class="bar">
       <button class="btn" id="add-open2">+ Painel</button>
       <button class="btn" id="btn-move" aria-pressed="false" title="Ligado: arrastar move os painéis no canvas. Desligado: arrastar só navega">Mover</button>
@@ -372,18 +377,22 @@
       <button class="btn" id="btn-magnet" aria-pressed="true">Ímã</button>
       <button class="btn" id="btn-reset">Posições iniciais</button>
     </div>
+    </div>
     <div class="mwrap">
     <div class="stagebox">
     <div class="stage pan"><svg id="svg-c" viewBox="-64 -150 6272 2790" role="img" aria-label="Configuração: painéis no canvas em pixels"></svg></div>
-      <div class="hud"><button class="btn" id="btn-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do canvas">
+    </div>
+    </div>
+    <div class="p-estado"><div class="stat" id="stat-c"></div>
+      <div class="hud p-ctrl"><button class="btn" id="btn-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do canvas">
   <button class="btn" id="zoom-out" aria-label="Diminuir zoom">−</button>
   <span id="zoom-label">100%</span>
   <button class="btn" id="zoom-in" aria-label="Aumentar zoom">+</button>
   <button class="btn" id="zoom-fit" title="Mostrar todos os painéis e o canvas">Enquadrar</button>
         <button class="btn" id="fs-c" aria-label="Tela cheia" title="Tela cheia">⤢</button>
 </div></div>
-      <div class="badge"><div class="stat" id="stat-c"></div></div>
     </div>
+    <aside class="of-lado" aria-label="Propriedades da Screen">
     <aside class="mcard" id="c-card" hidden aria-label="Painel selecionado no canvas">
       <div id="cc-um">
         <div class="mc-head"><span class="n" id="cc-n"></span><input type="text" id="cc-nome" maxlength="40" autocomplete="off" aria-label="Nome do painel"><button class="btn mc-x" id="cc-fechar" aria-label="Fechar">✕</button></div>
@@ -415,7 +424,6 @@
         <p class="mc-info">Com Mover ligado, arrastar um deles leva todos juntos.</p>
       </div>
     </aside>
-    </div>
 
     <div class="screens">
       <div class="screens-head">
@@ -430,27 +438,33 @@
         <div class="st" id="screen-stat"></div>
       </div>
     </div>
+    </aside>
   </section>
 
-  <section class="view" id="view-k" role="tabpanel" aria-labelledby="tab-k" hidden>
+  <section class="view oficina" id="view-k" role="tabpanel" aria-labelledby="tab-k" hidden>
+    <div class="of-topo">
     <div class="bar">
       <button class="btn" id="k-trace" aria-pressed="true">Traçar</button>
       <button class="btn" id="k-order" aria-pressed="true">Ordem</button>
       <button class="btn" id="k-oc" aria-pressed="false">Overclock</button>
     </div>
+    </div>
+    <div class="mwrap">
     <div class="stagebox">
     <div class="stage pan"><svg id="svg-k" viewBox="0 0 6000 2000" role="img" aria-label="Cabeamento de dados por gabinete"></svg></div>
-      <div class="hud"><button class="btn" id="k-lock" aria-pressed="false">Travar</button><div class="zoom" role="group" aria-label="Zoom do cabeamento">
+    </div>
+    </div>
+    <div class="p-estado"><div class="stat" id="k-stat"></div>
+      <div class="hud p-ctrl"><button class="btn" id="k-lock" aria-pressed="false">Travar</button><div class="zoom" role="group" aria-label="Zoom do cabeamento">
   <button class="btn" id="k-zout" aria-label="Diminuir zoom">−</button>
   <span id="k-zlabel">100%</span>
   <button class="btn" id="k-zin" aria-label="Aumentar zoom">+</button>
   <button class="btn" id="k-zfit" title="Mostrar todos os painéis">Enquadrar</button>
         <button class="btn" id="fs-k" aria-label="Tela cheia" title="Tela cheia">⤢</button>
 </div></div>
-      <div class="badge"><div class="stat" id="k-stat"></div></div>
     </div>
+    <aside class="of-lado" aria-label="Propriedades do cabeamento">
     <p class="msg" id="k-msg" role="status"></p>
-
     <div class="screens">
       <div class="screens-head">
         <h2>Portas</h2>
@@ -520,6 +534,7 @@
         <button class="btn" id="k-join-go">Juntar</button>
       </div>
     </div>
+    </aside>
   </section>
 
   <div class="drawer" id="drawer">

@@ -303,7 +303,8 @@ export function renderComp() {
   cv.hidden = false;
 
   var box = cv.parentNode, W = Math.max(200, box.clientWidth - 18), r = linhasRegioes(), b = r.b;
-  var maxH = Math.max(160,Math.min(window.innerHeight * 0.55, 520));
+  // tela larga: a prévia ocupa a área do desenho (altura fixa da aba); estreita: até metade da tela
+  var maxH = window.innerWidth >= 900 && box.clientHeight > 200 ? box.clientHeight - 18 : Math.max(160, Math.min(window.innerHeight * 0.55, 520));
   var k = Math.min(W / b.w, maxH / b.h), dpr = Math.min(2, window.devicePixelRatio || 1);
   desenhar(cv, k * dpr);
   cv.style.width = Math.round(b.w * k) + "px"; cv.style.height = Math.round(b.h * k) + "px";

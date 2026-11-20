@@ -93,12 +93,15 @@ function camadas() {
   tiles.filter(function (t) { return !t.pn; }).forEach(function (t) { ul.appendChild(linhaPainel(t, "")); });
 }
 
-// a grade do Palco ocupa a janela até embaixo (o cabeçalho do app fica em cima)
+// a grade do Palco (e das abas no mesmo molde: Screen, Cabeamento, Composição) ocupa a janela até embaixo; o
+// cabeçalho do app fica em cima e, onde aparece, a gaveta de painéis embaixo
 function medirAltura() {
-  var v = $("view-m");
-  if (!v || v.hidden || window.innerWidth < 900) return;
-  var topo = v.getBoundingClientRect().top + window.scrollY;
-  document.documentElement.style.setProperty("--palco-alto", Math.max(420, window.innerHeight - topo - 16) + "px");
+  var v = document.querySelector(".view.palco:not([hidden]), .view.oficina:not([hidden])");
+  if (!v || window.innerWidth < 900) return;
+  var topo = v.getBoundingClientRect().top + window.scrollY, dr = document.getElementById("drawer");
+  // com a gaveta à vista, o espaço reservado para ela embaixo da página (o padding do .wrap)
+  var gaveta = dr && getComputedStyle(dr).display !== "none" ? parseFloat(getComputedStyle(document.querySelector(".wrap")).paddingBottom) || dr.offsetHeight : 0;
+  document.documentElement.style.setProperty("--palco-alto", Math.max(420, window.innerHeight - topo - 16 - gaveta) + "px");
 }
 
 export function init() {
@@ -128,7 +131,7 @@ export function init() {
   ouvirRig(function () { camadas(); });
 
   // trocar de aba (o app desliga o "Mover" ao sair do Palco) ou entrar/sair do 3D: reaplica a ferramenta
-  new MutationObserver(function () { aplicar(); medirAltura(); })
+  new MutationObserver(function () { aplicar(); medirAltura(); requestAnimationFrame(medirAltura); })
     .observe(document.body, { attributes: true, attributeFilter: ["data-aba", "class"] });
   window.addEventListener("resize", medirAltura);
 
