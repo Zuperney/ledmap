@@ -1,5 +1,5 @@
 import { ID_V1, TELAS_V1, projetoAtivo } from "./projetos.js";
-import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis, gabsUsados, vistaM, set_vistaM, migrarVistasAntigas } from "./core.js";
+import { tiles, EXTRAS, groups, nextG, cleanExtras, mnum, save, set_EXTRAS, set_groups, set_nextG, paineis, set_paineis, limpaPaineis, painelById, podarPaineis, gabsUsados, vistaM, set_vistaM, migrarVistasAntigas, migrarTransformacoes, marcarInicio, PIN_V } from "./core.js";
 import { garantirGabs } from "./gabinetes.js";
 import { eletricaState, loadEletrica } from "./eletrica.js";
 import { compState, loadComp } from "./composicao.js";
@@ -18,12 +18,13 @@ export function buildProject() {
     return {
       tipo: "ledmap",
       versao: 2,
+      pinV: PIN_V, // regras de transformação: pin padrão embaixo no meio, grupos com pin próprio e membros relativos
       exportadoEm: new Date().toISOString(),
       projeto: (function () { var a = projetoAtivo() || {}; return { nome: a.nome || "", cliente: a.cliente || "", local: a.local || "", data: a.data || "", obs: a.obs || "" }; })(),
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
-      paineis: paineis.map(function (p) { return { id: p.id, nome: p.name, giroX: p.rx || 0, giroY: p.ry || 0, giroZ: p.rz || 0 }; }),
+      paineis: paineis.map(function (p) { return { id: p.id, nome: p.name, pinoX: p.gx || 0, pinoAltura: p.gy || 0, pinoRecuo: p.gz || 0, pino: p.pv || "b", giroX: p.rx || 0, giroY: p.ry || 0, giroZ: p.rz || 0 }; }),
       vistaAtual: vistaM,
-      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, giroX: e.rx || 0, giroY: e.ry || 0, giroZ: e.rz || 0, pivo: e.pv || "c" }; }),
+      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, giroX: e.rx || 0, giroY: e.ry || 0, giroZ: e.rz || 0, pivo: e.pv || "b" }; }),
       gabinetes: gabsUsados(EXTRAS),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
@@ -141,7 +142,7 @@ export function applyProject(o) {
       nCab += nr[pt.id].length;
     });
 
-    set_paineis(limpaPaineis((Array.isArray(o.paineis) ? o.paineis : []).map(function (p) { return p && { id: p.id, name: p.nome, rx: p.giroX, ry: p.giroY, rz: p.giroZ }; })));
+    set_paineis(limpaPaineis((Array.isArray(o.paineis) ? o.paineis : []).map(function (p) { return p && { id: p.id, name: p.nome, rx: p.giroX, ry: p.giroY, rz: p.giroZ, gx: p.pinoX, gy: p.pinoAltura, gz: p.pinoRecuo, pv: p.pino }; })));
     tiles.forEach(function (t) {
       var n = nt[t.id];
       if (n) {
@@ -150,6 +151,9 @@ export function applyProject(o) {
       }
     });
     podarPaineis();
+    // arquivo de antes das regras de transformação: grupos ganham pin e o pin padrão vai para baixo, sem mover nada
+    migrarTransformacoes(o.pinV !== PIN_V);
+    marcarInicio();
     refreshM();
     set_groups(ng);
     set_nextG(Math.max(Number(o.proximaScreen) || 1, ng.reduce(function (a, g) { return Math.max(a, idNum(g.id)); }, 0) + 1));

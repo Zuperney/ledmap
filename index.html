@@ -248,7 +248,6 @@
     <div class="mwrap">
     <div class="stagebox">
     <div class="stage pan"><svg id="svg-m" viewBox="-1 -0.5 29 10.5" role="img" aria-label="Palco: os painéis LED em escala, na vista escolhida"></svg></div>
-      <span class="vnav vicons" id="m-vistas" role="group" aria-label="Vista: Frente, Topo, Esquerda, Direita, 3D (teclas 1 a 5)"></span>
       <div class="hud"><button class="btn" id="m-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do palco">
   <button class="btn" id="m-zout" aria-label="Diminuir zoom">−</button>
   <span id="m-zlabel">100%</span>
@@ -260,6 +259,7 @@
       <div class="m-vazio" id="m-vazio" hidden><button class="btn" id="add-open3">+ Adicionar o primeiro painel</button></div>
     </div>
     </div>
+    <nav class="p-vistas" id="m-vistas" aria-label="Vistas: Frente, Atrás, Esquerda, Direita, Topo (teclas 1 a 5) e 3D (tecla 0)"></nav>
     <aside class="p-estudio" id="m-estudio" aria-label="Estúdio">
       <div class="p-abas" role="tablist">
         <button role="tab" id="m-ab-prop" aria-selected="true" data-aba="prop">Propriedades</button>
@@ -273,17 +273,18 @@
         <div class="mc-tags" id="mc-tags"></div>
         <p class="mc-info" id="mc-info"></p>
         <p class="mc-info mc-palco" id="mc-palco" title="Onde a frente do painel fica no palco, com o giro: X da esquerda para a direita, altura do chão e recuo (positivo = para trás, negativo = à frente)"></p>
+        <button class="btn mc-ref" id="mc-ref" type="button" hidden aria-pressed="false" title="Painel de grupo: os campos mostram e editam os valores relativos ao grupo ou os do palco">Valores: no grupo</button>
         <div class="mc-campos">
           <label>Largura (m) <input type="number" id="mc-w" step="0.05" min="0.05" inputmode="decimal"></label>
           <label>Altura (m) <input type="number" id="mc-h" step="0.05" min="0.05" inputmode="decimal"></label>
-          <label><span id="m-x-l">X (m)</span> <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
-          <label><span id="m-y-l">Y do chão (m)</span> <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
-          <label><span id="mc-z-l">Recuo (m)</span> <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
+          <label title="Onde está o pin do painel (o ponto que não se move ao girar nem ao mudar a medida)"><span id="m-x-l">Pin X (m)</span> <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
+          <label title="Altura do pin a partir do chão (com o pin embaixo, é a altura da borda de baixo)"><span id="m-y-l">Pin altura (m)</span> <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
+          <label title="Recuo do pin (positivo = para trás)"><span id="mc-z-l">Pin recuo (m)</span> <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
           <label>Screen <select id="mc-scr" aria-label="Screen do painel"></select></label>
           <label title="Inclina para frente ou para trás (ajuste na vista Esquerda ou Direita)">Giro X (°) <input type="number" id="mc-rx" step="1" inputmode="decimal" placeholder="0"></label>
           <label title="Abre como lateral em V ou L (ajuste na vista Topo)">Giro Y (°) <input type="number" id="mc-ry" step="1" inputmode="decimal" placeholder="0"></label>
           <label title="Gira no próprio plano (ajuste na vista Frente)">Giro Z (°) <input type="number" id="mc-rz" step="1" inputmode="decimal" placeholder="0"></label>
-          <label title="Ponto em volta do qual o painel gira. Trocar o pivô não tira o painel do lugar">Pivô <select id="mc-pv" aria-label="Pivô do giro"></select></label>
+          <label title="Ponto do painel onde ele é preso: a posição é a dele, e o giro e a medida acontecem em volta dele. Trocar o pin não tira o painel do lugar">Pin <select id="mc-pv" aria-label="Pin do painel"></select></label>
         </div>
         <div class="mc-acts">
           <button class="btn" id="m-prop">Editar</button>
@@ -312,10 +313,10 @@
         <p class="mc-info" id="mc-ginfo"></p>
         <p class="mc-info mc-palco" id="mc-gpalco" title="Onde o grupo fica no palco: X, altura do chão e recuo (positivo = para trás)"></p>
         <div class="mc-campos">
-          <label title="Centro do grupo, da esquerda para a direita">Centro X (m) <input type="number" id="mc-gx" step="0.05" inputmode="decimal"></label>
-          <label title="Altura do centro do grupo">Centro altura (m) <input type="number" id="mc-gy" step="0.05" inputmode="decimal"></label>
-          <label title="Recuo do centro do grupo (positivo = para trás)">Centro recuo (m) <input type="number" id="mc-gz" step="0.05" inputmode="decimal" placeholder="0"></label>
-          <span></span>
+          <label title="Onde está o pin do grupo, da esquerda para a direita">Pin X (m) <input type="number" id="mc-gx" step="0.05" inputmode="decimal"></label>
+          <label title="Altura do pin do grupo a partir do chão">Pin altura (m) <input type="number" id="mc-gy" step="0.05" inputmode="decimal"></label>
+          <label title="Recuo do pin do grupo (positivo = para trás)">Pin recuo (m) <input type="number" id="mc-gz" step="0.05" inputmode="decimal" placeholder="0"></label>
+          <label title="Ponto da caixa do grupo onde ele é preso: o giro do grupo é em volta dele. Trocar não tira nada do lugar">Pin <select id="mc-gpv" aria-label="Pin do grupo"></select></label>
           <label title="Inclina o grupo inteiro">Giro X (°) <input type="number" id="mc-grx" step="1" inputmode="decimal" placeholder="0"></label>
           <label title="Abre o grupo inteiro em V ou L">Giro Y (°) <input type="number" id="mc-gry" step="1" inputmode="decimal" placeholder="0"></label>
           <label title="Gira o grupo inteiro no próprio plano">Giro Z (°) <input type="number" id="mc-grz" step="1" inputmode="decimal" placeholder="0"></label>
@@ -335,7 +336,7 @@
       </div>
       <div class="p-pane" id="m-pane-cam" hidden><ul class="p-camadas" id="m-camadas" aria-label="Grupos e painéis"></ul></div>
     </aside>
-    <div class="p-estado"><div class="stat" id="stat-m"></div></div>
+    <div class="p-estado"><div class="stat" id="stat-m"></div><span class="p-cursor" id="m-cursor" aria-live="off" title="Onde o cursor está no palco (Z = recuo, positivo para trás)"></span></div>
     <div class="legend" id="m-ports" hidden></div>
   </section>
 

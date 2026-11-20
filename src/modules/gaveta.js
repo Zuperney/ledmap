@@ -1,5 +1,6 @@
 import { selected, groups, gname, save, res, fmt, tiles } from "./core.js";
 import { tById } from "./exportar.js";
+import { pinNoPalco } from "./grupos.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
 import { refreshSelects } from "./tabela.js";
 import { duplicateSel } from "./historico.js";
@@ -40,7 +41,7 @@ export function updInsp() {
     var t = selected && tById[selected], info = document.getElementById("insp-info");
     if (!t || !info) return;
     var q = res(t);
-    info.textContent = fmt(t.w) + "×" + fmt(t.h) + " m · " + q.w + "×" + q.h + " px · " + q.cols + "×" + q.rows + " gab · Palco " + fmt(t.mx) + "," + fmt(t.my) + " · Canvas " + t.cx + "," + t.cy;
+    info.textContent = fmt(t.w) + "×" + fmt(t.h) + " m · " + q.w + "×" + q.h + " px · " + q.cols + "×" + q.rows + " gab · Pin no palco " + (function () { var P = pinNoPalco(t); return fmt(P[0]) + "," + fmt(P[1]); })() + " · Canvas " + t.cx + "," + t.cy;
   }
 
 export function init() {

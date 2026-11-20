@@ -1,7 +1,9 @@
-// Vistas do Palco: Frente, Topo, Esquerda e Direita, ortogonais (ver espaco.js), e 3D. Todos os painéis aparecem em todas;
-// cada vista 2D mostra e edita um plano do palco: Frente (X e altura, giro Z), Topo (X e recuo, giro Y),
-// Esquerda/Direita (fundo e altura, giro X). A 3D mostra a montagem no espaço, no lugar do desenho, e acompanha
-// as edições do cartão; tocar num painel abre o cartão dele. As 5 aparecem como ícones de casinha no canto do desenho (teclas 1 a 5).
+// Vistas do Palco: Frente, Atrás, Esquerda, Direita e Topo, ortogonais e travadas (ver espaco.js), e 3D. Todos os
+// painéis aparecem em todas; cada vista 2D mostra e edita um plano do palco: Frente e Atrás (X e altura, giro Z),
+// Esquerda/Direita (fundo e altura, giro X), Topo (X e recuo, giro Y). A 3D mostra a montagem no espaço, no lugar do
+// desenho, e acompanha as edições do cartão; tocar num painel abre o cartão dele.
+// Ficam na barra lateral à direita do desenho, como num programa 3D: as 5 vistas (teclas 1 a 5) e, separado, o 3D
+// (tecla 0), que liga e desliga voltando para a última vista 2D.
 import { save, set_vistaM, vistaM } from "./core.js";
 import { fitM } from "./rig.js";
 import { renderCabM, viewM } from "./rig-cabos.js";
@@ -15,6 +17,7 @@ function $(id) { return document.getElementById(id); }
 
 var DICA = {
   frente: "olhando do público: move em X e altura, a alça gira em Z (no próprio plano)",
+  tras: "olhando do fundo para o público (X espelhado): move em X e altura, a alça gira em Z",
   topo: "olhando de cima: move em X e recuo, a alça gira em Y (abre em V ou L)",
   esq: "olhando da esquerda: move em fundo e altura, a alça gira em X (inclina)",
   dir: "olhando da direita: move em fundo e altura, a alça gira em X (inclina)",
@@ -58,6 +61,9 @@ function setEm3D(on) {
   guardar3D(on);
 }
 
+// o botão 3D: liga, ou desliga voltando para a última vista 2D
+export function alternar3D() { irParaVista(em3D ? vistaM : "3d"); }
+
 export function irParaVista(id) {
   if (id === "3d") {
     if (!em3D) setEm3D(true);
@@ -80,12 +86,13 @@ export function itensVistas() {
 export function init() {
   var grupo = $("m-vistas");
   TODAS.forEach(function (id, i) {
-    var b = document.createElement("button");
-    b.type = "button"; b.className = "vbtn"; b.setAttribute("data-v", id);
-    b.innerHTML = ICONES_VISTA[id];
-    b.title = nomeVista(id) + " (" + (i + 1) + "): " + DICA[id];
+    if (id === "3d") { var d = document.createElement("span"); d.className = "p-div"; grupo.appendChild(d); }
+    var b = document.createElement("button"), tecla = id === "3d" ? "0" : String(i + 1);
+    b.type = "button"; b.className = "vbtn" + (id === "3d" ? " v3d" : ""); b.setAttribute("data-v", id);
+    b.innerHTML = ICONES_VISTA[id] + '<span class="k">' + tecla + "</span>";
+    b.title = nomeVista(id) + " (" + tecla + "): " + DICA[id];
     b.setAttribute("aria-label", nomeVista(id));
-    b.addEventListener("click", function () { irParaVista(id); });
+    b.addEventListener("click", function () { if (id === "3d") alternar3D(); else irParaVista(id); });
     grupo.appendChild(b);
   });
   try { localStorage.removeItem("ledmap-mosaico"); } catch (e) {} // preferência das prévias, que saíram

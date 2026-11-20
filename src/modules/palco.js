@@ -2,13 +2,14 @@
 // (Propriedades e Camadas) à direita, estado embaixo. É só a casca: as ferramentas acionam o que já existia
 // (o "Mover", a alça de giro, o Recortar, o + Painel) e o cartão do painel vira a aba Propriedades.
 // Ferramentas: Selecionar (V) arrasta painéis · Navegar (H) arrastar só move a vista · Girar (R) mostra a alça ·
-// Painel (P) abre o + Painel · Recortar (C) recorta o painel selecionado. Vistas: 1 a 5. Enquadrar: F.
+// Painel (P) abre o + Painel · Recortar (C) recorta o painel selecionado. Vistas: 1 a 5 (Frente, Atrás, Esquerda,
+// Direita, Topo), 0 liga/desliga o 3D. Enquadrar: F.
 import { tiles, selected, paineis, membrosPainel, pnome, fmt } from "./core.js";
 import { corCab } from "./gabinetes.js";
 import { setEditM, setAlcaLigada } from "./rig-edicao.js";
 import { select } from "./tabela.js";
 import { abrirGrupo, abrirMembro } from "./rig-cartao.js";
-import { irParaVista } from "./vistas.js";
+import { irParaVista, alternar3D } from "./vistas.js";
 import { ouvirRig } from "./ponte3d.js";
 import { pmsg } from "./exportar.js";
 
@@ -139,8 +140,9 @@ export function init() {
     if (k === "p") { e.preventDefault(); $("add-open").click(); return; }
     if (k === "c" && !no3D()) { e.preventDefault(); recortar(); return; }
     if (k === "f") { e.preventDefault(); $("m-zfit").click(); return; }
+    if (e.key === "0") { e.preventDefault(); alternar3D(); return; }
     var n = "12345".indexOf(e.key);
-    if (n >= 0) { e.preventDefault(); irParaVista(["frente", "topo", "esq", "dir", "3d"][n]); }
+    if (n >= 0) { e.preventDefault(); irParaVista(["frente", "tras", "esq", "dir", "topo"][n]); }
   });
   aplicar();
   medirAltura();

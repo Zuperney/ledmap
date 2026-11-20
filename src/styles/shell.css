@@ -242,7 +242,14 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
 .ptool[aria-pressed="true"] { background: var(--imag); color: var(--bg); border-color: var(--imag); }
 .ptool .k { position: absolute; right: 2px; bottom: 0; font: 600 8px var(--font-data); opacity: .65; }
 .p-div { flex: none; width: 1px; height: 24px; background: var(--line); margin: 0 3px; }
-#view-m.palco .vnav { position: absolute; left: 8px; top: 8px; z-index: 5; padding: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+/* barra lateral das vistas (à direita do desenho, fora dele): 5 vistas 2D e, separado, o 3D */
+.p-vistas { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; background: var(--panel); }
+.p-vistas .vbtn { position: relative; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--fg); cursor: pointer; }
+.p-vistas .vbtn:hover { background: var(--bg); border-color: var(--line); }
+.p-vistas .vbtn[aria-pressed="true"] { background: var(--imag); color: var(--bg); border-color: var(--imag); }
+.p-vistas .vbtn .k { position: absolute; right: 2px; bottom: 0; font: 600 8px var(--font-data); opacity: .65; }
+.p-vistas .p-div { width: 24px; height: 1px; margin: 3px 0; }
+.p-vistas .v3d { font: 700 11px var(--font-display); letter-spacing: .04em; }
 .p-estudio { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
 .p-abas { display: flex; border-bottom: 1px solid var(--line); }
 .p-abas button { flex: 1; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--muted); font: 600 13px var(--font-display); letter-spacing: .05em; }
@@ -263,6 +270,7 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
 .p-camadas .md { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .p-estado { display: flex; align-items: center; gap: 12px; padding: 0 10px; min-height: 26px; font-size: 11px; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
 .p-estado .stat { overflow: hidden; text-overflow: ellipsis; }
+.p-cursor { margin-left: auto; font-family: var(--font-data); color: var(--fg); min-width: 170px; text-align: right; }
 /* ajuda da aba ("?"): o texto aparece por cima, em vez de ficar sempre embaixo da tela */
 body[data-aba="m"] #hint { display: none; }
 body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px; top: 96px; z-index: 40; max-width: 460px; max-height: 60vh; overflow: auto; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.3); color: var(--fg); }
@@ -280,8 +288,8 @@ body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px;
 /* tela larga: grade que ocupa a altura da janela; o desenho fica com o resto */
 @media (min-width: 900px) {
   #view-m.palco { display: grid; gap: 0; height: var(--palco-alto, calc(100dvh - 60px));
-    grid-template-columns: 48px minmax(0, 1fr) var(--col-card); grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas: "ctx ctx ctx" "tools main estudio" "tools estado estudio";
+    grid-template-columns: 48px minmax(0, 1fr) 46px var(--col-card); grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "ctx ctx ctx ctx" "tools main vistas estudio" "tools estado vistas estudio";
     border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
   #view-m.palco[hidden] { display: none; }
   #view-m.palco > .p-ctx { grid-area: ctx; }
@@ -292,6 +300,7 @@ body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px;
   #view-m.palco .stagebox { min-height: 0 !important; height: 100%; }
   #view-m.palco .stage.pan { height: 100%; max-height: none; border: 0; border-radius: 0; }
   #view-m.palco > .p-estudio { grid-area: estudio; border-left: 1px solid var(--line); }
+  #view-m.palco > .p-vistas { grid-area: vistas; border-left: 1px solid var(--line); }
   #view-m.palco .mcard { position: static; border: 0; padding: 0; background: none; box-shadow: none; max-height: none; }
   body.recortando #view-m.palco .mcard:not([hidden]) { display: block !important; }
   #view-m.palco > .p-estado { grid-area: estado; }

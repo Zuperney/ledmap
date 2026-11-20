@@ -1,12 +1,12 @@
-import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, BASE, pnome, membrosPainel, painelById, novoPainel, podarPaineis, res, existe, EXTRAS, vistaM, el, text, gravarVivo } from "./core.js";
+import { svgM, rowsEl, tiles, fmt, selected, gM, save, FLOOR, mnum, pnome, membrosPainel, painelById, novoPainel, podarPaineis, res, existe, EXTRAS, vistaM, el, text, gravarVivo, INICIO, set_paineis } from "./core.js";
 import { updInsp } from "./gaveta.js";
 import { placeM, fitM, guideMV, guideMH, boundsM, statM, desenharPaineis, desenharFurosM, reordenarM, faceM } from "./rig.js";
-import { VISTAS, caixa, caixaDe, desprojetar, projetar, pivo, limpaGiro, encara, matrizEixo } from "./espaco.js";
+import { VISTAS, caixa, caixaDe, desprojetar, projetar, pivo, encara, matrizEixo, matriz, multiplicar, noEspacoDe, pai, aplicar, transposta } from "./espaco.js";
 import { cabOn, renderCabM, viewM } from "./rig-cabos.js";
 import { tById, pmsg } from "./exportar.js";
 import { select, atualizarTags } from "./tabela.js";
-import { renderCartao, posCampos, grupoAberto, membroAbertoId, aplicarVivoLista } from "./rig-cartao.js";
-import { caixaGrupo, girarGrupo } from "./grupos.js";
+import { renderCartao, grupoAberto, membroAbertoId, aplicarVivoLista } from "./rig-cartao.js";
+import { pinGrupo, girarGrupo, formarGrupo, soltarDoGrupo, pinNoPalco } from "./grupos.js";
 import { best } from "./canvas-edicao.js";
 import { twoStep, routes } from "./cabeamento.js";
 import { curTab } from "./abas.js";
@@ -22,7 +22,7 @@ function toWorldM(e) {
 
 function rowM(t) {
     var c = rowsEl.children[tiles.indexOf(t)];
-    if (c) c.querySelector(".mpos").textContent = fmt(t.mx) + " , " + fmt(t.my);
+    if (c) { var P = pinNoPalco(t); c.querySelector(".mpos").textContent = fmt(P[0]) + " , " + fmt(P[1]); } // o pin no palco
     updInsp();
   }
 
@@ -41,9 +41,9 @@ export function syncMPanel() {
   }
 
 // ---- alça de giro: com Mover ligado e um painel selecionado, girar em volta do pivô no plano da tela ----
-// Cada vista gira um eixo (Frente → Z, Topo → Y, laterais → X); o passo vem de "Passo do giro".
-// Só o painel selecionado gira (o grupo não vai junto). Com os outros dois giros em zero o ângulo é exato;
-// com eles, a alça muda o valor do eixo da vista e o desenho mostra o resultado.
+// Gira em volta do pin, no eixo que aponta para quem olha (Frente → Z, Topo → Y, laterais → X), exato em qualquer
+// vista e com qualquer giro anterior; o passo vem de "Passo do giro". Cada passo parte do giro do começo do arrasto
+// (sem somar erro). Grupo selecionado: gira o grupo em volta do pin dele (os membros não mudam).
 var alca = null, giro = null, RAIO = 1.1;
 // a alça só aparece com a ferramenta Girar do Palco (com Selecionar, arrastar move sem a alça no caminho)
 var alcaLigada = false;
@@ -63,25 +63,26 @@ export function desenharAlca() {
     alca.style.display = on ? "" : "none";
     if (!on) return;
     svgM.appendChild(alca); // por cima de tudo
-    // grupo selecionado como um painel: a alça gira o grupo inteiro em volta do centro dele
-    var pn = grupoAberto(), cg = pn && caixaGrupo(pn);
-    var V = VISTAS[vistaM], P = projetar(vistaM, cg ? cg.centro : pivo(t)), px = P[0], py = FLOOR - P[1];
+    // grupo selecionado como um painel: a alça gira o grupo inteiro em volta do pin dele
+    var pn = grupoAberto(), pg = pn && painelById(pn);
+    var V = VISTAS[vistaM], P = projetar(vistaM, pg ? pinGrupo(pg) : pivo(t)), px = P[0], py = FLOOR - P[1];
     var a = giro ? giro.a : Math.PI / 2, bx = px + RAIO * Math.cos(a), by = py - RAIO * Math.sin(a);
     alca.piv.setAttribute("cx", px); alca.piv.setAttribute("cy", py);
     alca.bot.setAttribute("cx", bx); alca.bot.setAttribute("cy", by);
     alca.linha.setAttribute("x1", px); alca.linha.setAttribute("y1", py); alca.linha.setAttribute("x2", bx); alca.linha.setAttribute("y2", by);
     alca.txt.setAttribute("x", bx + 0.35); alca.txt.setAttribute("y", by);
-    alca.txt.textContent = cg ? "Grupo " + (giro && giro.grupo ? (giro.aplicado > 0 ? "+" : "") + fmt(giro.aplicado) + "°" : "↻") : "Giro " + V.eixo.slice(1).toUpperCase() + " " + fmt(t[V.eixo] || 0) + "°";
+    alca.txt.textContent = (pg ? "Grupo " : "Giro ") + (giro ? (giro.aplicado > 0 ? "+" : "") + fmt(giro.aplicado) + "°" : pg ? "↻" : V.eixo.slice(1).toUpperCase() + " " + fmt(t[V.eixo] || 0) + "°");
   }
 function iniciarGiro(e) {
     var t = selected && tById[selected];
     if (!t) return;
     e.stopPropagation(); e.preventDefault();
-    var pn = grupoAberto(), cg = pn && caixaGrupo(pn);
-    var P = projetar(vistaM, cg ? cg.centro : pivo(t)), px = P[0], py = FLOOR - P[1], a = anguloTela(e, px, py), V = VISTAS[vistaM];
-    giro = { t: t, eixo: V.eixo, sinal: V.sinal, v0: t[V.eixo] || 0, px: px, py: py, ult: a, acc: 0, a: a, grupo: cg ? pn : null, w: V.w, aplicado: 0 };
-    // grupo: guarda como estava no começo; cada passo gira a partir daqui (um arredondamento só, sem acumular erro)
-    if (cg) { var pg = painelById(pn); giro.ini = membrosPainel(pn).map(function (m) { return { t: m, mx: m.mx, my: m.my, z: m.z, rx: m.rx, ry: m.ry, rz: m.rz }; }); giro.gIni = { rx: pg.rx, ry: pg.ry, rz: pg.rz }; }
+    var pn = grupoAberto(), pg = pn && painelById(pn);
+    var P = projetar(vistaM, pg ? pinGrupo(pg) : pivo(t)), px = P[0], py = FLOOR - P[1], a = anguloTela(e, px, py), V = VISTAS[vistaM];
+    giro = { t: t, px: px, py: py, ult: a, acc: 0, a: a, grupo: pg ? pn : null, w: V.w, aplicado: 0 };
+    // guarda o giro do começo; cada passo gira a partir daqui (um arredondamento só, sem acumular erro)
+    if (pg) giro.gIni = { rx: pg.rx, ry: pg.ry, rz: pg.rz };
+    else giro.Mini = matriz(t);
     alca.bot.setPointerCapture(e.pointerId);
   }
 function moverGiro(e) {
@@ -89,27 +90,26 @@ function moverGiro(e) {
     if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI;
     giro.ult = a; giro.acc += d; giro.a = a;
     var passo = Number(document.getElementById("m-gpasso").value) || 5;
-    if (giro.grupo) {
-      // o grupo gira em volta do eixo de quem olha (exato em qualquer vista): anti-horário na tela = positivo
-      var g = Math.round(giro.acc * 180 / Math.PI / passo) * passo;
-      if (g !== giro.aplicado) {
-        giro.ini.forEach(function (o) { o.t.mx = o.mx; o.t.my = o.my; o.t.z = o.z; o.t.rx = o.rx; o.t.ry = o.ry; o.t.rz = o.rz; });
-        Object.assign(painelById(giro.grupo), giro.gIni);
-        var lista = girarGrupo(giro.grupo, matrizEixo(giro.w, g)); giro.aplicado = g; lista.forEach(placeM); reordenarM(); statM(); desenharPaineis(); renderCartao(); if (cabOn) renderCabM(); }
-      desenharAlca();
-      return;
-    }
-    var alvo = limpaGiro(Math.round((giro.v0 + giro.sinal * giro.acc * 180 / Math.PI) / passo) * passo);
-    if (alvo !== (giro.t[giro.eixo] || 0)) {
-      giro.t[giro.eixo] = alvo;
-      placeM(giro.t); reordenarM(); statM(); desenharPaineis(); renderCartao();
+    // gira em volta do eixo de quem olha: anti-horário na tela = positivo
+    var g = Math.round(giro.acc * 180 / Math.PI / passo) * passo;
+    if (g !== giro.aplicado) {
+      var Rd = matrizEixo(giro.w, g), lista;
+      if (giro.grupo) lista = girarGrupo(giro.grupo, Rd, giro.gIni);
+      else {
+        // giro no palco = Rd · giro do começo; o painel guarda o relativo ao pai (o pin fica)
+        var t = giro.t, n = noEspacoDe(pai(t), t, pivo(t), multiplicar(Rd, giro.Mini));
+        t.rx = n.rx; t.ry = n.ry; t.rz = n.rz;
+        lista = [t];
+      }
+      giro.aplicado = g;
+      lista.forEach(placeM); reordenarM(); statM(); desenharPaineis(); renderCartao();
       if (cabOn) renderCabM();
     }
     desenharAlca();
   }
 function fimGiro() {
     if (!giro) return;
-    if (!giro.grupo) gravarVivo([giro.t]); // o do grupo já gravou cada passo
+    if (!giro.grupo) gravarVivo([giro.t]); // o grupo grava com o save (lista de grupos)
     giro = null; ignorarAte = performance.now() + 350;
     save(); fitM(); desenharAlca();
   }
@@ -132,7 +132,9 @@ export function iniciarSelecao() {
 
 export function desagrupar(pn) {
     if (!pn) return;
-    membrosPainel(pn).forEach(function (o) { o.pn = ""; });
+    var m = membrosPainel(pn);
+    m.forEach(soltarDoGrupo); // cada painel fica com os valores no palco: nada se move
+    gravarVivo(m);
     podarPaineis();
     pmsg("Grupo desfeito.");
     save(); refreshM(); atualizarTags();
@@ -165,7 +167,7 @@ function syncGrupo() { renderCartao(); }
 function clicarGrupo() {
     if (mselM.length < 2) return;
     var p = novoPainel();
-    mselM.forEach(function (id) { if (tById[id]) tById[id].pn = p.id; });
+    formarGrupo(p, mselM.map(function (id) { return tById[id]; }).filter(Boolean)); // pin no meio de baixo da caixa: nada se move
     podarPaineis();
     pmsg(pnome(p) + " criado com " + mselM.length + " painéis. Com Mover ligado, o grupo se move junto.");
     var primeiro = mselM[0];
@@ -258,17 +260,20 @@ export function onDownM(e, t) {
     var naSel = mselM.length >= 2 && mselM.indexOf(t.id) >= 0;
     if (modoSel && !naSel) return; // no modo de selecionar, tocar marca/desmarca (o clique cuida disso)
     if (!naSel) { limparMselM(); select(t.id); }
-    var conj = {};
+    // quem anda: grupos inteiros (só o pin do grupo muda) e painéis soltos ou abertos sozinhos (no espaço do pai)
+    var conj = {}, grs = {};
     (naSel ? mselM.map(function (id) { return tById[id]; }).filter(Boolean) : [t]).forEach(function (o) {
-      (o.pn && membroAbertoId() !== o.id ? membrosPainel(o.pn) : [o]).forEach(function (m) { conj[m.id] = m; }); // aberto sozinho: só ele
+      if (o.pn && painelById(o.pn) && membroAbertoId() !== o.id) { grs[o.pn] = painelById(o.pn); membrosPainel(o.pn).forEach(function (m) { conj[m.id] = m; }); }
+      else conj[o.id] = o;
     });
-    conj[t.id] = t;
     var lista = Object.keys(conj).map(function (k) { return conj[k]; });
     var w = toWorldM(e);
     // arrastar move no plano da vista (Frente: X e altura; Topo: X e recuo; laterais: Z e altura);
     // o ímã e o passo valem para o contorno do conjunto na vista, não só para o painel puxado
     dragM = { t: t, wx: w.x, wy: w.y, sx: e.clientX, sy: e.clientY, moveu: false,
-      todos: lista.map(function (o) { return { t: o, x0: o.mx, y0: o.my, z0: o.z || 0 }; }),
+      todos: lista.filter(function (o) { return !(o.pn && grs[o.pn]); }).map(function (o) { var p = pai(o); return { t: o, x0: o.mx, y0: o.my, z0: o.z || 0, Mt: p ? transposta(p.M) : null }; }),
+      grupos: Object.keys(grs).map(function (k) { var g = grs[k]; return { g: g, x0: g.gx || 0, y0: g.gy || 0, z0: g.gz || 0 }; }),
+      lista: lista,
       ids: lista.map(function (o) { return o.id; }),
       cx: caixaDe(lista, vistaM) };
     gM[t.id].setPointerCapture(e.pointerId);
@@ -282,7 +287,7 @@ export function ignorarCliqueM() { return performance.now() < ignorarAte; }
 function endDragM() {
     pintar = null;
     var was = dragM && dragM.moveu;
-    if (was) { ignorarAte = performance.now() + 350; gravarVivo(dragM.todos.map(function (o) { return o.t; })); } // no Topo e nas laterais o recuo muda
+    if (was) { ignorarAte = performance.now() + 350; gravarVivo(dragM.lista); } // no Topo e nas laterais o recuo muda
     dragM = null;
     guideMV.classList.add("off");
     guideMH.classList.add("off");
@@ -350,12 +355,16 @@ export function init() {
         if (hy) nv += hy.d;
       }
       var d = desprojetar(vistaM, nu - c.u0, nv - c.v0); // deslocamento no palco
-      dragM.todos.forEach(function (o) {
-        o.t.mx = Math.round((o.x0 + d[0]) * 100) / 100;
-        o.t.my = Math.round((o.y0 + d[1]) * 100) / 100;
-        o.t.z = Math.round((o.z0 - d[2]) * 100) / 100 || 0; // recuo é para trás (−Z)
-        placeM(o.t); rowM(o.t);
+      dragM.grupos.forEach(function (o) {
+        o.g.gx = mnum(o.x0 + d[0]); o.g.gy = mnum(o.y0 + d[1]); o.g.gz = mnum(o.z0 - d[2]) || 0; // recuo é para trás (−Z)
       });
+      dragM.todos.forEach(function (o) {
+        var dl = o.Mt ? aplicar(o.Mt, d) : d; // membro aberto sozinho: o deslocamento no espaço do grupo
+        o.t.mx = mnum(o.x0 + dl[0]);
+        o.t.my = mnum(o.y0 + dl[1]);
+        o.t.z = mnum(o.z0 - dl[2]) || 0;
+      });
+      dragM.lista.forEach(function (o) { placeM(o); rowM(o); });
       if (hx) { guideMV.setAttribute("x1", hx.line); guideMV.setAttribute("x2", hx.line); }
       if (hy) { guideMH.setAttribute("y1", FLOOR - hy.line); guideMH.setAttribute("y2", FLOOR - hy.line); }
       guideMV.classList.toggle("off", !hx);
@@ -370,20 +379,6 @@ export function init() {
   });
   svgM.addEventListener("pointerup", function (e) { if (giro) { fimGiro(); return; } if (laco) { fecharLaco(e); return; } endDragM(); });
   svgM.addEventListener("pointercancel", function (e) { if (giro) { fimGiro(); return; } if (laco) { fecharLaco(e); return; } endDragM(); });
-  ["m-x", "m-y"].forEach(function (id) {
-      document.getElementById(id).addEventListener("change", function () {
-        var t = selected && tById[selected];
-        if (!t) return;
-        var nx = mnum(document.getElementById("m-x").value), ny = mnum(document.getElementById("m-y").value);
-        if (nx !== null && ny !== null) {
-          // o campo mostra o pivô no palco (painel girado) ou o canto (sem giro): o painel e o grupo andam a diferença
-          var base = posCampos(t), dx = nx - base[0], dy = ny - base[1];
-          membrosPainel(t.pn).forEach(function (o) { if (o !== t) { o.mx = mnum(o.mx + dx); o.my = mnum(o.my + dy); } });
-          t.mx = mnum(t.mx + dx); t.my = mnum(t.my + dy); save();
-        }
-        refreshM();
-      });
-    });
   document.getElementById("m-grp").addEventListener("click", clicarGrupo);
   // tocar no vazio do desenho tira a seleção (fora do modo de selecionar vários)
   svgM.addEventListener("click", function (e) {
@@ -410,9 +405,11 @@ export function init() {
   btnMagM = document.getElementById("m-magnet");
   btnMagM.addEventListener("click", function () { magnetM = !magnetM; btnMagM.setAttribute("aria-pressed", String(magnetM)); });
   twoStep(document.getElementById("m-reset"), "Restaurar", "Confirmar?", function () {
-      // volta posição, recuo, giro e pivô ao que estava quando o projeto abriu
-      tiles.forEach(function (t, idx) { ["mx", "my", "z", "rx", "ry", "rz", "pv"].forEach(function (k) { t[k] = BASE[idx][k]; }); });
-      gravarVivo(tiles); save(); refreshM();
+      // volta posição, recuo, giro, pin e grupos ao que estava quando o projeto abriu
+      tiles.forEach(function (t) { var o = INICIO.t[t.id]; if (o) Object.keys(o).forEach(function (k) { t[k] = o[k]; }); });
+      set_paineis(INICIO.p.map(function (p) { return Object.assign({}, p); }));
+      tiles.forEach(function (t) { if (t.pn && !painelById(t.pn)) t.pn = ""; });
+      gravarVivo(tiles); save(); refreshM(); atualizarTags();
     });
 }
 

@@ -33,6 +33,15 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .zoom .btn { min-width: 36px; }
 .zoom span { font-size: 12px; min-width: 46px; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
 .grid line { stroke: var(--grid); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.grid line.sub { opacity: .45; } /* abaixo do chão (ou à frente, no Topo) */
+/* eixos do palco nas cores dos programas 3D: X vermelho, Y verde, Z azul */
+:root { --eixo-x: #e5484d; --eixo-y: #3fb950; --eixo-z: #4c8dff; }
+.floor.eixo-x, .eixo0.eixo-x { stroke: var(--eixo-x); }
+.floor.eixo-y, .eixo0.eixo-y { stroke: var(--eixo-y); }
+.floor.eixo-z, .eixo0.eixo-z { stroke: var(--eixo-z); }
+.tick.eixo-x { fill: var(--eixo-x); } .tick.eixo-y { fill: var(--eixo-y); } .tick.eixo-z { fill: var(--eixo-z); }
+.tick.eixo-nome { font-weight: 700; }
+.origem { fill: var(--bg); stroke: var(--fg); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 .grid.off { display: none; }
 .floor { stroke: var(--fg); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .frame { fill: none; stroke: var(--line); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
@@ -51,7 +60,7 @@ html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .scr.fundo rect.body { fill-opacity: .16; stroke-dasharray: 5 3; }
 .scr.frente rect.body { fill-opacity: .4; stroke-width: 2.5; }
 .ztag { fill: var(--fg); font-family: var(--font-data); font-weight: 500; pointer-events: none; stroke: var(--panel); stroke-width: 0.06; paint-order: stroke; }
-.eixo0 { stroke: var(--imag); stroke-width: 1.5; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; opacity: .55; pointer-events: none; }
+.eixo0 { stroke: var(--imag); stroke-width: 1.5; vector-effect: non-scaling-stroke; opacity: .8; pointer-events: none; }
 /* contorno da caixa do painel na vista (mostra a espessura e o painel de lado); a frente vai por cima */
 .scr .casco { fill: var(--cor, var(--imag)); fill-opacity: .1; stroke: var(--cor, var(--imag)); stroke-opacity: .6; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .scr.de-lado .casco { fill-opacity: .45; stroke-opacity: 1; stroke-width: 2; }
