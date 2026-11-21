@@ -22,7 +22,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      # o Electron só serve para o app de Windows: aqui não precisa baixar o binário (~100 MB)
       - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      # nada é publicado se algum teste falhar (cabeamento, espaço, transformações, painel misto, blocos)
+      - run: npm run testar
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

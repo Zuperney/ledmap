@@ -6,6 +6,7 @@ import { snakePorTela } from "./auto-cabos.js";
 import { VOLT, voltNome, phaseOf, phaseBalance, acTone, ampCab, typicalPerTile, dividirPorAmp } from "./eletrica-calc.js";
 import { saveFile, csv, pmsg } from "./exportar.js";
 import { histTick } from "./historico.js";
+import { gravarDados } from "./gravacao.js";
 
 var ESTORE, cfg = { vk: "220_tri", brilho: 70, conteudo: 33, margem: 80 };
 var PADRAO = { vk: "220_tri", brilho: 70, conteudo: 33, margem: 80 };
@@ -17,9 +18,9 @@ function limpa(c) {
 }
 
 export function eletricaState() { return cfg; }
-export function loadEletrica(c) { cfg = limpa(c); try { localStorage.setItem(ESTORE, JSON.stringify(cfg)); } catch (e) {} }
+export function loadEletrica(c) { cfg = limpa(c); gravarDados(ESTORE, JSON.stringify(cfg)); }
 
-function salvar() { histTick(); try { localStorage.setItem(ESTORE, JSON.stringify(cfg)); } catch (e) {} }
+function salvar() { histTick(); gravarDados(ESTORE, JSON.stringify(cfg)); }
 
 function celula(key) { var c = cellEl[key]; return { key: key, t: c.t, c: c.c, r: c.r }; }
 

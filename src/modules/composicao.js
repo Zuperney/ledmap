@@ -8,6 +8,7 @@ import { cabDe } from "./gabinetes.js";
 import { ports, routes, cellEl, owners, pcolor, portById } from "./cabeamento.js";
 import { saveFile, csv, pmsg } from "./exportar.js";
 import { histTick } from "./historico.js";
+import { gravarDados } from "./gravacao.js";
 
 var CSTORE, cfg = { preset: "mapa", escopo: "", modo: "comp", cores: {} };
 var MONO = "IBM Plex Mono, ui-monospace, Menlo, Consolas, monospace";
@@ -36,10 +37,10 @@ function limpa(c) {
 export function compState() { return cfg; }
 export function loadComp(c) {
   cfg = limpa(c);
-  try { localStorage.setItem(CSTORE, JSON.stringify(cfg)); } catch (e) {}
+  gravarDados(CSTORE, JSON.stringify(cfg));
   if (document.body.getAttribute("data-aba") === "n") renderComp();
 }
-function salvar() { histTick(); try { localStorage.setItem(CSTORE, JSON.stringify(cfg)); } catch (e) {} }
+function salvar() { histTick(); gravarDados(CSTORE, JSON.stringify(cfg)); }
 
 function mdc(a, b) { while (b) { var t = b; b = a % b; a = t; } return a; }
 
