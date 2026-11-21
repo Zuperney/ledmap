@@ -1,9 +1,9 @@
-import { svgC, tiles, res } from "./core.js";
+import { svgC, tiles, res, blocosDe } from "./core.js";
 
 // retângulo em px (canvas) que envolve os painéis
 export function caixaPx(lista) {
   var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  lista.forEach(function (t) { var q = res(t); x0 = Math.min(x0, t.cx); y0 = Math.min(y0, t.cy); x1 = Math.max(x1, t.cx + q.w); y1 = Math.max(y1, t.cy + q.h); });
+  lista.forEach(function (t) { blocosDe(t).forEach(function (b) { x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h); }); }); // com os blocos
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 import { drag, set_drag } from "./canvas-edicao.js";

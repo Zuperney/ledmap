@@ -1,6 +1,7 @@
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { GAB, cabDe, garantirGabs } from "./gabinetes.js";
+import { limpaBlocos, listaBlocos, pxGabinete } from "./blocos.js";
 import { limpaGiro, limpaPivo, limpaVista, chaveGiro, deslocQuadro, deVistaAntiga, definirPai, paiDeGrupo, trocarPivo, migrarGrupoAntigo } from "./espaco.js";
 
 let paineis = [];
@@ -89,7 +90,16 @@ export function cleanExtra(x) {
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), rx: limpaGiro(x.rx), ry: limpaGiro(x.ry), rz: limpaGiro(x.rz), pv: limpaPivo(x.pv), oc: x.oc === true, tv: x.tv === true, extra: true };
+    var o = { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), rx: limpaGiro(x.rx), ry: limpaGiro(x.ry), rz: limpaGiro(x.rz), pv: limpaPivo(x.pv), oc: x.oc === true, tv: x.tv === true, extra: true };
+    o.bl = limpaBlocos(x.bl, res(o)); // blocos no mapa de pixels (ver blocos.js); null = um bloco só
+    return o;
+  }
+
+// blocos do painel no canvas da Screen (sem divisão: um bloco, o painel inteiro) e onde fica cada gabinete
+export function blocosDe(t) { return listaBlocos(res(t), t.cx, t.cy, t.bl); }
+export function gabPx(t, c, r) {
+    var q = res(t);
+    return t.bl ? pxGabinete(blocosDe(t), q, c, r) : [t.cx + c * q.cw, t.cy + r * q.ch];
   }
 
 export function cleanExtras(list) {
@@ -286,9 +296,7 @@ export function members(id) { return tiles.filter(function (t) { return t.grp ==
 export function bbox(list) {
     var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     list.forEach(function (t) {
-      var a = res(t);
-      x0 = Math.min(x0, t.cx); y0 = Math.min(y0, t.cy);
-      x1 = Math.max(x1, t.cx + a.w); y1 = Math.max(y1, t.cy + a.h);
+      blocosDe(t).forEach(function (b) { x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h); }); // com os blocos
     });
     return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   }

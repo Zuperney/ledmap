@@ -97,10 +97,13 @@ export function snake(cells, routing, corner) {
   return out;
 }
 
-// completa uma tela e só então passa para a próxima: no máximo 1 cabo cruza entre telas
+// painel de um grupo conta como o grupo inteiro (PLANO.md: o grupo é um painel só também no cabeamento)
+function reino(t) { return t ? (t.pn ? "g:" + t.pn : t.id) : ""; }
+
+// completa uma tela (ou um grupo) e só então passa para a próxima: no máximo 1 cabo cruza entre telas
 export function snakePorTela(cells, routing, corner) {
   var by = {}, ordem = [];
-  cells.forEach(function (c) { var k = c.t.id; if (!by[k]) { by[k] = []; ordem.push(k); } by[k].push(c); });
+  cells.forEach(function (c) { var k = reino(c.t); if (!by[k]) { by[k] = []; ordem.push(k); } by[k].push(c); });
   if (ordem.length <= 1) return snake(cells, routing, corner);
   var e = eixos(routing, corner);
   var min = function (g, ax) { return g.reduce(function (m, c) { return Math.min(m, c[ax]); }, Infinity); };
@@ -329,7 +332,7 @@ function avaliar(chunks, cap, cells, viz) {
     for (var k = 1; k < ch.length; k++) {
       var v = viz[ch[k - 1]].filter(function (x) { return x.j === ch[k]; })[0];
       if (v && v.salto) saltos++;
-      if (cells[ch[k]].t && cells[ch[k - 1]].t && cells[ch[k]].t.id !== cells[ch[k - 1]].t.id) trocas++;
+      if (cells[ch[k]].t && cells[ch[k - 1]].t && reino(cells[ch[k]].t) !== reino(cells[ch[k - 1]].t)) trocas++; // dentro do grupo não é troca
     }
     desvio += Math.abs(ch.length - media);
   });

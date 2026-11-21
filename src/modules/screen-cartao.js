@@ -10,6 +10,7 @@ import { placeC, multiLista, modoSelC, iniciarSelecaoC, clearMulti } from "./can
 import { openAdd, duplicarPainel, excluirPaineis, editarPainel } from "./telas.js";
 import { viewC, caixaPx } from "./visor.js";
 import { twoStep } from "./cabeamento.js";
+import { renderBlocos } from "./blocos-ui.js";
 
 function $(id) { return document.getElementById(id); }
 
@@ -64,6 +65,7 @@ export function renderCartaoC() {
     if (document.activeElement !== $("cc-y")) $("cc-y").value = t.cy;
     opcoesScreen($("cc-scr"), t.grp);
     $("cc-dup").textContent = p ? "Duplicar grupo" : "Duplicar";
+    renderBlocos(t); // blocos no mapa de pixels
     $("cc-sel").hidden = tiles.length < 2;
   } else if (modo === "varios") {
     var n = ids.length;

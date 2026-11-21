@@ -24,7 +24,7 @@ export function buildProject() {
       telas: tiles.map(function (t) { return { id: t.id, nome: t.name, x: t.cx, y: t.cy, screen: t.grp || "", painel: t.pn || "", mx: t.mx, my: t.my }; }),
       paineis: paineis.map(function (p) { return { id: p.id, nome: p.name, pinoX: p.gx || 0, pinoAltura: p.gy || 0, pinoRecuo: p.gz || 0, pino: p.pv || "b", giroX: p.rx || 0, giroY: p.ry || 0, giroZ: p.rz || 0 }; }),
       vistaAtual: vistaM,
-      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, giroX: e.rx || 0, giroY: e.ry || 0, giroZ: e.rz || 0, pivo: e.pv || "b", oculto: !!e.oc, travado: !!e.tv }; }),
+      extras: EXTRAS.map(function (e) { return { id: e.id, nome: e.name, tipo: e.kind, gabinete: e.cab, largura: e.w, altura: e.h, mx: e.mx, my: e.my, cx: e.cx, cy: e.cy, recortes: e.off || [], profundidade: e.z || 0, giroX: e.rx || 0, giroY: e.ry || 0, giroZ: e.rz || 0, pivo: e.pv || "b", oculto: !!e.oc, travado: !!e.tv, blocos: e.bl || null }; }),
       gabinetes: gabsUsados(EXTRAS),
       screens: groups.map(function (g) { return { id: g.id, nome: g.name }; }),
       proximaScreen: nextG,
@@ -86,7 +86,7 @@ export function applyProject(o) {
     if (Array.isArray(o.extras)) {
       var crus = o.extras.map(function (x) {
         if (!x || typeof x !== "object") return null;
-        var tp = telasPos[String(x.id)], c = { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes, z: x.profundidade, rx: x.giroX, ry: x.giroY, rz: x.giroZ, pv: x.pivo, oc: x.oculto === true, tv: x.travado === true, pl: x.vista };
+        var tp = telasPos[String(x.id)], c = { id: x.id, name: x.nome, kind: x.tipo, cab: x.gabinete, w: x.largura, h: x.altura, mx: x.mx, my: x.my, cx: x.cx, cy: x.cy, grp: "", off: x.recortes, z: x.profundidade, rx: x.giroX, ry: x.giroY, rz: x.giroZ, pv: x.pivo, oc: x.oculto === true, tv: x.travado === true, bl: x.blocos, pl: x.vista };
         if (x.vista && tp && mnum(tp.mx) !== null && mnum(tp.my) !== null) { c.mx = tp.mx; c.my = tp.my; }
         return c;
       });
@@ -94,7 +94,7 @@ export function applyProject(o) {
       crus.forEach(function (c) { if (c && migrados[c.id]) posMig[String(c.id)] = { mx: c.mx, my: c.my }; });
       var ne = cleanExtras(crus);
       // estrutura (o que exige recriar o desenho) × campos vivos (recuo, giro e pivô: aplicados no lugar)
-      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(",")]; })); };
+      var sig = function (l) { return JSON.stringify(l.map(function (e) { return [e.id, e.name, e.kind, e.cab, e.w, e.h, e.mx, e.my, e.cx, e.cy, (e.off || []).join(","), JSON.stringify(e.bl || null)]; })); };
       if (sig(ne) === sig(EXTRAS)) {
         var vivos = {};
         ne.forEach(function (x) { vivos[x.id] = x; });

@@ -278,6 +278,17 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
 .p-estado { display: flex; align-items: center; gap: 12px; padding: 0 10px; min-height: 26px; font-size: 11px; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
 .p-estado .stat { overflow: hidden; text-overflow: ellipsis; }
 /* painel misto, no modal de painel */
+/* Endereçamento: barra de modos */
+.modos { display: inline-flex; align-self: flex-start; }
+.modos .btn[aria-pressed="true"] { background: var(--imag); color: var(--bg); border-color: var(--imag); }
+
+/* blocos no mapa (cartão da Screen) */
+.cc-blocos { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+.cc-bl-cab { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
+.cc-bl { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 6px; font-size: 11px; }
+.cc-bl .md { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-bl label { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); }
+.cc-bl input { width: 74px; }
 .chk { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.35; cursor: pointer; }
 .chk input { margin-top: 2px; }
 .misto { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px dashed var(--line); border-radius: 6px; }
@@ -373,7 +384,8 @@ body.rig-3d #view-m .mwrap.mv-2, body.rig-3d #view-m .mwrap.mv-4 { grid-template
     grid-template-areas: "topo topo" "main lado" "estado lado";
     border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
   .oficina[hidden] { display: none; }
-  .oficina > .of-topo { grid-area: topo; display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .oficina > .of-topo { grid-area: topo; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .oficina > .of-topo .medit { flex-basis: 100%; }
   .oficina > .of-topo .bar { margin: 0; }
   .oficina > .mwrap { grid-area: main; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) !important; gap: 0; }
   .oficina .stagebox { min-height: 0; height: 100%; }
