@@ -5,6 +5,8 @@ import { ksave, kflush, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
 import { pmsg } from "./exportar.js";
+import { planoMisto, sugerirComplemento, descreverEixo } from "./misto.js";
+import { formarGrupo } from "./grupos.js";
 
 let KEY_REOPEN, KEY_PEND, addModal, aName, aW, aH, aPrev, aErr, editando = null;
 
@@ -28,10 +30,25 @@ export function nextExtraId() {
 
 function mult(v) { v = Number(v); return isFinite(v) && v > 0 && v <= 30; }
 
-let aCab;
+let aCab, aCab2, aMisto;
+function misto() { return !!(aMisto && aMisto.checked && !editando); }
+function planoAtual() {
+  var gA = GAB[aCab.value], gB = GAB[aCab2.value];
+  return gA && gB && mult(aW.value) && mult(aH.value) ? planoMisto(Number(aW.value), Number(aH.value), gA, gB, document.getElementById("a-posv").value, document.getElementById("a-posh").value) : null;
+}
 
 function updatePrev() {
     if (!GAB[aCab.value]) { aPrev.textContent = "A biblioteca está vazia: crie um gabinete primeiro."; return; }
+    document.getElementById("a-misto-box").hidden = !misto();
+    document.getElementById("a-cab-l").textContent = misto() ? "Gabinete principal" : "Gabinete";
+    if (misto()) {
+      if (!mult(aW.value) || !mult(aH.value)) { aPrev.textContent = "Informe largura e altura entre 0,1 e 30 m."; return; }
+      var gA = GAB[aCab.value], gB = GAB[aCab2.value], p = planoAtual();
+      if (!p) { aPrev.textContent = "Esses dois gabinetes não fecham " + fmt(Number(aW.value)) + " × " + fmt(Number(aH.value)) + " m. Troque o complemento (Sugerir complemento) ou a medida."; return; }
+      aPrev.textContent = "Altura: " + descreverEixo(p.altura, gA.mh, gB.mh) + " · Largura: " + descreverEixo(p.largura, gA.mw, gB.mw) + " · " + p.total + " gabinetes (" + p.nA + " principais + " + p.nB + " de complemento)" +
+        (p.blocos.length > 1 ? " · vira um grupo de " + p.blocos.length + " painéis, que funciona como um painel só" : " · fecha só com o principal: um painel comum");
+      return;
+    }
     if (!mult(aW.value) || !mult(aH.value)) { aPrev.textContent = "Informe largura e altura entre 0,1 e 30 m."; return; }
     var g = GAB[aCab.value], q = res({ w: Number(aW.value), h: Number(aH.value), kind: "imag", cab: aCab.value });
     aPrev.textContent = "Gabinete " + fmt(g.mw * 100) + " × " + fmt(g.mh * 100) + " cm · painel final " +fmt(q.cols * g.mw) + " × " + fmt(q.rows * g.mh) + " m · " + q.cols + " × " + q.rows + " gabinetes (" + (q.cols * q.rows) + ") · " + q.w + " × " + q.h + " px · " + nf(q.total) + " px no total";
@@ -75,6 +92,8 @@ export function openAdd(id) {
     document.getElementById("add-title").textContent = e ? "Editar painel " + e.id : "Adicionar painel";
     document.getElementById("a-ok").textContent = e ? "Salvar" : "Adicionar";
     aName.value = e ? e.name : "Painel " + nextExtraId();
+    document.getElementById("a-misto-fld").hidden = !!e; // misto só ao criar
+    if (e) aMisto.checked = false;
     if (e) { aW.value = e.w; aH.value = e.h; preencherCabs(e.cab); }
     document.getElementById("a-z-fld").hidden = !e;
     document.getElementById("a-z").value = e && e.z ? e.z : "";
@@ -98,6 +117,12 @@ export function preencherCabs(valor) {
     });
     var pd = gabPadrao();
     aCab.value = GAB[v] ? v : (pd ? pd.id : "");
+    if (aCab2) {
+      var v2 = aCab2.value;
+      aCab2.textContent = "";
+      Array.prototype.forEach.call(aCab.options, function (o) { aCab2.appendChild(o.cloneNode(true)); });
+      aCab2.value = GAB[v2] ? v2 : aCab.value;
+    }
     if (!addModal.hidden) updatePrev();
   }
 
@@ -125,9 +150,12 @@ export function init() {
   aPrev = document.getElementById("a-prev");
   aErr = document.getElementById("a-err");
   aCab = document.getElementById("a-cab");
+  aCab2 = document.getElementById("a-cab2");
+  aMisto = document.getElementById("a-misto");
   preencherCabs((gabPadrao() || {}).id);
-  [aCab, aW, aH].forEach(function (n) { n.addEventListener("input", updatePrev); });
-  document.getElementById("add-open").addEventListener("click", function () { openAdd(); });
+  [aCab, aW, aH, aCab2, document.getElementById("a-posv"), document.getElementById("a-posh")].forEach(function (n) { n.addEventListener("input", updatePrev); });
+  aMisto.addEventListener("change", function () { if (aMisto.checked && aCab2.value === aCab.value) sugerir(true); updatePrev(); });
+  document.getElementById("a-sugerir").addEventListener("click", function () { sugerir(false); });
   document.getElementById("add-open2").addEventListener("click", function () { openAdd(); });
   document.getElementById("add-open3").addEventListener("click", function () { openAdd(); });
   document.getElementById("a-cancel").addEventListener("click", closeAdd);
@@ -141,6 +169,7 @@ export function init() {
       aErr.textContent = "";
       if (!GAB[aCab.value]) { aErr.textContent = "Escolha um gabinete (a biblioteca está vazia: crie um em Criar ou editar gabinetes)."; return; }
       if (editando) { salvarEdicao(); return; }
+      if (misto()) { criarMisto(); return; }
       if (EXTRAS.length >= EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " painéis."; return; }
       if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Informe largura e altura válidas (até 30 m)."; return; }
       var id = nextExtraId();
@@ -158,6 +187,69 @@ export function init() {
       }
     });
 }
+
+// cria um painel desenhado no Palco (ferramenta Painel): w × h em gabinetes inteiros, canto de baixo à esquerda em
+// (mx, my), de frente para o público, pin no meio de baixo. Devolve "" ou o motivo de não ter criado.
+export function criarPainelEm(w, h, mx, my, cab) {
+    if (!GAB[cab]) return "Escolha um gabinete.";
+    if (EXTRAS.length >= EXTRA_MAX) return "Limite de " + EXTRA_MAX + " painéis.";
+    var id = nextExtraId();
+    if (Number(id) > 999) return "Numeração esgotada.";
+    var fc = freeC({ w: w, h: h, kind: "imag", cab: cab, mx: mx, my: my });
+    var c = cleanExtra({ id: id, name: "Painel " + id, kind: "imag", cab: cab, w: w, h: h, mx: Math.round(mx * 1000) / 1000, my: Math.round(my * 1000) / 1000, z: 0, pv: "b", cx: fc.x, cy: fc.y, grp: "" });
+    if (!c) return "Medida ou posição fora do limite (até 30 m de painel).";
+    EXTRAS.push(c);
+    try { localStorage.setItem("ledmap-msg", "Painel " + id + ": " + fmt(w) + " × " + fmt(h) + " m."); } catch (e) {}
+    if (!commitAndReload(curTab + ":" + id)) { EXTRAS.pop(); return "Não consegui salvar neste navegador."; }
+    return "";
+  }
+
+// sugere o complemento do painel misto (mesmo pitch, menos gabinetes no total)
+function sugerir(quieto) {
+    var gA = GAB[aCab.value];
+    if (!gA || !mult(aW.value) || !mult(aH.value)) return;
+    var s = sugerirComplemento(Number(aW.value), Number(aH.value), gA, GABINETES, document.getElementById("a-posv").value, document.getElementById("a-posh").value);
+    if (s) { aCab2.value = s.g.id; aErr.textContent = ""; }
+    else if (!quieto) aErr.textContent = "Nenhum gabinete da biblioteca com o mesmo pitch fecha essa medida junto com o principal.";
+    updatePrev();
+  }
+
+// cria o painel misto: um painel por bloco (principal, faixa, coluna, canto), todos num grupo com o nome do painel,
+// pin no meio de baixo. Na Screen os blocos ficam lado a lado como na montagem.
+function criarMisto() {
+    var w = Number(aW.value), h = Number(aH.value), gA = GAB[aCab.value], gB = GAB[aCab2.value];
+    if (!mult(aW.value) || !mult(aH.value)) { aErr.textContent = "Informe largura e altura válidas (até 30 m)."; return; }
+    var p = planoAtual();
+    if (!p) { aErr.textContent = "Esses dois gabinetes não fecham a medida: troque o complemento ou a medida."; return; }
+    if (EXTRAS.length + p.blocos.length > EXTRA_MAX) { aErr.textContent = "Limite de " + EXTRA_MAX + " painéis."; return; }
+    var base = Number(nextExtraId());
+    if (base + p.blocos.length - 1 > 999) { aErr.textContent = "Numeração esgotada."; return; }
+    var fm = posNova(w, h);
+    if (!fm) { aErr.textContent = "Sem espaço livre na montagem."; return; }
+    var nome = (aName.value.trim() || "Painel " + base).slice(0, 40), fc = freeC({ w: w, h: h, kind: "imag", cab: gA.id, mx: fm.mx, my: fm.my });
+    var kx = gA.rx / gA.mw, ky = gA.ry / gA.mh; // px por metro (o complemento tem o mesmo pitch)
+    var NOME = { principal: "", faixa: " · faixa", coluna: " · coluna", canto: " · canto" };
+    var antesEx = EXTRAS.length, antesT = tiles.length, antesP = paineis.slice(), novos = [];
+    var falhou = p.blocos.some(function (b, i) {
+      var g = b.cab === "a" ? gA : gB, nid = String(base + i);
+      var c = cleanExtra({ id: nid, name: (nome + NOME[b.papel]).slice(0, 40), kind: "imag", cab: g.id, w: b.w, h: b.h, mx: r3(fm.mx + b.x), my: r3(fm.my + b.y), z: fm.z, pv: "b",
+        cx: Math.round(fc.x + b.x * kx), cy: Math.round(fc.y + (h - b.y - b.h) * ky), grp: "" });
+      if (!c) return true;
+      EXTRAS.push(c);
+      var t = Object.assign({}, c, { pn: "" });
+      tiles.push(t); novos.push(t);
+      return false;
+    });
+    var desfaz = function () { EXTRAS.length = antesEx; tiles.length = antesT; set_paineis(antesP); };
+    if (falhou) { desfaz(); aErr.textContent = "Dimensões ou posição fora do limite."; return; }
+    if (novos.length > 1) {
+      var g = novoPainel(); g.name = nome;
+      formarGrupo(g, novos); // pin no meio de baixo da caixa: nada se move
+      if (fm.ry) g.ry = fm.ry; // vista lateral: o grupo nasce virado para ela
+    } else if (fm.ry) { novos[0].ry = fm.ry; gravarVivo(novos); }
+    try { localStorage.setItem("ledmap-msg", nome + ": painel misto com " + p.total + " gabinetes" + (novos.length > 1 ? " em " + novos.length + " partes (um grupo)." : ".")); } catch (e) {}
+    if (!commitAndReload(curTab + ":" + base)) { try { localStorage.removeItem("ledmap-msg"); } catch (e) {} desfaz(); aErr.textContent = "Não consegui salvar neste navegador."; }
+  }
 
 // grava nome, tamanho e gabinete; a posição (Rig e Screen), a Screen e o grupo ficam como estão.
 // Se a grade de gabinetes muda, as rotas de cabo que passavam por este painel saem (as células mudaram).
@@ -210,6 +302,47 @@ export function duplicarPainel(id) {
     if (falhou) { desfaz("Não foi possível duplicar."); return; }
     try { localStorage.setItem("ledmap-msg", orig ? pnome(orig) + " duplicado: " + mem.length + " painéis em " + pnome(novoG) + "." : "Painel " + t.id + " duplicado."); } catch (e) {}
     if (!commitAndReload(curTab + ":" + base)) { try { localStorage.removeItem("ledmap-msg"); } catch (e) {} desfaz("Não consegui salvar neste navegador."); }
+  }
+
+// Duplicar várias: cópias do painel (ou do grupo inteiro) deslocadas no palco por desl = [[dx, dy, dRecuo], …].
+// Cada cópia é igual ao original (giro, pin, gabinete); grupo vira grupo novo com o pin deslocado e os membros com os
+// mesmos valores relativos. Na Screen, cada cópia vai para o primeiro espaço livre. juntar: o original (solto) e as
+// cópias viram um grupo só.
+export function duplicarEm(id, desl, juntar) {
+    var t = tiles.filter(function (x) { return x.id === id; })[0];
+    if (!t || !desl.length) return "Nada para duplicar.";
+    var orig = t.pn && painelById(t.pn), mem = orig ? membrosPainel(t.pn) : [t], total = mem.length * desl.length;
+    if (EXTRAS.length + total > EXTRA_MAX) return "Limite de " + EXTRA_MAX + " painéis: dá para criar mais " + Math.max(0, Math.floor((EXTRA_MAX - EXTRAS.length) / mem.length)) + " cópia(s).";
+    var base = Number(nextExtraId());
+    if (base + total - 1 > 999) return "Numeração esgotada.";
+    var antesEx = EXTRAS.length, antesT = tiles.length, antesP = paineis.slice(), copias = [], k = 0, cb = bbox(mem);
+    var falhou = desl.some(function (d, ci) {
+      var g = null;
+      if (orig) { g = novoPainel(); Object.assign(g, { gx: r3((orig.gx || 0) + d[0]), gy: r3((orig.gy || 0) + d[1]), gz: r3((orig.gz || 0) + d[2]), rx: orig.rx || 0, ry: orig.ry || 0, rz: orig.rz || 0, pv: orig.pv }); g.name = (pnome(orig) + " " + (ci + 2)).slice(0, 40); }
+      var fc = freeSpot(cb.w, cb.h, tiles.concat(BASE)) || { x: cb.x, y: cb.y };
+      return mem.some(function (m) {
+        var nid = String(base + k++), mx = orig ? m.mx : r3(m.mx + d[0]), my = orig ? m.my : r3(m.my + d[1]), z = orig ? (m.z || 0) : r3((m.z || 0) + d[2]);
+        var c = cleanExtra({ id: nid, name: (m.name + " " + (ci + 2)).slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + fc.x - cb.x, cy: m.cy + fc.y - cb.y, grp: m.grp || "", off: m.off, z: z, rx: m.rx, ry: m.ry, rz: m.rz, pv: m.pv });
+        if (!c) return true;
+        EXTRAS.push(c);
+        var nt = Object.assign({}, c, { mx: mx, my: my, z: z, pn: g ? g.id : "" });
+        tiles.push(nt); copias.push(nt);
+        return false;
+      });
+    });
+    if (falhou) { EXTRAS.length = antesEx; tiles.length = antesT; set_paineis(antesP); return "Alguma cópia ficaria fora do limite (até 200 m do centro)."; }
+    if (juntar && !orig) { var gj = novoPainel(); gj.name = (t.name + " (conjunto)").slice(0, 40); formarGrupo(gj, [t].concat(copias)); }
+    try { localStorage.setItem("ledmap-msg", (orig ? pnome(orig) : "Painel " + t.id) + ": " + desl.length + " cópia(s)" + (juntar && !orig ? ", tudo num grupo." : ".")); } catch (e) {}
+    if (!commitAndReload(curTab + ":" + base)) { try { localStorage.removeItem("ledmap-msg"); } catch (e) {} EXTRAS.length = antesEx; tiles.length = antesT; set_paineis(antesP); return "Não consegui salvar neste navegador."; }
+    return "";
+  }
+// tamanho do painel (ou do grupo) no palco: largura em X, altura e fundo (recuo), com giro e grupo
+export function medidaNoPalco(id) {
+    var t = tiles.filter(function (x) { return x.id === id; })[0];
+    if (!t) return null;
+    var mem = t.pn && painelById(t.pn) ? membrosPainel(t.pn) : [t], e = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, r0: Infinity, r1: -Infinity };
+    mem.forEach(function (m) { var x = extensao(m); e.x0 = Math.min(e.x0, x.x0); e.x1 = Math.max(e.x1, x.x1); e.y0 = Math.min(e.y0, x.y0); e.y1 = Math.max(e.y1, x.y1); e.r0 = Math.min(e.r0, x.r0); e.r1 = Math.max(e.r1, x.r1); });
+    return { w: e.x1 - e.x0, h: e.y1 - e.y0, d: e.r1 - e.r0, grupo: mem.length > 1 ? (t.pn && painelById(t.pn)) : null, n: mem.length };
   }
 
 // limpa as rotas de cabo que passam pelos painéis (as células deles mudaram)

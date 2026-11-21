@@ -89,7 +89,7 @@ export function cleanExtra(x) {
     var cx = Math.round(Number(x.cx)), cy = Math.round(Number(x.cy));
     if (!isFinite(cx) || !isFinite(cy) || Math.abs(cx) > 20000 || Math.abs(cy) > 20000) { cx = 0; cy = 0; }
     var nm = typeof x.name === "string" ? x.name.trim().slice(0, 40) : "";
-    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), rx: limpaGiro(x.rx), ry: limpaGiro(x.ry), rz: limpaGiro(x.rz), pv: limpaPivo(x.pv), extra: true };
+    return { id: id, name: nm || ("Painel " + id), kind: kind, cab: cab, w: w, h: h, mx: mx, my: my, cx: cx, cy: cy, grp: typeof x.grp === "string" ? x.grp : "", pn: "", off: limpaOff(x.off), z: profundidade(x.z), rx: limpaGiro(x.rx), ry: limpaGiro(x.ry), rz: limpaGiro(x.rz), pv: limpaPivo(x.pv), oc: x.oc === true, tv: x.tv === true, extra: true };
   }
 
 export function cleanExtras(list) {
@@ -133,7 +133,7 @@ export function gabsUsados(list) {
 export function gravarVivo(lista) {
     var porId = {};
     lista.forEach(function (t) { porId[t.id] = t; });
-    EXTRAS.forEach(function (x) { var t = porId[x.id]; if (t) ["z", "rx", "ry", "rz", "pv"].forEach(function (k) { x[k] = t[k]; }); });
+    EXTRAS.forEach(function (x) { var t = porId[x.id]; if (t) ["z", "rx", "ry", "rz", "pv", "oc", "tv"].forEach(function (k) { x[k] = t[k]; }); });
   }
 
 export function save() {
@@ -321,7 +321,7 @@ export function migrarTransformacoes(pinAntigo) {
 export var INICIO = { t: {}, p: [] };
 export function marcarInicio() {
   INICIO = { t: {}, p: paineis.map(function (p) { return Object.assign({}, p); }) };
-  tiles.forEach(function (t) { INICIO.t[t.id] = { mx: t.mx, my: t.my, z: t.z, rx: t.rx, ry: t.ry, rz: t.rz, pv: t.pv, pn: t.pn }; });
+  tiles.forEach(function (t) { INICIO.t[t.id] = { mx: t.mx, my: t.my, z: t.z, rx: t.rx, ry: t.ry, rz: t.rz, pv: t.pv, pn: t.pn }; }); // ocultar e travar não voltam com o Restaurar
 }
 
 export function init() {

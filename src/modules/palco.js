@@ -2,9 +2,13 @@
 // (Propriedades e Camadas) à direita, estado embaixo. É só a casca: as ferramentas acionam o que já existia
 // (o "Mover", a alça de giro, o Recortar, o + Painel) e o cartão do painel vira a aba Propriedades.
 // Ferramentas: Selecionar (V) arrasta painéis · Navegar (H) arrastar só move a vista · Girar (R) mostra a alça ·
-// Painel (P) abre o + Painel · Recortar (C) recorta o painel selecionado. Vistas: 1 a 5 (Frente, Atrás, Esquerda,
+// Painel (P) desenha um painel arrastando (clique no vazio abre a janela) · Medir (M) mede entre dois pontos ·
+// Recortar (C) recorta o painel selecionado (ver desenhar.js). Vistas: 1 a 5 (Frente, Atrás, Esquerda,
 // Direita, Topo), 0 liga/desliga o 3D. Enquadrar: F.
-import { tiles, selected, paineis, membrosPainel, pnome, fmt } from "./core.js";
+import { tiles, selected, paineis, membrosPainel, pnome, fmt, gravarVivo, save, EXTRAS } from "./core.js";
+import { placeM } from "./rig.js";
+import { commitAndReload } from "./telas.js";
+import { curTab } from "./abas.js";
 import { corCab } from "./gabinetes.js";
 import { setEditM, setAlcaLigada } from "./rig-edicao.js";
 import { select } from "./tabela.js";
@@ -15,7 +19,7 @@ import { pmsg } from "./exportar.js";
 
 function $(id) { return document.getElementById(id); }
 
-var NOMES = { selecionar: "Selecionar", navegar: "Navegar", girar: "Girar" };
+var NOMES = { selecionar: "Selecionar", navegar: "Navegar", girar: "Girar", painel: "Painel", medir: "Medir" };
 var CHAVE = "ledmap-ferramenta"; // preferência do aparelho
 var ferramenta = "selecionar";
 
@@ -32,7 +36,9 @@ export function usar(f) {
 
 function aplicar() {
   var em3 = no3D();
-  if (noPalco() && !em3) setEditM(ferramenta !== "navegar");
+  if (noPalco() && !em3) setEditM(ferramenta === "selecionar" || ferramenta === "girar"); // Painel e Medir desenham: sem arrasto de painel
+  document.body.dataset.ferr = em3 ? "" : ferramenta;
+  document.body.classList.toggle("p-desenho", !em3 && (ferramenta === "painel" || ferramenta === "medir"));
   setAlcaLigada(ferramenta === "girar");
   document.querySelectorAll("#m-tools .ptool[data-tool]").forEach(function (b) {
     b.setAttribute("aria-pressed", String(b.getAttribute("data-tool") === ferramenta));
@@ -61,14 +67,27 @@ function aba(qual) {
   if (qual === "cam") camadas();
 }
 
-// Camadas: os grupos (com os painéis dentro) e depois os painéis soltos; tocar seleciona
+// Camadas: os grupos (com os painéis dentro) e depois os painéis soltos; tocar seleciona.
+// Cada linha tem olho (ocultar no Palco), cadeado (travar no desenho) e ▲▼ (ordem: quem vem depois fica por cima
+// quando dois painéis estão na mesma profundidade). No grupo, o olho e o cadeado valem para todos os membros.
+var OLHO = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+var OLHO_X = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7c2 0 3.8.8 5.3 1.8M22 12s-4 7-10 7c-2 0-3.8-.8-5.3-1.8"/><path d="M3 3l18 18"/></svg>';
+var CAD = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+var CAD_A = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>';
+function acoes(lista, ordem) {
+  var oc = lista.every(function (t) { return t.oc; }), tv = lista.every(function (t) { return t.tv; });
+  return '<span class="ac">' + (ordem ? '<button type="button" data-ac="sobe" title="Para frente (desenhado por cima)">▲</button><button type="button" data-ac="desce" title="Para trás (desenhado por baixo)">▼</button>' : "") +
+    '<button type="button" data-ac="oc" aria-pressed="' + oc + '" title="' + (oc ? "Mostrar no Palco" : "Ocultar no Palco") + '">' + (oc ? OLHO_X : OLHO) + "</button>" +
+    '<button type="button" data-ac="tv" aria-pressed="' + tv + '" title="' + (tv ? "Destravar" : "Travar: não pega toque nem arrasto no desenho") + '">' + (tv ? CAD : CAD_A) + "</button></span>";
+}
 function linhaPainel(t, cls) {
   var li = document.createElement("li");
   li.className = cls + (t.id === selected ? " sel" : "");
   li.setAttribute("data-id", t.id);
   li.style.setProperty("--cor", corCab(t));
   li.title = t.name + " · " + fmt(t.w) + " × " + fmt(t.h) + " m";
-  li.innerHTML = '<span class="sw"></span><span class="n"></span><span class="nm"></span><span class="md"></span>';
+  li.innerHTML = '<span class="sw"></span><span class="n"></span><span class="nm"></span><span class="md"></span>' + acoes([t], true);
+  li.classList.toggle("oculta", !!t.oc);
   li.querySelector(".n").textContent = t.id;
   li.querySelector(".nm").textContent = t.name;
   li.querySelector(".md").textContent = fmt(t.w) + "×" + fmt(t.h);
@@ -84,13 +103,34 @@ function camadas() {
     if (!m.length) return;
     var g = document.createElement("li");
     g.className = "grp"; g.setAttribute("data-grupo", p.id);
-    g.innerHTML = '<span class="sw" style="background:var(--muted)"></span><span class="nm"></span><span class="md"></span>';
+    g.innerHTML = '<span class="sw" style="background:var(--muted)"></span><span class="nm"></span><span class="md"></span>' + acoes(m, false);
+    g.classList.toggle("oculta", m.every(function (t) { return t.oc; }));
     g.querySelector(".nm").textContent = pnome(p);
     g.querySelector(".md").textContent = m.length + " painéis";
     ul.appendChild(g);
     m.forEach(function (t) { ul.appendChild(linhaPainel(t, "mem")); });
   });
   tiles.filter(function (t) { return !t.pn; }).forEach(function (t) { ul.appendChild(linhaPainel(t, "")); });
+}
+
+// olho, cadeado e ordem (ver acoes)
+function acaoCamada(li, ac) {
+  var g = li.getAttribute("data-grupo"), id = li.getAttribute("data-id");
+  var lista = g ? membrosPainel(g) : tiles.filter(function (t) { return t.id === id; });
+  if (!lista.length) return;
+  if (ac === "oc" || ac === "tv") {
+    var liga = !lista.every(function (t) { return t[ac]; });
+    lista.forEach(function (t) { t[ac] = liga; placeM(t); });
+    gravarVivo(lista); save(); camadas();
+    pmsg(lista.length > 1 ? (liga ? (ac === "oc" ? "Grupo oculto no Palco." : "Grupo travado.") : (ac === "oc" ? "Grupo à vista." : "Grupo destravado.")) : (liga ? (ac === "oc" ? "Painel oculto no Palco (continua no cabeamento e na composição)." : "Painel travado: selecione pela lista.") : (ac === "oc" ? "Painel à vista." : "Painel destravado.")));
+    return;
+  }
+  // ordem: troca de lugar com o vizinho na lista de painéis (a definição); recarrega para tudo seguir a ordem nova
+  var i = EXTRAS.findIndex(function (x) { return x.id === id; }), j = ac === "sobe" ? i + 1 : i - 1;
+  if (i < 0 || j < 0 || j >= EXTRAS.length) return;
+  var tmp = EXTRAS[i]; EXTRAS[i] = EXTRAS[j]; EXTRAS[j] = tmp;
+  try { localStorage.setItem("ledmap-msg", "Ordem das camadas atualizada."); } catch (e) {}
+  if (!commitAndReload(curTab + ":" + id)) { EXTRAS[j] = EXTRAS[i]; EXTRAS[i] = tmp; pmsg("Não consegui salvar neste navegador."); }
 }
 
 // a grade do Palco (e das abas no mesmo molde: Screen, Cabeamento, Composição) ocupa a janela até embaixo; o
@@ -118,6 +158,8 @@ export function init() {
   $("m-camadas").addEventListener("click", function (e) {
     var li = e.target.closest("li");
     if (!li) return;
+    var bt = e.target.closest("button[data-ac]");
+    if (bt) { e.stopPropagation(); acaoCamada(li, bt.getAttribute("data-ac")); return; }
     var g = li.getAttribute("data-grupo");
     if (g) { var m = membrosPainel(g); if (m.length) select(m[0].id); abrirGrupo(g); aba("prop"); return; }
     var id = li.getAttribute("data-id");
@@ -138,9 +180,8 @@ export function init() {
   // atalhos (fora dos campos; Ctrl/Cmd ficam para desfazer, duplicar etc.)
   document.addEventListener("keydown", function (e) {
     if (!noPalco() || e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || "") || e.target.isContentEditable) return;
-    var k = e.key.toLowerCase(), f = { v: "selecionar", h: "navegar", r: "girar" }[k];
+    var k = e.key.toLowerCase(), f = { v: "selecionar", h: "navegar", r: "girar", p: "painel", m: "medir" }[k];
     if (f && !no3D()) { e.preventDefault(); usar(f); return; }
-    if (k === "p") { e.preventDefault(); $("add-open").click(); return; }
     if (k === "c" && !no3D()) { e.preventDefault(); recortar(); return; }
     if (k === "f") { e.preventDefault(); $("m-zfit").click(); return; }
     if (e.key === "0") { e.preventDefault(); alternar3D(); return; }

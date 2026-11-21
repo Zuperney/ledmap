@@ -33,6 +33,8 @@ import { init as init_screen_cartao } from "./modules/screen-cartao.js";
 import { init as init_vistas } from "./modules/vistas.js";
 import { init as init_campos } from "./modules/campos.js";
 import { init as init_palco } from "./modules/palco.js";
+import { init as init_duplicar } from "./modules/duplicar.js";
+import { init as init_desenhar } from "./modules/desenhar.js";
 
 init_core();
 init_rig();
@@ -58,6 +60,8 @@ init_gab_ui();
 init_rig_cartao();
 init_menu_contexto();
 init_screen_cartao();
+init_duplicar();
+init_desenhar();
 init_vistas();
 init_campos();
 init_palco();
