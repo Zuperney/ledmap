@@ -9,6 +9,8 @@ var FACE = 'fill="currentColor" fill-opacity=".28"';
 export var ICONES_VISTA = {
   // de frente: o oitão com a porta; a chaminé aparece atrás do telhado
   frente: A + '<path d="M15 7.5V4h2v5.5"/><path ' + FACE + ' d="M5 20v-9l7-6.5 7 6.5v9z"/><path d="M10.5 20v-5h3v5"/>' + F,
+  // de trás: o oitão do fundo, sem porta, com uma janela; a chaminé fica na frente do telhado (do lado de quem olha)
+  tras: A + '<path ' + FACE + ' d="M5 20v-9l7-6.5 7 6.5v9z"/><path d="M7 9.2V4h2v3.4"/><path d="M10.5 13h3v3h-3z"/>' + F,
   // de cima: o telhado com a cumeeira no meio (fundo em cima), a chaminé atrás e a porta embaixo
   topo: A + '<path ' + FACE + ' d="M6 4h12v15H6z"/><path d="M12 4v15"/><path d="M14.5 5.5h2v2h-2z"/><path d="M10.5 21h3"/>' + F,
   // da esquerda: a lateral; o fundo (chaminé) à esquerda, o público à direita

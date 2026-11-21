@@ -1,9 +1,14 @@
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
 import { GAB, cabDe, garantirGabs } from "./gabinetes.js";
-import { limpaGiro, limpaPivo, limpaVista, chaveGiro, deslocQuadro, deVistaAntiga } from "./espaco.js";
+import { limpaGiro, limpaPivo, limpaVista, chaveGiro, deslocQuadro, deVistaAntiga, definirPai, paiDeGrupo, trocarPivo, migrarGrupoAntigo } from "./espaco.js";
 
 let paineis = [];
+// o pai de um painel é o grupo dele (com pin gx, gy, recuo gz e giro): ver espaco.js. Grupo de projeto antigo (sem
+// pin) ainda não é pai: os membros dele estão com os valores no palco até a migração (migrarTransformacoes).
+definirPai(function (t) { var p = painelById(t.pn); return p && typeof p.gx === "number" ? paiDeGrupo(p) : null; });
+// versão das transformações gravada junto: 2 = pin padrão no meio de baixo e grupos com pin próprio
+export var PIN_V = 2;
 // O Rig mostra o palco por uma de 4 vistas ortogonais (Frente, Topo, Esquerda, Direita: ver espaco.js).
 // Cada painel tem posição (mx, my, recuo z) e giro (rx, ry, rz em graus, em volta do pivô pv).
 let vistaM = "frente";
@@ -136,7 +141,7 @@ export function save() {
     try {
       var pos = {}, tg = {}, mpos = {}, tp = {};
       tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; tp[t.id] = t.pn || ""; });
-      localStorage.setItem(STORE, JSON.stringify({ pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, vista: vistaM, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
+      localStorage.setItem(STORE, JSON.stringify({ pinV: PIN_V, pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, vista: vistaM, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
     } catch (e) {}
   }
 
@@ -232,7 +237,14 @@ export function cabPath(cols, rows, cw, ch) {
 export function limpaPaineis(l) {
     var out = [], seen = {};
     (Array.isArray(l) ? l : []).forEach(function (p) {
-      if (p && typeof p.id === "string" && /^a\d{1,6}$/.test(p.id) && !seen[p.id]) { seen[p.id] = 1; out.push({ id: p.id, name: typeof p.name === "string" ? p.name.slice(0, 40) : "", rx: limpaGiro(p.rx), ry: limpaGiro(p.ry), rz: limpaGiro(p.rz) }); } // giro do grupo como um todo
+      if (p && typeof p.id === "string" && /^a\d{1,6}$/.test(p.id) && !seen[p.id]) {
+        seen[p.id] = 1;
+        var g = { id: p.id, name: typeof p.name === "string" ? p.name.slice(0, 40) : "", rx: limpaGiro(p.rx), ry: limpaGiro(p.ry), rz: limpaGiro(p.rz) }; // giro do grupo
+        // pin do grupo no palco; sem ele é um grupo antigo, que a migração converte
+        var x = mm(p.gx, -200, 200), y = mm(p.gy, -50, 100), z = mm(p.gz, -200, 200);
+        if (x !== null && y !== null && z !== null) { g.gx = x; g.gy = y; g.gz = z || 0; g.pv = limpaPivo(p.pv); }
+        out.push(g);
+      }
     });
     return out;
   }
@@ -251,7 +263,7 @@ export function membrosPainel(id) { return id ? tiles.filter(function (t) { retu
 export function novoPainel() {
     var n = 1;
     paineis.forEach(function (p) { n = Math.max(n, (parseInt(p.id.slice(1), 10) || 0) + 1); });
-    var p = { id: "a" + n, name: "" };
+    var p = { id: "a" + n, name: "", gx: 0, gy: 0, gz: 0, rx: 0, ry: 0, rz: 0, pv: "b" };
     paineis.push(p);
     return p;
   }
@@ -281,6 +293,37 @@ export function bbox(list) {
     return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   }
 
+// Projetos de antes das regras de transformação (PLANO.md), sem mover nada no palco:
+// - grupo sem pin (o giro dele estava somado nos membros) ganha pin e membros relativos a ele;
+// - pinAntigo: o pin padrão era o centro; quem estava no centro passa para o meio da borda de baixo.
+export function migrarTransformacoes(pinAntigo) {
+  var mudou = false;
+  paineis.forEach(function (p) {
+    if (typeof p.gx === "number") return;
+    var m = membrosPainel(p.id);
+    if (!m.length) return;
+    var n = migrarGrupoAntigo(p, m);
+    p.gx = r2(n.gx); p.gy = r2(n.gy); p.gz = r2(n.gz) || 0; p.pv = n.pv;
+    m.forEach(function (t, i) { var v = n.membros[i]; t.mx = r2(v.mx); t.my = r2(v.my); t.z = r2(v.z) || 0; t.rx = v.rx; t.ry = v.ry; t.rz = v.rz; });
+    mudou = true;
+  });
+  if (pinAntigo) tiles.forEach(function (t) {
+    if (t.pv !== "c") return;
+    var n = trocarPivo(t, "b");
+    t.mx = r2(n.mx); t.my = r2(n.my); t.z = r2(n.z) || 0; t.pv = "b";
+    mudou = true;
+  });
+  if (mudou) gravarVivo(tiles);
+  return mudou;
+}
+
+// como tudo estava quando o projeto abriu (depois da migração): é o que o "Restaurar" do Palco devolve
+export var INICIO = { t: {}, p: [] };
+export function marcarInicio() {
+  INICIO = { t: {}, p: paineis.map(function (p) { return Object.assign({}, p); }) };
+  tiles.forEach(function (t) { INICIO.t[t.id] = { mx: t.mx, my: t.my, z: t.z, rx: t.rx, ry: t.ry, rz: t.rz, pv: t.pv, pn: t.pn }; });
+}
+
 export function init() {
   NS = "http://www.w3.org/2000/svg";
   FLOOR = 8;
@@ -290,7 +333,7 @@ export function init() {
   PITCH = { imag: { name: "P5.9", px: 84 }, up: { name: "P5.9", px: 84 }, c: { name: "P3.9", px: 128 } };
   EXTRA_MAX = 200;
   EXTRAS = [];
-  var migrados = {};
+  var migrados = {}, saved0 = null;
   try {
       var s0 = JSON.parse(localStorage.getItem(STORE) || "null");
       if (s0) garantirGabs(s0.gabs);
@@ -313,6 +356,7 @@ export function init() {
   groupMove = true;
   try {
       var saved = JSON.parse(localStorage.getItem(STORE) || "null");
+      saved0 = saved;
       if (saved) {
         if (Array.isArray(saved.groups)) {
           groups = saved.groups.filter(function (g) { return g && typeof g.id === "string" && typeof g.name === "string"; });
@@ -332,6 +376,8 @@ export function init() {
     } catch (e) {}
   tiles.forEach(function (t) { if (t.pn && !painelById(t.pn)) t.pn = ""; });
   podarPaineis();
+  var migrou = saved0 ? migrarTransformacoes(saved0.pinV !== PIN_V) : false;
+  marcarInicio();
   tiles.forEach(function (t) {
       if (t.grp && !groups.some(function (g) { return g.id === t.grp; })) t.grp = "";
     });
@@ -341,7 +387,7 @@ export function init() {
   gM = {};
   gC = {};
   selected = null;
-  if (Object.keys(migrados).length) save(); // grava já no formato novo (sem as vistas antigas)
+  if (Object.keys(migrados).length || migrou) save(); // grava já no formato novo (sem as vistas antigas, com os pins)
 }
 
 export { tiles, FLOOR, svgM, gM, selected, svgC, CW, CH, gC, rowsEl, groups, PITCH, active, nextG, groupMove, BASE, EXTRAS, STORE, EXTRA_MAX, paineis };

@@ -10,18 +10,18 @@ import { imagemMontagem, PRESETS } from "./composicao.js";
 import { projetoAtivo } from "./projetos.js";
 import { saveFile, pmsg } from "./exportar.js";
 import { select } from "./tabela.js";
-import { PROF, pivo, normal } from "./espaco.js";
+import { PROF, pivo, pivoLocal, matriz, normal } from "./espaco.js";
 
 var abertos = []; // 3D abertos: { alvo, api }
 
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
 // leva o painel sem giro (coordenadas do palco: x = mx…, y = my…, z = −recuo, frente para +Z) ao lugar dele:
-// gira em volta do pivô, ordem YXZ (a mesma de espaco.js)
-var GRAU = Math.PI / 180;
+// do quadro do painel para o palco, com o grupo (a mesma conta de espaco.js): p → P + M·(p − pin no quadro)
 function matrizPainel(t) {
-  var P = pivo(t), R = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler((t.rx || 0) * GRAU, (t.ry || 0) * GRAU, (t.rz || 0) * GRAU, "YXZ"));
-  return new THREE.Matrix4().makeTranslation(P[0], P[1], P[2]).multiply(R).multiply(new THREE.Matrix4().makeTranslation(-P[0], -P[1], -P[2]));
+  var M = matriz(t), P = pivo(t), L = pivoLocal(t);
+  var tx = P[0] - (M[0][0] * L[0] + M[0][1] * L[1] + M[0][2] * L[2]), ty = P[1] - (M[1][0] * L[0] + M[1][1] * L[1] + M[1][2] * L[2]), tz = P[2] - (M[2][0] * L[0] + M[2][1] * L[1] + M[2][2] * L[2]);
+  return new THREE.Matrix4().set(M[0][0], M[0][1], M[0][2], tx, M[1][0], M[1][1], M[1][2], ty, M[2][0], M[2][1], M[2][2], tz, 0, 0, 0, 1);
 }
 
 // textura da frente de um painel: o recorte dele na imagem da Montagem, com os gabinetes recortados transparentes

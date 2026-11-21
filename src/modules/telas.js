@@ -1,6 +1,6 @@
 import { GABINETES, GAB, gabPadrao } from "./gabinetes.js";
 import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS, bbox, membrosPainel, novoPainel, painelById, pnome, paineis, set_paineis, vistaM, gravarVivo } from "./core.js";
-import { caixa, caixaDe, limpaGiro } from "./espaco.js";
+import { caixa, caixaDe, limpaGiro, extensao, medidaNoPin } from "./espaco.js";
 import { ksave, kflush, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
@@ -59,7 +59,7 @@ function posNova(w, h) {
     if (!l) return null;
     var tudo = tiles.length ? caixaDe(tiles, "frente") : { u0: 0, u1: 0 };
     var esq = vistaM === "esq", X = esq ? tudo.u0 - 1 : tudo.u1 + 1, Zc = (esq ? 1 : -1) * (l.x + w / 2);
-    return { mx: X - w / 2, my: l.y, z: -Zc, ry: esq ? -90 : 90, pv: "c" };
+    return { mx: X - w / 2, my: l.y, z: -Zc, ry: esq ? -90 : 90, pv: "b" };
   }
 
 export function freeC(t) {
@@ -166,15 +166,17 @@ function salvarEdicao() {
     var i = EXTRAS.findIndex(function (x) { return x.id === editando; });
     if (i < 0) { closeAdd(); return; }
     var antes = EXTRAS[i], t = tiles.filter(function (x) { return x.id === editando; })[0] || antes;
+    var np = medidaNoPin(t, Number(aW.value), Number(aH.value)); // a medida cresce a partir do pin
     // recortes: com outro gabinete a grade é outra, então saem; mudando só o tamanho, ficam os que ainda cabem
-    var c = cleanExtra(Object.assign({}, antes, { name: aName.value, cab: aCab.value, w: Number(aW.value), h: Number(aH.value), mx: t.mx, my: t.my, cx: t.cx, cy: t.cy, off: antes.cab !== aCab.value ? [] : antes.off, z: document.getElementById("a-z").value }));
+    var c = cleanExtra(Object.assign({}, antes, { name: aName.value, cab: aCab.value, w: Number(aW.value), h: Number(aH.value), mx: np.mx, my: np.my, cx: t.cx, cy: t.cy, off: antes.cab !== aCab.value ? [] : antes.off, z: document.getElementById("a-z").value }));
     if (!c) { aErr.textContent = "Dimensões fora do limite (até 30 m de largura e altura)."; return; }
     var qa = res(antes), qn = res(c), mudouGrade = antes.cab !== c.cab || qa.cols !== qn.cols || qa.rows !== qn.rows;
     EXTRAS[i] = c;
+    var pos0 = [t.mx, t.my]; t.mx = c.mx; t.my = c.my; // a medida cresce a partir do pin (mpos sai dos tiles)
     var tirou = 0;
     if (mudouGrade) Object.keys(routes).forEach(function (pid) { var n0 = routes[pid].length; routes[pid] = routes[pid].filter(function (k) { return k.split(":")[0] !== c.id; }); tirou += n0 - routes[pid].length; });
     try { localStorage.setItem("ledmap-msg", tirou ? "Painel " + c.id + " atualizado. As rotas de cabo dele foram limpas: refaça o cabeamento." : "Painel " + c.id + " atualizado."); } catch (e) {}
-    if (!commitAndReload(curTab + ":" + c.id)) { EXTRAS[i] = antes; try { localStorage.removeItem("ledmap-msg"); } catch (e) {} aErr.textContent = "Não consegui salvar neste navegador."; }
+    if (!commitAndReload(curTab + ":" + c.id)) { EXTRAS[i] = antes; t.mx = pos0[0]; t.my = pos0[1]; try { localStorage.removeItem("ledmap-msg"); } catch (e) {} aErr.textContent = "Não consegui salvar neste navegador."; }
   }
 
 // duplica o painel; se ele estiver num grupo, duplica o grupo inteiro (mesma arrumação, grupo novo "… cópia").
@@ -186,16 +188,17 @@ export function duplicarPainel(id) {
     if (EXTRAS.length + mem.length > EXTRA_MAX) { pmsg("Limite de " + EXTRA_MAX + " painéis."); return; }
     var base = Number(nextExtraId());
     if (base + mem.length - 1 > 999) { pmsg("Numeração esgotada."); return; }
-    var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    mem.forEach(function (m) { x0 = Math.min(x0, m.mx); x1 = Math.max(x1, m.mx + m.w); y0 = Math.min(y0, m.my); y1 = Math.max(y1, m.my + m.h); });
-    var fm = freeM(x1 - x0, y1 - y0);
+    // o espaço que o conjunto ocupa no palco (com giro e grupo): a cópia anda até um lugar livre
+    var fr = faixa(mem, true), x0 = fr.x0, y0 = fr.y0;
+    var fm = freeM(fr.x1 - fr.x0, fr.y1 - fr.y0);
     if (!fm) { pmsg("Sem espaço livre na montagem para a cópia."); return; }
     var cb = bbox(mem), fc = freeSpot(cb.w, cb.h, tiles.concat(BASE)) || { x: cb.x, y: cb.y };
     var dx = fm.x - x0, dy = fm.y - y0, dcx = fc.x - cb.x, dcy = fc.y - cb.y;
     var antesEx = EXTRAS.length, antesT = tiles.length, antesP = paineis.slice(), novoG = null;
-    if (orig) { novoG = novoPainel(); novoG.name = (pnome(orig) + " cópia").slice(0, 40); }
+    // grupo: a cópia é um grupo novo com o mesmo giro e o pin deslocado; os membros copiam os valores relativos
+    if (orig) { novoG = novoPainel(); Object.assign(novoG, { gx: r3((orig.gx || 0) + dx), gy: r3((orig.gy || 0) + dy), gz: orig.gz || 0, rx: orig.rx || 0, ry: orig.ry || 0, rz: orig.rz || 0, pv: orig.pv }); novoG.name = (pnome(orig) + " cópia").slice(0, 40); }
     var falhou = mem.some(function (m, i) {
-      var nid = String(base + i), mx = Math.round((m.mx + dx) * 100) / 100, my = Math.round((m.my + dy) * 100) / 100;
+      var nid = String(base + i), mx = orig ? m.mx : r3(m.mx + dx), my = orig ? m.my : r3(m.my + dy);
       var c = cleanExtra({ id: nid, name: (m.name + " cópia").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: m.cx + dcx, cy: m.cy + dcy, grp: m.grp || "", off: m.off, z: m.z, rx: m.rx, ry: m.ry, rz: m.rz, pv: m.pv });
       if (!c) return true;
       EXTRAS.push(c);
@@ -235,8 +238,10 @@ export function editarPainel(id, campos) {
     var mudouGrade = antes.cab !== c.cab || qa.cols !== qn.cols || qa.rows !== qn.rows;
     if (!mudouGrade && c.w === antes.w && c.h === antes.h) return "";
     EXTRAS[i] = c;
+    // a posição gravada (mpos) sai dos tiles: o canto novo (a medida cresce a partir do pin) vai para o painel também
+    var pos0 = [t.mx, t.my]; t.mx = c.mx; t.my = c.my;
     var tirou = mudouGrade ? limparRotasDe([c.id]) : 0;
-    gravarEAbrir(c.id, "Painel " + c.id + ": " + fmt(c.w) + " × " + fmt(c.h) + " m." + (tirou ? " As rotas de cabo dele foram limpas: refaça o cabeamento." : ""), function () { EXTRAS[i] = antes; });
+    gravarEAbrir(c.id, "Painel " + c.id + ": " + fmt(c.w) + " × " + fmt(c.h) + " m." + (tirou ? " As rotas de cabo dele foram limpas: refaça o cabeamento." : ""), function () { EXTRAS[i] = antes; t.mx = pos0[0]; t.my = pos0[1]; });
     return "";
   }
 
@@ -256,7 +261,7 @@ function offEspelhado(t, dir) {
 // no eixo Y (de cabeça para baixo) o X e o Z trocam de sinal e o pivô troca cima ↔ baixo
 var PV_H = { tl: "tr", tr: "tl", l: "r", r: "l", bl: "br", br: "bl" }, PV_V = { tl: "bl", bl: "tl", t: "b", b: "t", tr: "br", br: "tr" };
 function giroEspelhado(t, v) {
-    var pv = t.pv || "c";
+    var pv = t.pv || "b";
     return v ? { rx: limpaGiro(-(t.rx || 0)), ry: t.ry || 0, rz: limpaGiro(-(t.rz || 0)), pv: PV_V[pv] || pv }
       : { rx: t.rx || 0, ry: limpaGiro(-(t.ry || 0)), rz: limpaGiro(-(t.rz || 0)), pv: PV_H[pv] || pv };
   }
@@ -272,17 +277,32 @@ function comGrupos(ids) {
     return Object.keys(set).map(function (k) { return set[k]; });
   }
 
-// contorno de uma lista: no Rig em metros (y do chão para cima), no canvas em px (y para baixo)
+// contorno de uma lista: no Rig, onde ela fica no palco em metros (com giro e grupo; y do chão para cima),
+// no canvas em px (y para baixo)
 function faixa(lista, rig) {
     var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     lista.forEach(function (t) {
-      var q = res(t), x = rig ? t.mx : t.cx, y = rig ? t.my : t.cy, w = rig ? t.w : q.w, h = rig ? t.h : q.h;
-      x0 = Math.min(x0, x); x1 = Math.max(x1, x + w); y0 = Math.min(y0, y); y1 = Math.max(y1, y + h);
+      if (rig) { var e = extensao(t); x0 = Math.min(x0, e.x0); x1 = Math.max(x1, e.x1); y0 = Math.min(y0, e.y0); y1 = Math.max(y1, e.y1); return; }
+      var q = res(t);
+      x0 = Math.min(x0, t.cx); x1 = Math.max(x1, t.cx + q.w); y0 = Math.min(y0, t.cy); y1 = Math.max(y1, t.cy + q.h);
     });
     return { x0: x0, x1: x1, y0: y0, y1: y1 };
   }
 
-function r2(v) { return Math.round(v * 100) / 100; }
+function r2(v) { return Math.round(v * 1000) / 1000; }
+function r3(v) { return Math.round(v * 1000) / 1000 || 0; }
+
+// Espelhar respeita a árvore (regra 14 do PLANO.md). Painel solto: o pin vai para o outro lado do plano (x = a ou
+// altura = a) e o giro e o pin trocam de lado. Grupo: o mesmo com o pin e o giro do grupo, e os membros espelham no
+// espaço do grupo em volta do pin dele (plano 0). Espelhar duas vezes volta ao original.
+function espelharPeca(t, v, a) { // devolve { mx, my } do quadro espelhado (painel solto: plano a; membro: plano 0)
+    return v ? { mx: t.mx, my: r2(2 * a - (t.my + t.h)) } : { mx: r2(2 * a - (t.mx + t.w)), my: t.my };
+  }
+function grupoEspelhado(g, v, a) {
+    var e = giroEspelhado(g, v);
+    return v ? { gx: g.gx || 0, gy: r3(2 * a - (g.gy || 0)), gz: g.gz || 0, rx: e.rx, ry: e.ry, rz: e.rz, pv: e.pv }
+      : { gx: r3(2 * a - (g.gx || 0)), gy: g.gy || 0, gz: g.gz || 0, rx: e.rx, ry: e.ry, rz: e.rz, pv: e.pv };
+  }
 
 var NOME_MODO = { x: "no eixo X", y: "no eixo Y", proprio: "no próprio eixo" };
 
@@ -291,13 +311,13 @@ export function espelharPaineis(ids, modo) {
     modo = NOME_MODO[modo] ? modo : "proprio";
     var S = comGrupos(ids);
     if (!S.length) return;
-    var fr = faixa(S, true), fc = faixa(S, false), v = modo === "y", comRecorte = [];
+    var fr = faixa(S, true), fc = faixa(S, false), v = modo === "y", comRecorte = [], feitos = {};
+    // plano do espelho no palco: o eixo 0 (X), ou o meio do próprio conjunto
+    var a = modo === "x" ? 0 : v ? (fr.y0 + fr.y1) / 2 : (fr.x0 + fr.x1) / 2;
     S.forEach(function (t) {
-      var q = res(t);
-      if (modo === "x") t.mx = r2(-(t.mx + t.w));
-      else if (modo === "proprio") t.mx = r2(fr.x0 + fr.x1 - (t.mx + t.w));
-      else t.my = r2(fr.y0 + fr.y1 - (t.my + t.h));
-      Object.assign(t, giroEspelhado(t, v));
+      var q = res(t), g = t.pn && painelById(t.pn);
+      if (g && !feitos[g.id]) { feitos[g.id] = 1; Object.assign(g, grupoEspelhado(g, v, a)); }
+      Object.assign(t, espelharPeca(t, v, g ? 0 : a), giroEspelhado(t, v));
       if (v) t.cy = Math.round(fc.y0 + fc.y1 - (t.cy + q.h));
       else t.cx = Math.round(fc.x0 + fc.x1 - (t.cx + q.w));
       if ((t.off || []).length) {
@@ -324,13 +344,13 @@ export function duplicarEspelhado(ids, modo) {
     if (base + S.length - 1 > 999) { pmsg("Numeração esgotada."); return; }
     var fr = faixa(S, true), tudo = faixa(tiles, false), v = modo === "y";
     if (modo === "x" && fr.x0 < 0 && fr.x1 > 0) { pmsg("O conjunto passa pelo eixo 0: a cópia no eixo X cairia em cima dele. Use No próprio eixo."); return; }
+    // plano do espelho: o eixo 0, ou a borda do conjunto (a cópia fica encostada à direita, ou em cima no "y")
+    var a = modo === "x" ? 0 : v ? fr.y1 : fr.x1;
     var antesEx = EXTRAS.length, antesT = tiles.length, antesP = paineis.slice(), novos = {};
     var falhou = S.some(function (m, i) {
-      var nid = String(base + i), q = res(m), mx = m.mx, my = m.my, cx = m.cx, cy = m.cy;
-      if (m.pn && painelById(m.pn) && !novos[m.pn]) { var g = novoPainel(); g.name = (pnome(painelById(m.pn)) + " espelhado").slice(0, 40); novos[m.pn] = g.id; }
-      if (modo === "x") mx = r2(-(m.mx + m.w));
-      else if (modo === "proprio") mx = r2(2 * fr.x1 - (m.mx + m.w));
-      else my = r2(2 * fr.y1 - (m.my + m.h));
+      var nid = String(base + i), q = res(m), cx = m.cx, cy = m.cy, og = m.pn && painelById(m.pn);
+      if (og && !novos[m.pn]) { var g = novoPainel(); Object.assign(g, grupoEspelhado(og, v, a)); g.name = (pnome(og) + " espelhado").slice(0, 40); novos[m.pn] = g.id; }
+      var pe = espelharPeca(m, v, og ? 0 : a), mx = pe.mx, my = pe.my;
       if (v) cy = Math.round(2 * tudo.y1 - (m.cy + q.h));
       else cx = Math.round(2 * tudo.x1 - (m.cx + q.w));
       var c = cleanExtra(Object.assign({ id: nid, name: (m.name + " (espelho)").slice(0, 40), kind: m.kind, cab: m.cab, w: m.w, h: m.h, mx: mx, my: my, cx: cx, cy: cy, grp: m.grp || "", off: offEspelhado(m, v ? "v" : "h"), z: m.z }, giroEspelhado(m, v)));
@@ -350,9 +370,11 @@ export function centralizarRig() {
     if (!aqui.length) return;
     var f = faixa(aqui, true), d = -Math.round((f.x0 + f.x1) / 2 * 2) / 2;
     if (!d) { pmsg("O desenho já está centralizado no eixo 0."); return; }
-    aqui.forEach(function (t) { t.mx = r2(t.mx + d); });
+    // painel solto anda; grupo anda pelo pin dele (os membros são relativos ao grupo)
+    function andar(k) { aqui.forEach(function (t) { if (!t.pn) t.mx = r2(t.mx + k); }); paineis.forEach(function (p) { p.gx = r3((p.gx || 0) + k); }); }
+    andar(d);
     try { localStorage.setItem("ledmap-msg", "Palco centralizado no eixo 0."); } catch (e) {}
-    if (!commitAndReload(curTab)) { aqui.forEach(function (t) { t.mx = r2(t.mx - d); }); pmsg("Não consegui salvar neste navegador."); }
+    if (!commitAndReload(curTab)) { andar(-d); pmsg("Não consegui salvar neste navegador."); }
   }
 
 export { KEY_PEND, KEY_REOPEN };

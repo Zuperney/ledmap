@@ -2,6 +2,7 @@ import { cabNome, cabDe, corGab } from "./gabinetes.js";
 import { tiles, rowsEl, groups, gname, save, selected, gM, gC, res, esc, fmt, nf, set_selected, painelById, pnome } from "./core.js";
 import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screens.js";
 import { syncInsp } from "./gaveta.js";
+import { pinNoPalco } from "./grupos.js";
 import { syncMPanel } from "./rig-edicao.js";
 import { renderCartaoC } from "./screen-cartao.js";
 import { avisarSel3D } from "./ponte3d.js";
@@ -68,7 +69,7 @@ export function init() {
       tr.innerHTML = '<td><span class="n">' + s.id + '</span></td><td><span class="pnm">' + esc(s.name) + '</span><span class="ptag"></span>' + (s.extra ? ' <button class="xdel" type="button">Excluir</button>' : '') +
         '</td><td class="gsel"></td><td class="r">' + fmt(s.w) + ' × ' + fmt(s.h) + '</td><td class="r">' + q.cols + ' × ' + q.rows + (q.n < q.cols * q.rows ? ' − ' + (q.cols * q.rows - q.n) : '') +
         '</td><td>' + cabNome(s) + '</td><td class="r">' + q.w + ' × ' + q.h +
-        '</td><td class="r">' + nf(q.total) + '</td><td class="r mpos">' + fmt(s.mx) + ' , ' + fmt(s.my) +
+        '</td><td class="r">' + nf(q.total) + '</td><td class="r mpos">' + (function () { var P = pinNoPalco(s); return fmt(P[0]) + ' , ' + fmt(P[1]); })() +
         '</td><td class="r cpos"></td>';
       tr.addEventListener("click", function () { select(selected === s.id ? null : s.id); });
       var xb = tr.querySelector(".xdel");

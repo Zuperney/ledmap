@@ -2,11 +2,11 @@ import { tiles, FLOOR, svgM, el, gM, fmt, text, res, cabPath, selected, paineis,
 import { corCab } from "./gabinetes.js";
 import { editM, onDownM, toggleMselM, limparMselM, modoSelM, ignorarCliqueM } from "./rig-edicao.js";
 import { select } from "./tabela.js";
-import { VISTAS, afim, casco, caixa, caixaDe, encara, profundidadeNaVista, temGiro } from "./espaco.js";
+import { VISTAS, afim, casco, caixa, caixaDe, encara, profundidadeNaVista, girado, eixosDaVista } from "./espaco.js";
 import { avisar3D } from "./ponte3d.js";
 import { abrirMembro } from "./rig-cartao.js";
 
-let gridM, floorLine, eixoM, regua, boundsM, layerM, guideMV, guideMH, pnLayer;
+let gridM, floorLine, eixoM, regua, origemM, boundsM, layerM, guideMV, guideMH, pnLayer;
 
 // O Rig desenha o palco pela vista escolhida (Frente, Topo, Esquerda, Direita). Na tela: x = U da vista e
 // y = FLOOR − V (V para cima). Na Frente sem giro é o desenho de sempre (x = metros, chão no FLOOR).
@@ -17,10 +17,13 @@ var faceM = {}, cascoM = {}, rotM = {}, ztM = {}, rotulosM = {};
 // legenda da vista, embaixo à esquerda: o que é a linha do zero e para onde fica o público
 var LEGENDA = {
   frente: "chão · olhando do público",
+  tras: "chão · olhando do fundo para o público · X espelhado",
   topo: "frente do palco (recuo 0) · para cima = fundo · olhando de cima",
   esq: "chão · olhando da esquerda · público →",
   dir: "chão · olhando da direita · ← público"
 };
+
+function fmtN(v) { return String(v).replace(".", ","); }
 
 export function fitM() {
   var b = boundsM, temp = tiles.length ? caixaDe(tiles, vistaM) : null;
@@ -38,17 +41,29 @@ export function fitM() {
   svgM.setAttribute("viewBox", [b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0].join(" "));
   gridM.textContent = "";
   var gx0 = -meia + 1, gx1 = meia - 1;
-  var gy0 = Math.min(0, Math.floor(topY), Math.ceil(b.y0)), gy1 = Math.max(FLOOR, Math.ceil(botY));
+  // a grade continua abaixo do chão (ou à frente da linha da frente, no Topo), mais apagada: o 0 fica no meio
+  var gy0 = Math.min(0, Math.floor(topY), Math.ceil(b.y0)), gy1 = Math.max(FLOOR + 2, Math.ceil(botY)), gyC = Math.floor(b.y1 - 0.6);
+  gy1 = Math.max(FLOOR, Math.min(gy1, gyC));
   var k;
-  for (k = gx0; k <= gx1; k++) el("line", { x1: k, y1: gy0, x2: k, y2: gy1 }, gridM);
-  for (k = gy0; k <= gy1; k++) el("line", { x1: gx0, y1: k, x2: gx1, y2: k }, gridM);
+  for (k = gx0; k <= gx1; k++) { el("line", { x1: k, y1: gy0, x2: k, y2: FLOOR }, gridM); if (gy1 > FLOOR) el("line", { "class": "sub", x1: k, y1: FLOOR, x2: k, y2: gy1 }, gridM); }
+  for (k = gy0; k <= gy1; k++) el("line", k > FLOOR ? { "class": "sub", x1: gx0, y1: k, x2: gx1, y2: k } : { x1: gx0, y1: k, x2: gx1, y2: k }, gridM);
+  // eixos da vista com as cores de programa 3D (X vermelho, Y verde, Z azul) e a origem 0,0
+  var E = eixosDaVista(vistaM);
   floorLine.setAttribute("x1", gx0); floorLine.setAttribute("x2", gx1);
+  floorLine.setAttribute("class", "floor eixo-" + E.h.nome.toLowerCase());
   eixoM.setAttribute("y1", gy0 - 0.5); eixoM.setAttribute("y2", gy1);
-  // régua: metros a cada 5 m a partir do 0 (negativos à esquerda) e, na borda esquerda, a altura (ou o recuo, no Topo)
+  eixoM.setAttribute("class", "eixo0 eixo-" + E.v.nome.toLowerCase());
+  origemM.setAttribute("cx", 0); origemM.setAttribute("cy", FLOOR);
+  // régua com sinal nos dois eixos, no valor do palco (X espelhado na Atrás; recuo positivo para trás)
+  function rot(v) { v = Math.round(v * 100) / 100 || 0; return v < 0 ? "−" + fmtN(-v) : fmtN(v); }
   regua.textContent = "";
-  for (k = -Math.floor(gx1 / 5) * 5; k <= gx1; k += 5) text(regua, "tick", k, FLOOR + 0.8, 0.5, (k < 0 ? "−" + -k : k) + " m").setAttribute("text-anchor", "middle");
-  for (k = 2; k <= FLOOR - gy0; k += 2) text(regua, "tick", gx0 - 0.15, FLOOR - k + 0.18, 0.45, k).setAttribute("text-anchor", "end");
-  for (k = -2; k >= FLOOR - gy1; k -= 2) text(regua, "tick", gx0 - 0.15, FLOOR - k + 0.18, 0.45, "−" + -k).setAttribute("text-anchor", "end");
+  for (k = -Math.floor(gx1 / 5) * 5; k <= gx1; k += 5) text(regua, "tick", k, FLOOR + 0.8, 0.5, rot(k * E.h.k) + " m").setAttribute("text-anchor", "middle");
+  for (k = 2; k <= FLOOR - gy0; k += 2) text(regua, "tick", gx0 - 0.15, FLOOR - k + 0.18, 0.45, rot(k * E.v.k)).setAttribute("text-anchor", "end");
+  for (k = -2; k >= FLOOR - gy1; k -= 2) text(regua, "tick", gx0 - 0.15, FLOOR - k + 0.18, 0.45, rot(k * E.v.k)).setAttribute("text-anchor", "end");
+  // nome dos eixos nas pontas (Z é o recuo: positivo para trás)
+  var NOME = { X: "X", Y: "Y altura", Z: "Z recuo" };
+  text(regua, "tick eixo-nome eixo-" + E.h.nome.toLowerCase(), gx1 - 0.1, FLOOR - 0.25, 0.5, NOME[E.h.nome] + (E.h.k < 0 ? " ←" : " →")).setAttribute("text-anchor", "end");
+  text(regua, "tick eixo-nome eixo-" + E.v.nome.toLowerCase(), 0.2, gy0 - 0.1, 0.5, NOME[E.v.nome] + (E.v.k < 0 ? " ↓" : " ↑")).setAttribute("text-anchor", "start");
   tiles.forEach(placeM);
   reordenarM();
   desenharPaineis();
@@ -65,7 +80,7 @@ export function reordenarM() {
     // senão os números e medidas dos dois se embaralham (ex.: laterais simétricas vistas de lado)
     var cu = (o.c.u0 + o.c.u1) / 2, cv = (o.c.v0 + o.c.v1) / 2;
     // (na Frente, um painel sem giro atrás de outro é o miolo recuado visto pelo recorte: mantém os rótulos)
-    var coberto = o.f && (vistaM !== "frente" || temGiro(o.t)) && ord.slice(i + 1).some(function (p) { return p.f && p.d > o.d + 1e-6 && cu > p.c.u0 && cu < p.c.u1 && cv > p.c.v0 && cv < p.c.v1; });
+    var coberto = o.f && (vistaM !== "frente" || girado(o.t)) && ord.slice(i + 1).some(function (p) { return p.f && p.d > o.d + 1e-6 && cu > p.c.u0 && cu < p.c.u1 && cv > p.c.v0 && cv < p.c.v1; });
     gM[o.t.id].classList.toggle("coberto", coberto);
   });
 }
@@ -147,12 +162,12 @@ export function placeM(t) {
   rotM[t.id].setAttribute("x", cx / pts.length); rotM[t.id].setAttribute("y", cy / pts.length);
   var z = t.z || 0;
   // recuo só faz sentido como etiqueta num painel sem giro (girado, ele é posição no palco, mostrada no Topo)
-  ztM[t.id].textContent = z && !temGiro(t) ? (z > 0 ? "recuo " : "avanço ") + fmt(Math.abs(z)) + " m" : "";
-  var sem = !temGiro(t) && vistaM === "frente";
+  ztM[t.id].textContent = z && !girado(t) ? (z > 0 ? "recuo " : "avanço ") + fmt(Math.abs(z)) + " m" : "";
+  var sem = !girado(t) && vistaM === "frente";
   g.classList.toggle("de-lado", deLado);
   g.classList.toggle("obliquo", !deLado && Math.abs(e) < 0.7); // muito de lado: os textos da frente ficariam tortos
   g.classList.toggle("costas", e < -0.08);
-  g.classList.toggle("girado", temGiro(t));
+  g.classList.toggle("girado", girado(t));
   // recuo/avanço tracejado só faz sentido olhando de frente um painel sem giro
   g.classList.toggle("fundo", sem && (t.z || 0) > 0);
   g.classList.toggle("frente", sem && (t.z || 0) < 0);
@@ -162,6 +177,18 @@ export function init() {
   gridM = el("g", { "class": "grid", id: "grid-m" }, svgM);
   floorLine = el("line", { "class": "floor", x1: -13, y1: FLOOR, x2: 13, y2: FLOOR }, svgM);
   eixoM = el("line", { "class": "eixo0", x1: 0, y1: -0.5, x2: 0, y2: FLOOR }, svgM);
+  origemM = el("circle", { "class": "origem", cx: 0, cy: FLOOR, r: 0.14 }, svgM);
+  // coordenada do cursor na barra de estado: os dois eixos da vista, no valor do palco
+  var cur = document.getElementById("m-cursor");
+  if (cur) {
+    svgM.addEventListener("pointermove", function (e) {
+      var pt = svgM.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      var w = pt.matrixTransform(svgM.getScreenCTM().inverse()), E = eixosDaVista(vistaM);
+      function v(x) { x = Math.round(x * 100) / 100 || 0; return (x < 0 ? "−" + fmtN(-x) : fmtN(x)); }
+      cur.textContent = E.h.nome + " " + v(w.x * E.h.k) + " · " + E.v.nome + " " + v((FLOOR - w.y) * E.v.k) + " m";
+    });
+    svgM.addEventListener("pointerleave", function () { cur.textContent = ""; });
+  }
   regua = el("g", {}, svgM);
   boundsM = { x0: -14, x1: 14, y0: -0.5, y1: 10 };
   layerM = el("g", {}, svgM);
