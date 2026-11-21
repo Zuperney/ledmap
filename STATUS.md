@@ -5,6 +5,10 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 
 ## Já feito
 
+- **Etapa 4 do PLANO.md (visualização).**
+  - **2D ⇄ 3D**: o 3D (botão ou tecla 0) abre com a câmera na orientação da vista 2D de onde veio; no 3D os ícones das vistas levam a câmera até elas com transição suave e a órbita é livre; ao sair, o Palco volta para a vista 2D mais perto da câmera. Os botões de câmera saíram da barra de cima.
+  - **Gizmo no 3D**: Mover (G) e Girar (R) o painel ou o grupo selecionado nos 3 eixos, em volta do pin, nos eixos do palco ou da peça (L), com o passo e o passo do giro do Palco. Soltar aplica pelas regras de transformação (relativo ao grupo, mm, centésimos). Painel travado não pega o gizmo.
+  - **Multiview**: botão na barra das vistas alterna 1, 2 ou 4 vistas; as de apoio acompanham ao vivo, tocar num painel seleciona e "Editar aqui" (ou duplo clique) troca com a principal.
 - **Etapa 3 do PLANO.md (montagem).**
   - **Painel misto**: no + Painel, "Painel misto" completa a medida com um segundo gabinete (ex.: 3,5 m = 3 × 1 m + 1 × 0,5 m), na altura e na largura. "Sugerir complemento" escolhe, entre os gabinetes com o mesmo pitch, o que fecha com menos gabinetes. Os menores ficam embaixo ou em cima, à direita ou à esquerda. Vira um grupo de até 4 painéis comuns (principal, faixa, coluna, canto), então cabeamento, composição e 3D funcionam como sempre. Contas em `misto.js`, testadas em `testes/misto.mjs`.
   - **Duplicar várias…** (cartão do painel e do grupo): N cópias em linha (direita, esquerda, cima, trás, frente) ou em grade (colunas × linhas para cima ou para trás), com espaço entre elas; o passo é o tamanho no palco. Grupo vira grupos novos; painel solto pode juntar o original e as cópias num grupo.

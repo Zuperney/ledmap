@@ -35,6 +35,7 @@ import { init as init_campos } from "./modules/campos.js";
 import { init as init_palco } from "./modules/palco.js";
 import { init as init_duplicar } from "./modules/duplicar.js";
 import { init as init_desenhar } from "./modules/desenhar.js";
+import { init as init_multivista } from "./modules/multivista.js";
 
 init_core();
 init_rig();
@@ -74,3 +75,4 @@ if (import.meta.env.PROD && "serviceWorker" in navigator && location.protocol.in
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 init_seletor();
+init_multivista(); // depois das vistas: o botão entra no fim da barra lateral

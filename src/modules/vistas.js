@@ -32,6 +32,7 @@ function atual() { return em3D ? "3d" : vistaM; }
 
 export function atualizarNav() {
   // ícones de casinha (como no SketchUp): o da vista na tela fica marcado
+  // no 3D fica marcado o botão 3D (os ícones das vistas viram atalhos da câmera)
   document.querySelectorAll("#m-vistas button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-v") === atual())); });
   $("m-edit").disabled = em3D; // mover e girar com a alça são do 2D; no 3D, o cartão
 }
@@ -39,17 +40,17 @@ export function atualizarNav() {
 function guardar3D(on) { try { if (on) sessionStorage.setItem(CHAVE_3D, "1"); else sessionStorage.removeItem(CHAVE_3D); } catch (e) {} }
 
 // ---- o 3D aparece no lugar do desenho; as opções dele vão para a barra de cima ----
-var seq3D = 0, import3D = false;
+var seq3D = 0, import3D = false, mod3D = null;
 function posicionar3D() {
   var palco = $("svg-m").closest(".stagebox"), quer = em3D, n = ++seq3D;
   if (!quer) registrar3D(null);
   // o three.js fica num pedaço à parte: só baixa quando o 3D abre
   if (!quer && !import3D) return;
   import("./vista3d.js").then(function (m) {
-    import3D = true;
+    import3D = true; mod3D = m;
     if (n !== seq3D) return; // mudou de novo enquanto baixava
     if (!quer) { m.fechar3DNoRig(palco); return; }
-    if (!m.abrir3DNoRig(palco, { barraEm: $("m-ctx3d") })) { setEm3D(false); irParaVista("frente"); return; }
+    if (!m.abrir3DNoRig(palco, { barraEm: $("m-ctx3d"), vista: vistaM })) { setEm3D(false); irParaVista("frente"); return; } // a câmera começa na vista de onde veio
     registrar3D({ atualizar: m.atualizar3D, marcarSel: m.marcarSel3D });
   }).catch(function () { if (quer) pmsg("Não consegui carregar a Vista 3D. Confira a conexão e tente de novo."); });
 }
@@ -61,14 +62,24 @@ function setEm3D(on) {
   guardar3D(on);
 }
 
-// o botão 3D: liga, ou desliga voltando para a última vista 2D
-export function alternar3D() { irParaVista(em3D ? vistaM : "3d"); }
+// o botão 3D: liga (a câmera começa na vista 2D atual) ou desliga, voltando para a vista 2D mais perto da câmera
+export function alternar3D() {
+  if (!em3D) { irParaVista("3d"); return; }
+  var v = (mod3D && mod3D.vistaMaisProxima3D()) || vistaM;
+  setEm3D(false);
+  irParaVista(v);
+}
 
 export function irParaVista(id) {
   if (id === "3d") {
     if (!em3D) setEm3D(true);
+  } else if (em3D) {
+    // no 3D, os ícones das vistas levam a câmera até elas (continua no 3D)
+    set_vistaM(id); save();
+    if (mod3D) mod3D.olhar3D(id);
+    atualizarNav();
+    return;
   } else {
-    if (em3D) setEm3D(false);
     set_vistaM(id);
     fitM(); syncMPanel(); renderCabM(); save();
     if (viewM) viewM.enquadrar();
