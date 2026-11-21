@@ -1,11 +1,18 @@
-// Vista 3D (só para olhar): desenhada a partir dos dados do Rig — posição, tamanho, recuo, giro e recortes.
-// Não tem dados próprios: editar continua no Rig (cartão, alça, arrastar). Carregada sob demanda (three.js à parte).
+// Vista 3D: desenhada a partir dos dados do Palco — posição, tamanho, recuo, giro e recortes. Não tem dados próprios.
+// Embutida no Palco: abre com a câmera na orientação da vista 2D de onde veio; os ícones das vistas levam a câmera até
+// elas (transição suave) e a órbita é livre; ao sair, o Palco volta para a vista 2D mais perto da câmera. O gizmo move
+// e gira o painel (ou o grupo) selecionado nos 3 eixos, em volta do pin, nos eixos do palco ou da peça, com o passo do
+// Palco; as contas são as mesmas regras do 2D (espaco.js). Carregada sob demanda (three.js à parte).
 // A frente de cada painel recebe a imagem da Montagem (entrada) com o test card escolhido, como o UV map do disguise.
 // Aparece embutida no Palco (a vista "3D"), no lugar do desenho; acompanha as edições ao vivo
 // e seleciona o painel tocado (o cartão abre ao lado).
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { tiles, res, selected } from "./core.js";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import { tiles, res, selected, painelById, membrosPainel, mnum } from "./core.js";
+import { grupoAberto, aplicarVivoLista } from "./rig-cartao.js";
+import { caixaGrupo, girarGrupoPara } from "./grupos.js";
+import { VISTAS, ORDEM_VISTAS, pai, noEspacoDe, deMatriz, pivoLocal as pinQuadro } from "./espaco.js";
 import { imagemMontagem, PRESETS } from "./composicao.js";
 import { projetoAtivo } from "./projetos.js";
 import { saveFile, pmsg } from "./exportar.js";
@@ -47,7 +54,7 @@ function texturaPainel(img, t) {
 // opcoes.barraEm: onde pôr as opções do 3D (Cor por painel, Frente, 3/4, Topo, Foto); no Palco, a barra de opções de cima
 export function abrir3DNoRig(alvo, opcoes) {
   if (abertos.some(function (a) { return a.alvo === alvo; })) return true;
-  var api = criar(alvo, { barraEm: opcoes && opcoes.barraEm, aoFechar: function () { abertos = abertos.filter(function (a) { return a.api !== api; }); } });
+  var api = criar(alvo, { barraEm: opcoes && opcoes.barraEm, vista: opcoes && opcoes.vista, aoFechar: function () { abertos = abertos.filter(function (a) { return a.api !== api; }); } });
   if (!api) return false;
   abertos.push({ alvo: alvo, api: api });
   return true;
@@ -58,6 +65,10 @@ export function fechar3DNoRig(alvo) { abertos.filter(function (a) { return !alvo
 export function atualizar3D() { abertos.forEach(function (a) { a.api.atualizar(); }); }
 // a seleção mudou: o painel selecionado fica destacado
 export function marcarSel3D() { abertos.forEach(function (a) { a.api.marcarSel(); }); }
+// os ícones das vistas no 3D: a câmera vai até a vista (Frente, Atrás, Esquerda, Direita, Topo)
+export function olhar3D(v) { abertos.forEach(function (a) { a.api.olhar(v); }); }
+// ao sair do 3D: a vista 2D mais perto de onde a câmera está
+export function vistaMaisProxima3D() { var a = abertos[0]; return a ? a.api.maisProxima() : null; }
 
 function criar(alvo, op) {
   var vivo = true, cheia = !!op.telaCheia;
@@ -70,7 +81,17 @@ function criar(alvo, op) {
   var bFrente = el("button", "btn", "Frente"), b34 = el("button", "btn", "3/4"), bTopo = el("button", "btn", "Topo"), bFoto = el("button", "btn", "Foto (PNG)");
   var botoes = [bFrente, b34, bTopo, bFoto], bFechar = null;
   if (cheia) { bFechar = el("button", "btn", "Fechar"); botoes.push(bFechar); }
-  botoes.forEach(function (b) { b.type = "button"; if (b === bFrente && op.barraEm) barra.appendChild(el("span", "v3d-rot", "Câmera")); barra.appendChild(b); });
+  // no Palco a câmera vai pelos ícones das vistas na barra lateral: aqui ficam só a imagem, o gizmo e a foto
+  if (op.barraEm) botoes = [bFoto];
+  botoes.forEach(function (b) { b.type = "button"; barra.appendChild(b); });
+  // gizmo (só embutido): nenhum, mover ou girar; eixos do palco ou da peça
+  var gz = { modo: "", local: false }, bGNada = null, bGMover = null, bGGirar = null, bGLocal = null;
+  if (!cheia) {
+    barra.appendChild(el("span", "v3d-rot", "Gizmo"));
+    bGNada = el("button", "btn", "Nenhum"); bGMover = el("button", "btn", "Mover (G)"); bGGirar = el("button", "btn", "Girar (R)"); bGLocal = el("button", "btn", "Eixos: palco (L)");
+    [bGNada, bGMover, bGGirar, bGLocal].forEach(function (b) { b.type = "button"; barra.appendChild(b); });
+    bGLocal.title = "Palco: setas e anéis nos eixos do palco · Peça: nos eixos do painel (ou do grupo)";
+  }
   barra.appendChild(el("span", "v3d-dica", cheia ? "Arraste para girar · pinça ou roda para aproximar · dois dedos ou botão direito para mover · toque no cubo para escolher a vista"
     : "Toque num painel para editar no cartão · arraste para girar · pinça ou roda aproxima · botão direito move · cubo escolhe a vista"));
   // as opções vão para fora (a barra de cima do Palco) quando pedido; senão ficam em cima do próprio 3D
@@ -99,6 +120,21 @@ function criar(alvo, op) {
 
   var camera = new THREE.PerspectiveCamera(40, 1, 0.05, 500);
   var controls = new OrbitControls(camera, renderer.domElement);
+
+  // ---- gizmo: um "marcador" no pin da peça selecionada, com uma caixa transparente do tamanho dela ----
+  var tc = null, alvoGz = null, fantasma = null;
+  if (!cheia) {
+    tc = new TransformControls(camera, renderer.domElement);
+    tc.setSize(0.9);
+    var ajudante = tc.getHelper ? tc.getHelper() : tc;
+    scene.add(ajudante);
+    alvoGz = new THREE.Object3D(); alvoGz.visible = false; scene.add(alvoGz);
+    fantasma = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xe08a1e, transparent: true, opacity: 0.25, depthWrite: false }));
+    fantasma.add(new THREE.LineSegments(new THREE.EdgesGeometry(fantasma.geometry), new THREE.LineBasicMaterial({ color: 0xe08a1e })));
+    alvoGz.add(fantasma);
+    tc.addEventListener("dragging-changed", function (e) { controls.enabled = !e.value; if (!e.value) aplicarGizmo(); });
+    tc.addEventListener("change", function () { pedir(); });
+  }
 
   // ---- a montagem (refeita quando o Rig muda): gabinetes, contornos, chão, eixo 0 e frentes ----
   var COR = new THREE.Color(0x3b434d), COR_SEL = new THREE.Color(0xe08a1e);
@@ -275,7 +311,7 @@ function criar(alvo, op) {
       if (d.lengthSq() > 0) girarPara(d);
       return;
     }
-    if (cheia || e.button) return;
+    if (cheia || e.button || (tc && tc.axis)) return; // tocou no gizmo
     var id = painelEm(e); // embutida: tocar num painel abre o cartão dele; no vazio, fecha
     select(id && id === selected ? null : id);
   });
@@ -303,6 +339,7 @@ function criar(alvo, op) {
     vivo = false;
     clearTimeout(refazer);
     ro.disconnect(); controls.dispose();
+    if (tc) { tc.detach(); tc.dispose(); if (typeof teclaGz === "function") document.removeEventListener("keydown", teclaGz); fantasma.geometry.dispose(); fantasma.material.dispose(); }
     limpar();
     cubo.geometry.dispose(); cubo.material.forEach(function (m) { if (m.map) m.map.dispose(); m.dispose(); });
     bordaCubo.geometry.dispose(); bordaCubo.material.dispose();
@@ -317,7 +354,7 @@ function criar(alvo, op) {
 
   // edições em sequência (digitando um ângulo, arrastando no 2D) refazem a cena uma vez só, sem mexer na câmera
   var refazer = null;
-  function atualizar() { clearTimeout(refazer); refazer = setTimeout(function () { if (vivo) montar(); }, 120); }
+  function atualizar() { clearTimeout(refazer); refazer = setTimeout(function () { if (vivo) { montar(); if (!(tc && tc.dragging)) posicionarGizmo(); } }, 120); }
 
   sel.addEventListener("change", montar);
   bFrente.addEventListener("click", function () { vista("frente"); });
@@ -333,8 +370,97 @@ function criar(alvo, op) {
     }, "image/png");
   });
 
+  // ---- câmera pelas vistas do Palco ----
+  function olhar(v) {
+    controls.target.set(cx, cy, cz);
+    var V = VISTAS[v];
+    if (!V) { vista("34"); return; }
+    girarPara(new THREE.Vector3(V.w[0], V.w[1], V.w[2]), distEnquadrar());
+  }
+  function maisProxima() {
+    var d = camera.position.clone().sub(controls.target).normalize(), melhor = "frente", m = -2;
+    ORDEM_VISTAS.forEach(function (v) { var w = VISTAS[v].w, k = d.x * w[0] + d.y * w[1] + d.z * w[2]; if (k > m) { m = k; melhor = v; } });
+    return melhor;
+  }
+
+  // ---- gizmo ----
+  function peca() {
+    var pn = grupoAberto(), t = selected && tiles.filter(function (x) { return x.id === selected; })[0];
+    if (pn && painelById(pn)) { var m = membrosPainel(pn); return m.some(function (x) { return x.tv; }) ? null : { grupo: painelById(pn), membros: m }; }
+    return t && !t.tv ? { t: t } : null;
+  }
+  function M3(M) { return new THREE.Matrix4().set(M[0][0], M[0][1], M[0][2], 0, M[1][0], M[1][1], M[1][2], 0, M[2][0], M[2][1], M[2][2], 0, 0, 0, 0, 1); }
+  function posicionarGizmo() {
+    if (!tc) return;
+    var p = gz.modo && peca();
+    if (!p) { tc.detach(); alvoGz.visible = false; pedir(); return; }
+    alvoGz.visible = true;
+    if (p.grupo) {
+      var g = p.grupo, cx0 = caixaGrupo(g.id), lo = cx0.lo, hi = cx0.hi;
+      alvoGz.position.set(g.gx || 0, g.gy || 0, -(g.gz || 0));
+      alvoGz.quaternion.setFromRotationMatrix(M3(matrizDe3(g)));
+      fantasma.position.set((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2 - PROF / 2);
+      fantasma.scale.set(Math.max(0.01, cx0.w), Math.max(0.01, cx0.h), Math.max(PROF, cx0.d + PROF));
+    } else {
+      var t = p.t, P = pivo(t), L = pinQuadro(t);
+      alvoGz.position.set(P[0], P[1], P[2]);
+      alvoGz.quaternion.setFromRotationMatrix(M3(matriz(t)));
+      fantasma.position.set(t.mx + t.w / 2 - L[0], t.my + t.h / 2 - L[1], -PROF / 2);
+      fantasma.scale.set(t.w, t.h, PROF);
+    }
+    var passo = Number((document.getElementById("m-snap") || {}).value) || 0.5, gp = Number((document.getElementById("m-gpasso") || {}).value) || 5;
+    tc.setTranslationSnap(passo); tc.setRotationSnap(THREE.MathUtils.degToRad(gp));
+    tc.setMode(gz.modo === "girar" ? "rotate" : "translate");
+    tc.setSpace(gz.local ? "local" : "world");
+    tc.attach(alvoGz);
+    pedir();
+  }
+  function matrizDe3(g) { return matriz({ rx: g.rx, ry: g.ry, rz: g.rz }); }
+  // soltou o gizmo: o pin e o giro novos vão para a peça pelas regras de sempre (relativo ao grupo, mm, centésimos)
+  function aplicarGizmo() {
+    var p = peca();
+    if (!p) return;
+    var P = [alvoGz.position.x, alvoGz.position.y, alvoGz.position.z], e = new THREE.Matrix4().makeRotationFromQuaternion(alvoGz.quaternion).elements;
+    var Mw = [[e[0], e[4], e[8]], [e[1], e[5], e[9]], [e[2], e[6], e[10]]];
+    if (p.grupo) {
+      var g = p.grupo, a = deMatriz(Mw);
+      g.gx = mnum(P[0]); g.gy = mnum(P[1]); g.gz = mnum(-P[2]) || 0;
+      aplicarVivoLista(girarGrupoPara(g.id, a));
+    } else {
+      var t = p.t, n = noEspacoDe(pai(t), t, P, Mw);
+      t.mx = mnum(n.mx); t.my = mnum(n.my); t.z = mnum(n.z) || 0; t.rx = n.rx; t.ry = n.ry; t.rz = n.rz;
+      aplicarVivoLista([t]);
+    }
+  }
+  function modoGizmo(m) {
+    gz.modo = m;
+    if (bGNada) { bGNada.setAttribute("aria-pressed", String(!m)); bGMover.setAttribute("aria-pressed", String(m === "mover")); bGGirar.setAttribute("aria-pressed", String(m === "girar")); }
+    if (m && !peca()) pmsg("Selecione um painel ou um grupo (não travado) para usar o gizmo.");
+    posicionarGizmo();
+  }
+  function eixosGizmo(local) { gz.local = local; if (bGLocal) { bGLocal.textContent = local ? "Eixos: peça (L)" : "Eixos: palco (L)"; bGLocal.setAttribute("aria-pressed", String(local)); } posicionarGizmo(); }
+  if (bGNada) {
+    bGNada.addEventListener("click", function () { modoGizmo(""); });
+    bGMover.addEventListener("click", function () { modoGizmo("mover"); });
+    bGGirar.addEventListener("click", function () { modoGizmo("girar"); });
+    bGLocal.addEventListener("click", function () { eixosGizmo(!gz.local); });
+    var teclaGz = function (e) {
+      if (!vivo || !document.body.classList.contains("rig-3d") || e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || "")) return;
+      var k = e.key.toLowerCase();
+      if (k === "g") modoGizmo(gz.modo === "mover" ? "" : "mover");
+      else if (k === "r") modoGizmo(gz.modo === "girar" ? "" : "girar");
+      else if (k === "l") eixosGizmo(!gz.local);
+      else return;
+      e.preventDefault();
+    };
+    document.addEventListener("keydown", teclaGz);
+    modoGizmo("");
+    eixosGizmo(false);
+  }
+
   medir();
   montar();
-  vista("34", true);
-  return { fechar: fechar, atualizar: atualizar, marcarSel: pintarSel };
+  if (op.vista && VISTAS[op.vista]) { controls.target.set(cx, cy, cz); var V0 = VISTAS[op.vista]; girarPara(new THREE.Vector3(V0.w[0], V0.w[1], V0.w[2]), distEnquadrar(), true); }
+  else vista("34", true);
+  return { fechar: fechar, atualizar: atualizar, marcarSel: function () { pintarSel(); posicionarGizmo(); }, olhar: olhar, maisProxima: maisProxima };
 }

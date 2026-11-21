@@ -21,6 +21,7 @@ Plano vivo: decisões fechadas, fases e backlog pontuado. Vai junto com o reposi
 - **Etapa 1 feita** (20/11/2026, branch `feat/etapa1-transformacoes`): transformações profissionais, Fase 1 e Fase 2. No 3D, os botões de câmera continuam na barra de cima até a Fase 3.
 - **Etapa 2 feita** (20/11/2026, branch `feat/etapa2-layout`): controles do desenho numa faixa embaixo (fora do desenho) em todas as abas com desenho, propriedades do Cabeamento num card à direita, e Screen, Cabeamento e Composição no mesmo molde do Palco na altura da janela.
 - **Etapa 3 feita** (20/11/2026, branch `feat/etapa3-montagem`): painel misto (decisões: os menores onde o técnico escolher, mistura na altura e na largura, sugestão com menos gabinetes), duplicar várias em linha ou grade, Camadas com ocultar, travar e ordem, ferramentas Painel por arrasto e Medir.
+- **Etapa 4 feita** (20/11/2026, branch `feat/etapa4-visualizacao`): 2D ⇄ 3D com a câmera da vista (Fase 3), gizmo de mover e girar no 3D e multiview de 2 ou 4 vistas.
 - No arquivo, o painel continua guardando o canto do quadro (mx, my) no espaço do pai: o pin sai dele de forma exata (canto + fração do pin). O que se vê e se edita é sempre o pin.
 
 ### Fase 1: Origem e eixos

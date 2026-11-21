@@ -339,6 +339,25 @@ body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px;
 .stage.arrastando, .stage.arrastando * { cursor: grabbing !important; }
 body.p-navegar #view-m .stage, body.p-navegar #view-m .stage .scr { cursor: grab; }
 
+/* ---- Etapa 4: multiview (o desenho principal e 1 ou 3 vistas de apoio ao vivo) ---- */
+#view-m .mwrap.mv-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 1px; background: var(--line); }
+#view-m .mwrap.mv-4 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+#view-m .mwrap.mv-2, #view-m .mwrap.mv-4 { align-items: stretch; }
+#view-m .mwrap.mv-2 > .stagebox, #view-m .mwrap.mv-4 > .stagebox { min-height: 0; height: 100%; }
+.mv { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); }
+.mv-t { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 8px; font: 700 12px var(--font-display); letter-spacing: .04em; border-bottom: 1px solid var(--line); }
+.mv-t .btn { padding: 2px 8px; font-size: 11px; }
+.mv-svg { flex: 1; min-height: 0; width: 100%; display: block; }
+.mv-eixo { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.mv-eixo.eixo-x { stroke: var(--eixo-x); } .mv-eixo.eixo-y { stroke: var(--eixo-y); } .mv-eixo.eixo-z { stroke: var(--eixo-z); }
+.mv-p { cursor: pointer; }
+.mv-c { fill: color-mix(in srgb, var(--cor) 18%, transparent); stroke: var(--cor); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mv-f { fill: color-mix(in srgb, var(--cor) 40%, transparent); }
+.mv-g { fill: none; stroke: var(--cor); stroke-width: .6; vector-effect: non-scaling-stroke; opacity: .7; }
+.mv-p.sel .mv-c { stroke: var(--fg); stroke-width: 2.5; }
+body.rig-3d #view-m .mv { display: none; }
+body.rig-3d #view-m .mwrap.mv-2, body.rig-3d #view-m .mwrap.mv-4 { grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: none; }
+
 /* ---- Etapa 2: os controles do desenho saem de cima dele (faixa de baixo, junto do estado) ---- */
 .p-estado .hud.p-ctrl { position: static; margin-left: auto; padding: 0; background: none; border: 0; box-shadow: none; }
 .p-estado .p-cursor + .hud.p-ctrl { margin-left: 8px; }
