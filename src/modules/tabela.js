@@ -4,6 +4,7 @@ import { applyFocus, renderChips, updateBoxes, updateDetailStat } from "./screen
 import { syncInsp } from "./gaveta.js";
 import { syncMPanel } from "./rig-edicao.js";
 import { renderCartaoC } from "./screen-cartao.js";
+import { avisarSel3D } from "./ponte3d.js";
 
 let deleteLater;
 
@@ -55,6 +56,7 @@ export function select(id) {
     syncMPanel();
     renderCartaoC();
     syncInsp();
+    avisarSel3D();
   }
 
 export function init() {

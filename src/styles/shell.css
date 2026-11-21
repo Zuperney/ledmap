@@ -160,10 +160,15 @@ input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-i
 .v3d-palco { position: relative; flex: 1; min-height: 0; touch-action: none; }
 .v3d-palco canvas { display: block; }
 body.com-3d { overflow: hidden; }
+/* 3D embutido no Rig (vista "3D" do seletor): ocupa o lugar do desenho 2D; o cartão do painel continua ao lado */
+.v3d.v3d-rig { position: absolute; inset: 0; z-index: 4; }
+.v3d-rig .v3d-bar { padding: 4px 6px; }
+body.rig-3d #view-m .hud, body.rig-3d #view-m .stagebox > .badge, body.rig-3d #m-edit-panel { display: none !important; }
+body.rig-3d #view-m .stagebox { min-height: max(360px, calc(100dvh - 150px)); } /* a altura da tela, como a coluna das miniaturas */
 
 /* Rig: desenho + cartão do painel (ao lado no computador, subindo de baixo no celular) */
 #view-m .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
-@media (min-width: 900px) { #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 900px) { #view-m .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) var(--col-card); } }
 .mcard { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 12px; }
 .mcard > div { display: flex; flex-direction: column; gap: 8px; }
 .mc-head { display: flex; align-items: center; gap: 8px; }
@@ -199,5 +204,115 @@ body.fs .mcard { display: none; }
 .cmi[data-arm="1"] { background: var(--bad); color: #fff; }
 .cmsep { height: 1px; background: var(--line); margin: 4px 2px; }
 #view-c .mwrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
-@media (min-width: 900px) { #view-c .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 900px) { #view-c .mwrap:has(> .mcard:not([hidden])) { grid-template-columns: minmax(0, 1fr) var(--col-card); } }
 .mc-chip.fora { color: var(--bad); border-color: var(--bad); }
+/* régua de escalas dos campos (clique longo): escolhe a escala subindo/descendo, arrasta para os lados */
+.regua { position: fixed; z-index: 90; min-width: 92px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 4px; font: 600 12px var(--font-data); user-select: none; pointer-events: none; }
+.regua-v { padding: 4px 8px; color: var(--fg); border-bottom: 1px solid var(--line); margin-bottom: 2px; text-align: center; }
+.regua-l { height: 26px; line-height: 26px; padding: 0 10px; color: var(--muted); border-radius: 5px; text-align: center; }
+.regua-l.on { background: var(--imag); color: var(--bg); }
+/* Recortar: o cartão sai e o desenho fica com a largura toda; a barra fica presa no topo do desenho */
+body.recortando #view-m .mcard { display: none !important; }
+body.recortando #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+.rec-barra { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 16px); padding: 6px 6px 6px 12px; background: var(--panel); border: 1px solid var(--imag); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); font-size: 12px; color: var(--fg); }
+.rec-barra[hidden] { display: none; }
+.rec-barra .btn { flex: none; background: var(--imag); color: var(--bg); border-color: var(--imag); }
+/* Tela cheia: o cartão do painel vai para baixo do desenho, com os campos lado a lado */
+body.fs #view-m .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+body.fs #view-m .mcard { display: block; position: static; max-height: none; border-radius: 6px; box-shadow: none; }
+body.fs #view-m .mcard[hidden], body.fs.recortando #view-m .mcard { display: none !important; }
+body.fs #view-m .mwrap:has(> .mcard:not([hidden])) .stage.pan { height: 64dvh; max-height: 64dvh; }
+body.fs.recortando #view-m .mwrap .stage.pan { height: 100dvh !important; max-height: 100dvh !important; }
+body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+/* abas de formulário e texto não esticam na tela larga (linhas longas e campos enormes cansam); as de desenho usam tudo */
+#view-p, #view-e, #view-r { max-width: 1200px; width: 100%; }
+
+/* ===== Palco: casca no estilo dos programas de desenho (ferramentas à esquerda, opções em cima, estúdio à direita) ===== */
+.p-ctx { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 5px 8px; min-height: 40px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.p-ferr { font: 700 15px var(--font-display); letter-spacing: .04em; color: var(--imag); min-width: 86px; }
+.p-grp { display: inline-flex; align-items: center; gap: 8px; }
+.p-grp[hidden] { display: none; }
+.p-grp label { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; }
+.p-dica { color: var(--muted); font-size: 11px; font-style: italic; }
+.p-ctx .sp { flex: 1; }
+.p-tools { display: flex; align-items: center; gap: 4px; padding: 6px; background: var(--panel); }
+.ptool { position: relative; width: 36px; height: 36px; flex: none; display: grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--fg); cursor: pointer; }
+.ptool svg { width: 19px; height: 19px; }
+.ptool:hover { background: var(--bg); border-color: var(--line); }
+.ptool[aria-pressed="true"] { background: var(--imag); color: var(--bg); border-color: var(--imag); }
+.ptool .k { position: absolute; right: 2px; bottom: 0; font: 600 8px var(--font-data); opacity: .65; }
+.p-div { flex: none; width: 1px; height: 24px; background: var(--line); margin: 0 3px; }
+#view-m.palco .vnav { position: absolute; left: 8px; top: 8px; z-index: 5; padding: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.p-estudio { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+.p-abas { display: flex; border-bottom: 1px solid var(--line); }
+.p-abas button { flex: 1; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--muted); font: 600 13px var(--font-display); letter-spacing: .05em; }
+.p-abas button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--imag); }
+.p-pane { flex: 1; min-height: 0; overflow: auto; padding: 10px; }
+.p-pane[hidden] { display: none; }
+.p-nada { color: var(--muted); font-size: 12px; margin: 0; }
+.p-pane:has(> #m-card:not([hidden])) .p-nada { display: none; }
+.p-camadas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.p-camadas li { display: grid; grid-template-columns: 12px 26px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+.p-camadas li:hover { background: var(--bg); }
+.p-camadas li.sel { background: color-mix(in srgb, var(--imag) 28%, transparent); }
+.p-camadas li.grp { grid-template-columns: 12px minmax(0, 1fr) auto; font: 700 13px var(--font-display); letter-spacing: .03em; margin-top: 4px; }
+.p-camadas li.mem { padding-left: 18px; }
+.p-camadas .sw { width: 10px; height: 10px; border-radius: 2px; background: var(--cor, var(--imag)); }
+.p-camadas .n { font: 600 11px var(--font-data); color: var(--muted); }
+.p-camadas .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-camadas .md { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.p-estado { display: flex; align-items: center; gap: 12px; padding: 0 10px; min-height: 26px; font-size: 11px; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+.p-estado .stat { overflow: hidden; text-overflow: ellipsis; }
+/* ajuda da aba ("?"): o texto aparece por cima, em vez de ficar sempre embaixo da tela */
+body[data-aba="m"] #hint { display: none; }
+body[data-aba="m"].p-ajuda #hint { display: block; position: fixed; right: 16px; top: 96px; z-index: 40; max-width: 460px; max-height: 60vh; overflow: auto; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.3); color: var(--fg); }
+
+/* tela estreita: empilhado (ferramentas numa linha, cartão sobe de baixo como antes) */
+@media (max-width: 899px) {
+  .p-tools { overflow-x: auto; border-bottom: 1px solid var(--line); }
+  .p-ctx .p-dica { display: none; } /* as dicas tomam espaço demais numa tela estreita; o "?" continua */
+  .p-ctx { gap: 6px; min-height: 0; }
+  .p-abas, .p-nada, #m-pane-cam { display: none !important; }
+  .p-estudio { background: none; }
+  .p-pane { padding: 0; overflow: visible; }
+}
+
+/* tela larga: grade que ocupa a altura da janela; o desenho fica com o resto */
+@media (min-width: 900px) {
+  #view-m.palco { display: grid; gap: 0; height: var(--palco-alto, calc(100dvh - 60px));
+    grid-template-columns: 48px minmax(0, 1fr) var(--col-card); grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "ctx ctx ctx" "tools main estudio" "tools estado estudio";
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
+  #view-m.palco[hidden] { display: none; }
+  #view-m.palco > .p-ctx { grid-area: ctx; }
+  #view-m.palco > .p-tools { grid-area: tools; flex-direction: column; border-right: 1px solid var(--line); }
+  #view-m.palco .p-div { width: 24px; height: 1px; margin: 3px 0; }
+  #view-m.palco .p-baixo { margin-top: auto; }
+  #view-m.palco > .mwrap { grid-area: main; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) !important; gap: 0; }
+  #view-m.palco .stagebox { min-height: 0 !important; height: 100%; }
+  #view-m.palco .stage.pan { height: 100%; max-height: none; border: 0; border-radius: 0; }
+  #view-m.palco > .p-estudio { grid-area: estudio; border-left: 1px solid var(--line); }
+  #view-m.palco .mcard { position: static; border: 0; padding: 0; background: none; box-shadow: none; max-height: none; }
+  body.recortando #view-m.palco .mcard:not([hidden]) { display: block !important; }
+  #view-m.palco > .p-estado { grid-area: estado; }
+  body[data-aba="m"] .drawer { display: none; }
+  body[data-aba="m"] .wrap { padding-bottom: 0; }
+  body.fs #view-m.palco { height: 100dvh; border: 0; border-radius: 0; }
+  body.fs #view-m.palco .stage.pan { height: 100%; max-height: none; }
+  body.fs #view-m.palco > .mwrap { grid-template-columns: minmax(0, 1fr) !important; }
+}
+/* vistas: ícones de casinha (como no SketchUp) no canto do desenho e nos títulos das prévias */
+.vicons { display: inline-flex; gap: 2px; }
+.vbtn { width: 34px; height: 32px; display: grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--fg); cursor: pointer; }
+.vbtn:hover { background: var(--bg); border-color: var(--line); }
+.vbtn[aria-pressed="true"] { background: var(--imag); color: var(--bg); border-color: var(--imag); }
+/* opções do 3D na barra de cima do Palco (em vez de uma barra própria por cima do desenho) */
+.v3d-bar.v3d-bar-fora { display: inline-flex; flex-wrap: nowrap; gap: 6px; padding: 0; background: none; border: 0; }
+.v3d-bar-fora .v3d-tit, .v3d-bar-fora .v3d-dica { display: none; }
+.v3d-bar-fora select, .v3d-bar-fora .btn { font-size: 12px; }
+#m-ctx3d { display: inline-flex; }
+.v3d-rot { align-self: center; margin-left: 6px; color: var(--muted); font-size: 11px; }
+/* arrastar a vista: Espaço segurado mostra a mãozinha; arrastando, a mão fechada */
+.stage.arrastavel, .stage.arrastavel * { cursor: grab !important; }
+.stage.arrastando, .stage.arrastando * { cursor: grabbing !important; }
+body.p-navegar #view-m .stage, body.p-navegar #view-m .stage .scr { cursor: grab; }

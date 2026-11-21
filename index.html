@@ -38,25 +38,6 @@
     </div>
   </div>
 </div>
-<div class="modal" id="vista-modal" role="dialog" aria-modal="true" aria-labelledby="v-title" hidden>
-  <div class="box">
-    <h2 id="v-title">Nova vista de montagem</h2>
-    <p class="sub">Uma vista é um plano 2D para painéis que não ficam de frente para o público: paredes de uma borda de campo, fundo, teto, piso. Ela é desenhada como quem olha para ela; o 3D junta tudo no lugar.</p>
-    <label class="fld">Nome <input type="text" id="v-nome" maxlength="40" autocomplete="off"></label>
-    <label class="fld">Orientação <select id="v-ori"></select></label>
-    <p class="sub">Onde fica o ponto 0 desta vista no palco. O 0 da Frente é o centro do palco, no chão.</p>
-    <div class="three">
-      <label class="fld">X (m) <input type="number" id="v-x" step="0.5" inputmode="decimal" title="Negativo = à esquerda, positivo = à direita (como o público vê)"></label>
-      <label class="fld">Altura (m) <input type="number" id="v-y" step="0.5" inputmode="decimal"></label>
-      <label class="fld">Profundidade (m) <input type="number" id="v-z" step="0.5" inputmode="decimal" title="Negativo = para o fundo, positivo = para o público"></label>
-    </div>
-    <div class="err" id="v-err" role="alert"></div>
-    <div class="acts">
-      <button class="btn" id="v-cancel">Cancelar</button>
-      <button class="btn" id="v-ok" aria-pressed="true">Criar</button>
-    </div>
-  </div>
-</div>
 <div class="modal" id="gab-modal" role="dialog" aria-modal="true" aria-labelledby="gab-h" hidden>
   <div class="box gab-box">
     <div id="gab-v-lista">
@@ -113,7 +94,7 @@
     <b class="brand">LED·MAP</b>
     <div class="tabs" role="tablist" aria-label="Áreas" id="tabs">
       <button class="tab" id="tab-p" role="tab" aria-selected="false" aria-controls="view-p">Projeto</button>
-      <button class="tab" id="tab-m" role="tab" aria-selected="true" aria-controls="view-m">Rig</button>
+      <button class="tab" id="tab-m" role="tab" aria-selected="true" aria-controls="view-m">Palco</button>
       <button class="tab" id="tab-c" role="tab" aria-selected="false" aria-controls="view-c">Screen</button>
       <button class="tab" id="tab-k" role="tab" aria-selected="false" aria-controls="view-k">Cabeamento</button>
       <button class="tab" id="tab-n" role="tab" aria-selected="false" aria-controls="view-n">Composição</button>
@@ -210,72 +191,99 @@
     <div class="card soon">
       <h2>Caderno</h2>
       <p>Documento do projeto para imprimir ou enviar.</p>
-      <ul><li>Capa com dados do projeto</li><li>Rig, Screen e cabeamento em desenhos vetoriais</li><li>Tabelas de painéis, portas e energia</li></ul>
+      <ul><li>Capa com dados do projeto</li><li>Palco, Screen e cabeamento em desenhos vetoriais</li><li>Tabelas de painéis, portas e energia</li></ul>
       <p class="note">Em breve. Esta área ainda não calcula nada.</p>
     </div>
   </section>
 
-  <section class="view" id="view-m" role="tabpanel" aria-labelledby="tab-m">
-    <div class="bar">
-      <button class="btn" id="add-open">+ Painel</button>
-      <button class="btn" id="m-edit" aria-pressed="false" title="Ligado: arrastar move os painéis. Desligado: arrastar só navega">Mover</button>
-      <button class="btn" id="m-3d" title="Ver a montagem em 3D (só para olhar; editar continua aqui)">3D</button>
-      <span class="vnav" role="group" aria-label="Vistas de montagem">
-        <button class="btn" id="m-vant" aria-label="Vista anterior">‹</button>
-        <button class="btn" id="m-vista">Frente ▾</button>
-        <button class="btn" id="m-vprox" aria-label="Próxima vista">›</button>
+  <section class="view palco" id="view-m" role="tabpanel" aria-labelledby="tab-m">
+    <!-- Palco no estilo dos programas de desenho: ferramentas à esquerda, opções da ferramenta em cima,
+         estúdio (propriedades e camadas) à direita, estado embaixo; o desenho ocupa o resto -->
+    <div class="p-ctx" id="m-ctx" aria-label="Opções da ferramenta">
+      <b class="p-ferr" id="m-ferr">Selecionar</b>
+      <span class="p-grp" data-ctx="selecionar girar">
+        <label title="Passo do arrasto">Passo
+          <select id="m-snap"><option value="0.01">1 cm</option><option value="0.1">10 cm</option><option value="0.25">25 cm</option><option value="0.5" selected>50 cm</option><option value="1">1 m</option></select>
+        </label>
+        <button class="btn" id="m-magnet" aria-pressed="true" title="Encaixa nas bordas e centros dos outros painéis e no 0">Ímã</button>
       </span>
-      <div class="dd">
-        <button class="btn dd-b">Visão ▾</button>
-        <div class="dd-m keep" hidden>
-          <button class="mi" id="btn-grid-m" aria-pressed="true">Grade</button>
-          <button class="mi" id="m-cab" aria-pressed="false">Cabos</button>
-        </div>
-      </div>
+      <span class="p-grp" data-ctx="girar">
+        <label title="Passo da alça de giro (o círculo acima do painel selecionado)">Giro
+          <select id="m-gpasso"><option value="1">1°</option><option value="5" selected>5°</option><option value="15">15°</option><option value="45">45°</option><option value="90">90°</option></select>
+        </label>
+        <span class="p-dica">arraste o círculo acima do painel selecionado; o eixo é o da vista</span>
+      </span>
+      <span class="p-grp" data-ctx="selecionar">
+        <span class="p-dica">arraste para mover · no vazio, laço seleciona vários · Shift + clique soma</span>
+        <button class="btn" id="m-reset" title="Volta posição, recuo e giro ao que estava quando o projeto abriu">Restaurar posições</button>
+      </span>
+      <span class="p-grp" data-ctx="navegar"><span class="p-dica">arrastar só move a vista · toque num painel para ver as propriedades</span></span>
+      <span class="p-grp" data-ctx="3d"><span id="m-ctx3d"></span><span class="p-dica">toque num painel e ajuste posição e giro em Propriedades · arraste para girar a câmera</span></span>
+      <span class="sp"></span>
+      <button class="btn" id="m-ajuda" type="button" aria-pressed="false" title="Como usar o Palco">?</button>
       <div class="dd">
         <button class="btn dd-b">Exportar ▾</button>
-        <div class="dd-m" hidden>
+        <div class="dd-m right" hidden>
           <button class="mi" id="m-export">Pixel map (PNG)</button>
           <button class="mi" id="m-lay-png">Layout (PNG)</button>
           <button class="mi" id="m-laycab-png">Layout + cabeamento (PNG)</button>
           <button class="mi" id="m-lay-csv">Layout (CSV)</button>
         </div>
       </div>
+      <!-- o "Mover" de antes: as ferramentas ligam e desligam o arrasto por ele -->
+      <button class="btn" id="m-edit" aria-pressed="false" hidden>Mover</button>
+      <div id="m-edit-panel" hidden></div>
     </div>
-    <div class="medit" id="m-edit-panel" hidden>
-      <span class="who">Arraste os painéis · grupo se move junto</span>
-      <label>Passo
-        <select id="m-snap"><option value="0.1">0,1 m</option><option value="0.25">0,25 m</option><option value="0.5" selected>0,5 m</option><option value="1">1 m</option></select>
-      </label>
-      <button class="btn" id="m-magnet" aria-pressed="true">Ímã</button>
-      <button class="btn" id="m-reset">Restaurar posições</button>
-    </div>
+    <nav class="p-tools" id="m-tools" aria-label="Ferramentas">
+      <button class="ptool" data-tool="selecionar" title="Selecionar e mover (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 8-6 2-3 6z"/></svg><span class="k">V</span></button>
+      <button class="ptool" data-tool="navegar" title="Navegar: arrastar só move a vista (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></svg><span class="k">H</span></button>
+      <button class="ptool" data-tool="girar" title="Girar em volta do pivô (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg><span class="k">R</span></button>
+      <span class="p-div"></span>
+      <button class="ptool" id="add-open" title="Novo painel (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6v12M15 6v12M3 12h18"/></svg><span class="k">P</span></button>
+      <button class="ptool" id="m-tool-rec" aria-pressed="false" title="Recortar gabinetes do painel selecionado (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg><span class="k">C</span></button>
+      <span class="p-div"></span>
+      <button class="ptool" id="btn-grid-m" aria-pressed="true" title="Grade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></button>
+      <button class="ptool" id="m-cab" aria-pressed="false" title="Mostrar cabos de sinal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg></button>
+    </nav>
     <div class="mwrap">
     <div class="stagebox">
-    <div class="stage pan"><svg id="svg-m" viewBox="-1 -0.5 29 10.5" role="img" aria-label="Montagem: vista frontal dos painéis LED em escala"></svg></div>
-      <div class="hud"><button class="btn" id="m-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom da montagem">
+    <div class="stage pan"><svg id="svg-m" viewBox="-1 -0.5 29 10.5" role="img" aria-label="Palco: os painéis LED em escala, na vista escolhida"></svg></div>
+      <span class="vnav vicons" id="m-vistas" role="group" aria-label="Vista: Frente, Topo, Esquerda, Direita, 3D (teclas 1 a 5)"></span>
+      <div class="hud"><button class="btn" id="m-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do palco">
   <button class="btn" id="m-zout" aria-label="Diminuir zoom">−</button>
   <span id="m-zlabel">100%</span>
   <button class="btn" id="m-zin" aria-label="Aumentar zoom">+</button>
-  <button class="btn" id="m-zfit" title="Mostrar todos os painéis">Enquadrar</button>
+  <button class="btn" id="m-zfit" title="Mostrar todos os painéis (F)">Enquadrar</button>
         <button class="btn" id="fs-m" aria-label="Tela cheia" title="Tela cheia">⤢</button>
 </div></div>
-      <div class="badge"><div class="stat" id="stat-m"></div></div>
+      <div class="rec-barra" id="m-rec-barra" role="status" hidden><span id="m-rec-txt"></span><button class="btn" id="m-rec-ok" type="button">Concluir recorte</button></div>
       <div class="m-vazio" id="m-vazio" hidden><button class="btn" id="add-open3">+ Adicionar o primeiro painel</button></div>
     </div>
+    </div>
+    <aside class="p-estudio" id="m-estudio" aria-label="Estúdio">
+      <div class="p-abas" role="tablist">
+        <button role="tab" id="m-ab-prop" aria-selected="true" data-aba="prop">Propriedades</button>
+        <button role="tab" id="m-ab-cam" aria-selected="false" data-aba="cam">Camadas</button>
+      </div>
+      <div class="p-pane" id="m-pane-prop">
+        <p class="p-nada" id="m-nada">Nada selecionado. Toque num painel no desenho ou em Camadas.</p>
     <aside class="mcard" id="m-card" hidden aria-label="Painel selecionado">
       <div id="mc-um">
         <div class="mc-head"><span class="n" id="mc-n"></span><input type="text" id="mc-nome" maxlength="40" autocomplete="off" aria-label="Nome do painel"><button class="btn mc-x" id="mc-fechar" aria-label="Fechar">✕</button></div>
         <div class="mc-tags" id="mc-tags"></div>
         <p class="mc-info" id="mc-info"></p>
+        <p class="mc-info mc-palco" id="mc-palco" title="Onde a frente do painel fica no palco, com o giro: X da esquerda para a direita, altura do chão e recuo (positivo = para trás, negativo = à frente)"></p>
         <div class="mc-campos">
           <label>Largura (m) <input type="number" id="mc-w" step="0.05" min="0.05" inputmode="decimal"></label>
           <label>Altura (m) <input type="number" id="mc-h" step="0.05" min="0.05" inputmode="decimal"></label>
-          <label>X (m) <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
+          <label><span id="m-x-l">X (m)</span> <input type="number" id="m-x" step="0.05" inputmode="decimal"></label>
           <label><span id="m-y-l">Y do chão (m)</span> <input type="number" id="m-y" step="0.05" inputmode="decimal"></label>
-          <label>Recuo (m) <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
+          <label><span id="mc-z-l">Recuo (m)</span> <input type="number" id="mc-z" step="0.05" inputmode="decimal" placeholder="0"></label>
           <label>Screen <select id="mc-scr" aria-label="Screen do painel"></select></label>
-          <label id="mc-vista-l" style="grid-column: 1 / -1" hidden>Vista de montagem <select id="mc-vista" aria-label="Vista de montagem do painel"></select></label>
+          <label title="Inclina para frente ou para trás (ajuste na vista Esquerda ou Direita)">Giro X (°) <input type="number" id="mc-rx" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Abre como lateral em V ou L (ajuste na vista Topo)">Giro Y (°) <input type="number" id="mc-ry" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Gira no próprio plano (ajuste na vista Frente)">Giro Z (°) <input type="number" id="mc-rz" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Ponto em volta do qual o painel gira. Trocar o pivô não tira o painel do lugar">Pivô <select id="mc-pv" aria-label="Pivô do giro"></select></label>
         </div>
         <div class="mc-acts">
           <button class="btn" id="m-prop">Editar</button>
@@ -302,6 +310,17 @@
       <div id="mc-grupo" hidden>
         <div class="mc-head"><span class="mc-gtag">Grupo</span><input type="text" id="mc-gnome" maxlength="40" autocomplete="off" aria-label="Nome do grupo"><button class="btn mc-x" id="mc-gfechar" aria-label="Fechar">✕</button></div>
         <p class="mc-info" id="mc-ginfo"></p>
+        <p class="mc-info mc-palco" id="mc-gpalco" title="Onde o grupo fica no palco: X, altura do chão e recuo (positivo = para trás)"></p>
+        <div class="mc-campos">
+          <label title="Centro do grupo, da esquerda para a direita">Centro X (m) <input type="number" id="mc-gx" step="0.05" inputmode="decimal"></label>
+          <label title="Altura do centro do grupo">Centro altura (m) <input type="number" id="mc-gy" step="0.05" inputmode="decimal"></label>
+          <label title="Recuo do centro do grupo (positivo = para trás)">Centro recuo (m) <input type="number" id="mc-gz" step="0.05" inputmode="decimal" placeholder="0"></label>
+          <span></span>
+          <label title="Inclina o grupo inteiro">Giro X (°) <input type="number" id="mc-grx" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Abre o grupo inteiro em V ou L">Giro Y (°) <input type="number" id="mc-gry" step="1" inputmode="decimal" placeholder="0"></label>
+          <label title="Gira o grupo inteiro no próprio plano">Giro Z (°) <input type="number" id="mc-grz" step="1" inputmode="decimal" placeholder="0"></label>
+        </div>
+        <p class="mc-info">Painéis do grupo (toque para editar só um; no desenho, duplo clique):</p>
         <div class="mc-tags" id="mc-gmembros"></div>
         <div class="mc-acts">
           <button class="btn" id="mc-gdup">Duplicar grupo</button>
@@ -313,7 +332,10 @@
         <button class="btn lnk" id="mc-gir" type="button">Ir até o grupo</button>
       </div>
     </aside>
-    </div>
+      </div>
+      <div class="p-pane" id="m-pane-cam" hidden><ul class="p-camadas" id="m-camadas" aria-label="Grupos e painéis"></ul></div>
+    </aside>
+    <div class="p-estado"><div class="stat" id="stat-m"></div></div>
     <div class="legend" id="m-ports" hidden></div>
   </section>
 

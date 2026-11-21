@@ -1,0 +1,147 @@
+// Palco no estilo dos programas de desenho: ferramentas à esquerda, opções da ferramenta em cima, estúdio
+// (Propriedades e Camadas) à direita, estado embaixo. É só a casca: as ferramentas acionam o que já existia
+// (o "Mover", a alça de giro, o Recortar, o + Painel) e o cartão do painel vira a aba Propriedades.
+// Ferramentas: Selecionar (V) arrasta painéis · Navegar (H) arrastar só move a vista · Girar (R) mostra a alça ·
+// Painel (P) abre o + Painel · Recortar (C) recorta o painel selecionado. Vistas: 1 a 5. Enquadrar: F.
+import { tiles, selected, paineis, membrosPainel, pnome, fmt } from "./core.js";
+import { corCab } from "./gabinetes.js";
+import { setEditM, setAlcaLigada } from "./rig-edicao.js";
+import { select } from "./tabela.js";
+import { abrirGrupo, abrirMembro } from "./rig-cartao.js";
+import { irParaVista } from "./vistas.js";
+import { ouvirRig } from "./ponte3d.js";
+import { pmsg } from "./exportar.js";
+
+function $(id) { return document.getElementById(id); }
+
+var NOMES = { selecionar: "Selecionar", navegar: "Navegar", girar: "Girar" };
+var CHAVE = "ledmap-ferramenta"; // preferência do aparelho
+var ferramenta = "selecionar";
+
+function no3D() { return document.body.classList.contains("rig-3d"); }
+function noPalco() { return document.body.getAttribute("data-aba") === "m"; }
+
+// liga a ferramenta: Selecionar e Girar ligam o arrasto ("Mover"), Navegar desliga; a alça só no Girar
+export function usar(f) {
+  if (!NOMES[f]) return;
+  ferramenta = f;
+  try { localStorage.setItem(CHAVE, f); } catch (e) {}
+  aplicar();
+}
+
+function aplicar() {
+  var em3 = no3D();
+  if (noPalco() && !em3) setEditM(ferramenta !== "navegar");
+  setAlcaLigada(ferramenta === "girar");
+  document.querySelectorAll("#m-tools .ptool[data-tool]").forEach(function (b) {
+    b.setAttribute("aria-pressed", String(b.getAttribute("data-tool") === ferramenta));
+    b.disabled = em3; // no 3D, mover e girar são pelo cartão
+  });
+  document.body.classList.toggle("p-navegar", !em3 && ferramenta === "navegar"); // cursor de mãozinha no desenho
+  var ctx = em3 ? "3d" : ferramenta;
+  $("m-ferr").textContent = em3 ? "Vista 3D" : NOMES[ferramenta];
+  document.querySelectorAll("#m-ctx .p-grp").forEach(function (g) {
+    g.hidden = (g.getAttribute("data-ctx") || "").split(" ").indexOf(ctx) < 0;
+  });
+}
+
+// Recortar: precisa de um painel selecionado; o botão acompanha o modo
+function recortar() {
+  if (!selected) { pmsg("Selecione um painel para recortar os gabinetes dele."); return; }
+  $("m-rec").click();
+}
+
+// ---- estúdio ----
+function aba(qual) {
+  ["prop", "cam"].forEach(function (k) {
+    $("m-ab-" + k).setAttribute("aria-selected", String(k === qual));
+    $("m-pane-" + k).hidden = k !== qual;
+  });
+  if (qual === "cam") camadas();
+}
+
+// Camadas: os grupos (com os painéis dentro) e depois os painéis soltos; tocar seleciona
+function linhaPainel(t, cls) {
+  var li = document.createElement("li");
+  li.className = cls + (t.id === selected ? " sel" : "");
+  li.setAttribute("data-id", t.id);
+  li.style.setProperty("--cor", corCab(t));
+  li.title = t.name + " · " + fmt(t.w) + " × " + fmt(t.h) + " m";
+  li.innerHTML = '<span class="sw"></span><span class="n"></span><span class="nm"></span><span class="md"></span>';
+  li.querySelector(".n").textContent = t.id;
+  li.querySelector(".nm").textContent = t.name;
+  li.querySelector(".md").textContent = fmt(t.w) + "×" + fmt(t.h);
+  return li;
+}
+function camadas() {
+  var ul = $("m-camadas");
+  if (!ul || $("m-pane-cam").hidden) return;
+  ul.textContent = "";
+  if (!tiles.length) { var v = document.createElement("li"); v.className = "md"; v.textContent = "Nenhum painel ainda: use a ferramenta Painel (P)."; ul.appendChild(v); return; }
+  paineis.forEach(function (p) {
+    var m = membrosPainel(p.id);
+    if (!m.length) return;
+    var g = document.createElement("li");
+    g.className = "grp"; g.setAttribute("data-grupo", p.id);
+    g.innerHTML = '<span class="sw" style="background:var(--muted)"></span><span class="nm"></span><span class="md"></span>';
+    g.querySelector(".nm").textContent = pnome(p);
+    g.querySelector(".md").textContent = m.length + " painéis";
+    ul.appendChild(g);
+    m.forEach(function (t) { ul.appendChild(linhaPainel(t, "mem")); });
+  });
+  tiles.filter(function (t) { return !t.pn; }).forEach(function (t) { ul.appendChild(linhaPainel(t, "")); });
+}
+
+// a grade do Palco ocupa a janela até embaixo (o cabeçalho do app fica em cima)
+function medirAltura() {
+  var v = $("view-m");
+  if (!v || v.hidden || window.innerWidth < 900) return;
+  var topo = v.getBoundingClientRect().top + window.scrollY;
+  document.documentElement.style.setProperty("--palco-alto", Math.max(420, window.innerHeight - topo - 16) + "px");
+}
+
+export function init() {
+  try { var f = localStorage.getItem(CHAVE); if (NOMES[f]) ferramenta = f; } catch (e) {}
+  document.querySelectorAll("#m-tools .ptool[data-tool]").forEach(function (b) {
+    b.addEventListener("click", function () { usar(b.getAttribute("data-tool")); });
+  });
+  $("m-tool-rec").addEventListener("click", recortar);
+  // o Recortar do cartão e o da barra mostram o mesmo estado
+  new MutationObserver(function () { $("m-tool-rec").setAttribute("aria-pressed", $("m-rec").getAttribute("aria-pressed") || "false"); })
+    .observe($("m-rec"), { attributes: true, attributeFilter: ["aria-pressed"] });
+  $("m-ab-prop").addEventListener("click", function () { aba("prop"); });
+  $("m-ab-cam").addEventListener("click", function () { aba("cam"); });
+  $("m-camadas").addEventListener("click", function (e) {
+    var li = e.target.closest("li");
+    if (!li) return;
+    var g = li.getAttribute("data-grupo");
+    if (g) { var m = membrosPainel(g); if (m.length) select(m[0].id); abrirGrupo(g); aba("prop"); return; }
+    var id = li.getAttribute("data-id");
+    if (id) { if (li.classList.contains("mem")) abrirMembro(id); else select(id === selected ? null : id); } // painel de grupo: edita só ele
+  });
+  $("m-ajuda").addEventListener("click", function () {
+    var on = !document.body.classList.contains("p-ajuda");
+    document.body.classList.toggle("p-ajuda", on);
+    this.setAttribute("aria-pressed", String(on));
+  });
+  ouvirRig(function () { camadas(); });
+
+  // trocar de aba (o app desliga o "Mover" ao sair do Palco) ou entrar/sair do 3D: reaplica a ferramenta
+  new MutationObserver(function () { aplicar(); medirAltura(); })
+    .observe(document.body, { attributes: true, attributeFilter: ["data-aba", "class"] });
+  window.addEventListener("resize", medirAltura);
+
+  // atalhos (fora dos campos; Ctrl/Cmd ficam para desfazer, duplicar etc.)
+  document.addEventListener("keydown", function (e) {
+    if (!noPalco() || e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || "") || e.target.isContentEditable) return;
+    var k = e.key.toLowerCase(), f = { v: "selecionar", h: "navegar", r: "girar" }[k];
+    if (f && !no3D()) { e.preventDefault(); usar(f); return; }
+    if (k === "p") { e.preventDefault(); $("add-open").click(); return; }
+    if (k === "c" && !no3D()) { e.preventDefault(); recortar(); return; }
+    if (k === "f") { e.preventDefault(); $("m-zfit").click(); return; }
+    var n = "12345".indexOf(e.key);
+    if (n >= 0) { e.preventDefault(); irParaVista(["frente", "topo", "esq", "dir", "3d"][n]); }
+  });
+  aplicar();
+  medirAltura();
+}
