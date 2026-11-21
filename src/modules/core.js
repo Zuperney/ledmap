@@ -124,8 +124,21 @@ export function save() {
   }
 
 // n = gabinetes que existem (a grade menos os recortados); total = pixels desses gabinetes
+// Memoizado por objeto: res() é chamado dentro de laços por gabinete (cabeamento, exportações, 3D).
+// O cache vale enquanto o gabinete (mesmo objeto e medidas), w, h e o array de recortes forem os mesmos;
+// "off" é sempre trocado por um array novo (nunca alterado no lugar), então comparar a referência basta.
+// O resultado é compartilhado: quem chama não pode alterá-lo.
+var cacheRes = new WeakMap();
 export function res(s) {
-    var g = cabDe(s), cols = Math.max(1, Math.round(s.w / g.mw)), rows = Math.max(1, Math.round(s.h / g.mh));
+    var g = cabDe(s), m = cacheRes.get(s);
+    if (m && m.g === g && m.rx === g.rx && m.ry === g.ry && m.mw === g.mw && m.mh === g.mh && m.w === s.w && m.h === s.h && m.off === s.off) return m.q;
+    var q = calcRes(s, g);
+    cacheRes.set(s, { g: g, rx: g.rx, ry: g.ry, mw: g.mw, mh: g.mh, w: s.w, h: s.h, off: s.off, q: q });
+    return q;
+  }
+
+function calcRes(s, g) {
+    var cols = Math.max(1, Math.round(s.w / g.mw)), rows = Math.max(1, Math.round(s.h / g.mh));
     var w = cols * g.rx, h = rows * g.ry, fora = {}, nf0 = 0;
     (Array.isArray(s.off) ? s.off : []).forEach(function (k) {
       var p = k.split(":"), c = +p[0], r = +p[1];

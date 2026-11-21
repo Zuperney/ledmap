@@ -1,6 +1,6 @@
 import { GABINETES, GAB, gabPadrao } from "./gabinetes.js";
 import { save, STORE, EXTRAS, BASE, res, nf, fmt, tiles, scaledPos, freeSpot, groups, gname, EXTRA_MAX, cleanExtra, set_EXTRAS, bbox, membrosPainel, novoPainel, painelById, pnome, paineis, set_paineis, noPlano, vistaM } from "./core.js";
-import { ksave, twoStep, routes } from "./cabeamento.js";
+import { ksave, kflush, twoStep, routes } from "./cabeamento.js";
 import { deleteLater } from "./tabela.js";
 import { curTab } from "./abas.js";
 import { pmsg } from "./exportar.js";
@@ -8,7 +8,7 @@ import { pmsg } from "./exportar.js";
 let KEY_REOPEN, KEY_PEND, addModal, aName, aW, aH, aPrev, aErr, editando = null;
 
 export function commitAndReload(reopen, pending) {
-    save(); ksave();
+    save(); ksave(); kflush();
     try {
       var chk = JSON.parse(localStorage.getItem(STORE) || "null");
       if (!chk || JSON.stringify(chk.extras) !== JSON.stringify(EXTRAS)) return false;
