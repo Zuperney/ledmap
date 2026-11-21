@@ -88,7 +88,7 @@ export function init() {
   TODAS.forEach(function (id, i) {
     if (id === "3d") { var d = document.createElement("span"); d.className = "p-div"; grupo.appendChild(d); }
     var b = document.createElement("button"), tecla = id === "3d" ? "0" : String(i + 1);
-    b.type = "button"; b.className = "vbtn" + (id === "3d" ? " v3d" : ""); b.setAttribute("data-v", id);
+    b.type = "button"; b.className = "vbtn" + (id === "3d" ? " vb3d" : ""); b.setAttribute("data-v", id);
     b.innerHTML = ICONES_VISTA[id] + '<span class="k">' + tecla + "</span>";
     b.title = nomeVista(id) + " (" + tecla + "): " + DICA[id];
     b.setAttribute("aria-label", nomeVista(id));

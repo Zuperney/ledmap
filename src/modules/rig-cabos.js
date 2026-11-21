@@ -53,7 +53,7 @@ export function init() {
       return { x: c.u0, y: y0, w: c.u1 - c.u0, h: Math.max(y1, FLOOR) - y0 }; // inclui o chão (a frente, no Topo)
     },
     // Navegar: com o "Mover" desligado, arrastar com o botão esquerdo move a vista
-    { arrastarEsq: function () { return document.getElementById("m-edit").getAttribute("aria-pressed") !== "true"; } });
+    { arrastarEsq: function () { return document.getElementById("m-edit").getAttribute("aria-pressed") !== "true" && !document.body.classList.contains("p-desenho"); } });
   cabOn = false;
   ovlM = el("g", {}, svgM);
   btnCab = document.getElementById("m-cab");

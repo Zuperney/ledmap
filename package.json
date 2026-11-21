@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "testar": "node testes/cabeamento.mjs && node testes/espaco.mjs && node testes/transformacoes.mjs",
+    "testar": "node testes/cabeamento.mjs && node testes/espaco.mjs && node testes/transformacoes.mjs && node testes/misto.mjs",
     "desktop": "vite build && electron .",
     "dist": "vite build && electron-builder --win",
     "dist:dir": "vite build && electron-builder --win --dir"

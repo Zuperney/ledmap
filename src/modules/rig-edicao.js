@@ -267,6 +267,7 @@ export function onDownM(e, t) {
       else conj[o.id] = o;
     });
     var lista = Object.keys(conj).map(function (k) { return conj[k]; });
+    if (lista.some(function (o) { return o.tv; })) { pmsg("Tem painel travado nesse conjunto: destrave em Camadas para arrastar."); return; }
     var w = toWorldM(e);
     // arrastar move no plano da vista (Frente: X e altura; Topo: X e recuo; laterais: Z e altura);
     // o ímã e o passo valem para o contorno do conjunto na vista, não só para o painel puxado

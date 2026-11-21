@@ -228,12 +228,13 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
 #view-p, #view-e, #view-r { max-width: 1200px; width: 100%; }
 
 /* ===== Palco: casca no estilo dos programas de desenho (ferramentas à esquerda, opções em cima, estúdio à direita) ===== */
-.p-ctx { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 5px 8px; min-height: 40px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.p-ctx { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; overflow: hidden; padding: 5px 8px; min-height: 40px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .p-ferr { font: 700 15px var(--font-display); letter-spacing: .04em; color: var(--imag); min-width: 86px; }
-.p-grp { display: inline-flex; align-items: center; gap: 8px; }
+.p-grp { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex-shrink: 1; }
+.p-grp > label, .p-grp > .btn, .p-ctx > .btn, .p-ctx > .dd, .p-ctx > .p-ferr { flex-shrink: 0; }
 .p-grp[hidden] { display: none; }
 .p-grp label { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; }
-.p-dica { color: var(--muted); font-size: 11px; font-style: italic; }
+.p-dica { color: var(--muted); font-size: 11px; font-style: italic; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* a barra não quebra linha: a dica encolhe (inteira no title) */
 .p-ctx .sp { flex: 1; }
 .p-tools { display: flex; align-items: center; gap: 4px; padding: 6px; background: var(--panel); }
 .ptool { position: relative; width: 36px; height: 36px; flex: none; display: grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--fg); cursor: pointer; }
@@ -249,7 +250,7 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
 .p-vistas .vbtn[aria-pressed="true"] { background: var(--imag); color: var(--bg); border-color: var(--imag); }
 .p-vistas .vbtn .k { position: absolute; right: 2px; bottom: 0; font: 600 8px var(--font-data); opacity: .65; }
 .p-vistas .p-div { width: 24px; height: 1px; margin: 3px 0; }
-.p-vistas .v3d { font: 700 11px var(--font-display); letter-spacing: .04em; }
+.p-vistas .vb3d { font: 700 11px var(--font-display); letter-spacing: .04em; }
 .p-estudio { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
 .p-abas { display: flex; border-bottom: 1px solid var(--line); }
 .p-abas button { flex: 1; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--muted); font: 600 13px var(--font-display); letter-spacing: .05em; }
@@ -259,17 +260,29 @@ body.fs #view-m .mc-campos { grid-template-columns: repeat(auto-fill, minmax(130
 .p-nada { color: var(--muted); font-size: 12px; margin: 0; }
 .p-pane:has(> #m-card:not([hidden])) .p-nada { display: none; }
 .p-camadas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
-.p-camadas li { display: grid; grid-template-columns: 12px 26px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+.p-camadas li { display: grid; grid-template-columns: 12px 26px minmax(0, 1fr) auto auto; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 5px; cursor: pointer; font-size: 12px; }
 .p-camadas li:hover { background: var(--bg); }
 .p-camadas li.sel { background: color-mix(in srgb, var(--imag) 28%, transparent); }
-.p-camadas li.grp { grid-template-columns: 12px minmax(0, 1fr) auto; font: 700 13px var(--font-display); letter-spacing: .03em; margin-top: 4px; }
+.p-camadas li.grp { grid-template-columns: 12px minmax(0, 1fr) auto auto; font: 700 13px var(--font-display); letter-spacing: .03em; margin-top: 4px; }
 .p-camadas li.mem { padding-left: 18px; }
 .p-camadas .sw { width: 10px; height: 10px; border-radius: 2px; background: var(--cor, var(--imag)); }
 .p-camadas .n { font: 600 11px var(--font-data); color: var(--muted); }
 .p-camadas .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-camadas .md { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.p-camadas .ac { display: inline-flex; gap: 1px; }
+.p-camadas .ac button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; font-size: 9px; opacity: .55; }
+.p-camadas li:hover .ac button, .p-camadas .ac button[aria-pressed="true"] { opacity: 1; }
+.p-camadas .ac button:hover { background: var(--panel); color: var(--fg); }
+.p-camadas .ac button[aria-pressed="true"] { color: var(--imag); }
+.p-camadas li.oculta .nm, .p-camadas li.oculta .n { opacity: .45; text-decoration: line-through; }
 .p-estado { display: flex; align-items: center; gap: 12px; padding: 0 10px; min-height: 26px; font-size: 11px; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
 .p-estado .stat { overflow: hidden; text-overflow: ellipsis; }
+/* painel misto, no modal de painel */
+.chk { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.35; cursor: pointer; }
+.chk input { margin-top: 2px; }
+.misto { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px dashed var(--line); border-radius: 6px; }
+.misto .btn { align-self: flex-start; }
+.p-medida { margin-left: 8px; font-family: var(--font-data); font-size: 12px; color: #f5a524; }
 .p-cursor { margin-left: auto; font-family: var(--font-data); color: var(--fg); min-width: 170px; text-align: right; }
 /* ajuda da aba ("?"): o texto aparece por cima, em vez de ficar sempre embaixo da tela */
 body[data-aba="m"] #hint { display: none; }

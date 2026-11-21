@@ -27,7 +27,16 @@
       <label class="fld">Largura (m) <input type="number" id="a-w" value="2" min="0.1" max="30" step="0.1" inputmode="decimal"></label>
       <label class="fld">Altura (m) <input type="number" id="a-h" value="2" min="0.1" max="30" step="0.1" inputmode="decimal"></label>
     </div>
-    <label class="fld">Gabinete <select id="a-cab"></select></label>
+    <label class="fld"><span id="a-cab-l">Gabinete</span> <select id="a-cab"></select></label>
+    <label class="chk" id="a-misto-fld"><input type="checkbox" id="a-misto"> Painel misto: completar a medida com um segundo gabinete (ex.: 3,5 m = 3 × 1 m + 1 × 0,5 m)</label>
+    <div class="misto" id="a-misto-box" hidden>
+      <label class="fld">Gabinete de complemento <select id="a-cab2"></select></label>
+      <div class="two">
+        <label class="fld">Menores na altura <select id="a-posv"><option value="baixo">Embaixo</option><option value="cima">Em cima</option></select></label>
+        <label class="fld">Menores na largura <select id="a-posh"><option value="dir">À direita</option><option value="esq">À esquerda</option></select></label>
+      </div>
+      <button class="btn" id="a-sugerir" type="button" title="Entre os gabinetes com o mesmo pitch do principal, o que fecha a medida com menos gabinetes">Sugerir complemento</button>
+    </div>
     <label class="fld" id="a-z-fld" hidden>Recuo (m) <input type="number" id="a-z" step="0.05" min="-20" max="20" inputmode="decimal" placeholder="0 = no plano · 0,5 = meio metro para trás · −0,3 = para frente"></label>
     <button class="btn lnk" id="a-gabs" type="button">Criar ou editar gabinetes…</button>
     <div class="prev" id="a-prev"></div>
@@ -35,6 +44,42 @@
     <div class="acts">
       <button class="btn" id="a-cancel">Cancelar</button>
       <button class="btn" id="a-ok" aria-pressed="true">Adicionar</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="dup-modal" role="dialog" aria-modal="true" aria-labelledby="dup-h" hidden>
+  <div class="box">
+    <h2 id="dup-h">Duplicar várias</h2>
+    <p class="sub" id="dup-sub"></p>
+    <div class="seg" role="group" aria-label="Arranjo">
+      <button class="btn" id="dup-linha" type="button" aria-pressed="true">Em linha</button>
+      <button class="btn" id="dup-grade" type="button" aria-pressed="false">Em grade</button>
+    </div>
+    <div id="dup-box-linha">
+      <div class="two">
+        <label class="fld">Cópias <input type="number" id="dup-n" min="1" max="99" step="1" value="3" inputmode="numeric"></label>
+        <label class="fld">Para <select id="dup-dir"><option value="dir">a direita (X +)</option><option value="esq">a esquerda (X −)</option><option value="cima">cima (altura +)</option><option value="tras">trás (recuo +)</option><option value="frente">a frente (recuo −)</option></select></label>
+      </div>
+      <label class="fld">Espaço entre uma e outra (m) <input type="number" id="dup-gap" step="0.05" value="0" inputmode="decimal" placeholder="0 = encostadas"></label>
+    </div>
+    <div id="dup-box-grade" hidden>
+      <div class="two">
+        <label class="fld">Colunas (para a direita) <input type="number" id="dup-cols" min="1" max="50" step="1" value="3" inputmode="numeric"></label>
+        <label class="fld">Linhas <input type="number" id="dup-rows" min="1" max="50" step="1" value="2" inputmode="numeric"></label>
+      </div>
+      <div class="two">
+        <label class="fld">Linhas para <select id="dup-gdir"><option value="cima">cima (altura +)</option><option value="tras">trás (recuo +)</option></select></label>
+        <span></span>
+        <label class="fld">Espaço entre colunas (m) <input type="number" id="dup-gx" step="0.05" value="0" inputmode="decimal"></label>
+        <label class="fld">Espaço entre linhas (m) <input type="number" id="dup-gy" step="0.05" value="0" inputmode="decimal"></label>
+      </div>
+    </div>
+    <label class="chk" id="dup-juntar-fld"><input type="checkbox" id="dup-juntar"> Juntar o original e as cópias num grupo</label>
+    <div class="prev" id="dup-prev"></div>
+    <div class="err" id="dup-err" role="alert"></div>
+    <div class="acts">
+      <button class="btn" id="dup-cancel" type="button">Cancelar</button>
+      <button class="btn" id="dup-ok" type="button" aria-pressed="true">Duplicar</button>
     </div>
   </div>
 </div>
@@ -205,7 +250,7 @@
          estúdio (propriedades e camadas) à direita, estado embaixo; o desenho ocupa o resto -->
     <div class="p-ctx" id="m-ctx" aria-label="Opções da ferramenta">
       <b class="p-ferr" id="m-ferr">Selecionar</b>
-      <span class="p-grp" data-ctx="selecionar girar">
+      <span class="p-grp" data-ctx="selecionar girar painel">
         <label title="Passo do arrasto">Passo
           <select id="m-snap"><option value="0.01">1 cm</option><option value="0.1">10 cm</option><option value="0.25">25 cm</option><option value="0.5" selected>50 cm</option><option value="1">1 m</option></select>
         </label>
@@ -215,14 +260,19 @@
         <label title="Passo da alça de giro (o círculo acima do painel selecionado)">Giro
           <select id="m-gpasso"><option value="1">1°</option><option value="5" selected>5°</option><option value="15">15°</option><option value="45">45°</option><option value="90">90°</option></select>
         </label>
-        <span class="p-dica">arraste o círculo acima do painel selecionado; o eixo é o da vista</span>
+        <span class="p-dica" title="arraste o círculo acima do painel selecionado; o eixo é o da vista">arraste o círculo acima do painel selecionado; o eixo é o da vista</span>
       </span>
       <span class="p-grp" data-ctx="selecionar">
-        <span class="p-dica">arraste para mover · no vazio, laço seleciona vários · Shift + clique soma</span>
+        <span class="p-dica" title="arraste para mover · no vazio, laço seleciona vários · Shift + clique soma">arraste para mover · no vazio, laço seleciona vários · Shift + clique soma</span>
         <button class="btn" id="m-reset" title="Volta posição, recuo e giro ao que estava quando o projeto abriu">Restaurar posições</button>
       </span>
-      <span class="p-grp" data-ctx="navegar"><span class="p-dica">arrastar só move a vista · toque num painel para ver as propriedades</span></span>
-      <span class="p-grp" data-ctx="3d"><span id="m-ctx3d"></span><span class="p-dica">toque num painel e ajuste posição e giro em Propriedades · arraste para girar a câmera</span></span>
+      <span class="p-grp" data-ctx="navegar"><span class="p-dica" title="arrastar só move a vista · toque num painel para ver as propriedades">arrastar só move a vista · toque num painel para ver as propriedades</span></span>
+      <span class="p-grp" data-ctx="painel">
+        <label title="Gabinete do painel desenhado">Gabinete <select id="m-pcab"></select></label>
+        <span class="p-dica" title="arraste na Frente ou na Atrás: a medida fecha em gabinetes inteiros · clique no vazio abre a janela">arraste na Frente ou na Atrás: a medida fecha em gabinetes inteiros · clique no vazio abre a janela</span>
+      </span>
+      <span class="p-grp" data-ctx="medir"><span class="p-dica" title="arraste de um ponto a outro · encaixa nos cantos dos painéis e no 0 · Shift deixa reto · Esc limpa">arraste de um ponto a outro · encaixa nos cantos dos painéis e no 0 · Shift deixa reto · Esc limpa</span></span>
+      <span class="p-grp" data-ctx="3d"><span id="m-ctx3d"></span><span class="p-dica" title="toque num painel e ajuste posição e giro em Propriedades · arraste para girar a câmera">toque num painel e ajuste posição e giro em Propriedades · arraste para girar a câmera</span></span>
       <span class="sp"></span>
       <button class="btn" id="m-ajuda" type="button" aria-pressed="false" title="Como usar o Palco">?</button>
       <div class="dd">
@@ -243,7 +293,8 @@
       <button class="ptool" data-tool="navegar" title="Navegar: arrastar só move a vista (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></svg><span class="k">H</span></button>
       <button class="ptool" data-tool="girar" title="Girar em volta do pivô (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg><span class="k">R</span></button>
       <span class="p-div"></span>
-      <button class="ptool" id="add-open" title="Novo painel (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6v12M15 6v12M3 12h18"/></svg><span class="k">P</span></button>
+      <button class="ptool" id="add-open" data-tool="painel" title="Painel: arraste no desenho para criar (P) · clique no vazio abre a janela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6v12M15 6v12M3 12h18"/></svg><span class="k">P</span></button>
+      <button class="ptool" data-tool="medir" title="Medir: arraste de um ponto a outro (M)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg><span class="k">M</span></button>
       <button class="ptool" id="m-tool-rec" aria-pressed="false" title="Recortar gabinetes do painel selecionado (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg><span class="k">C</span></button>
       <span class="p-div"></span>
       <button class="ptool" id="btn-grid-m" aria-pressed="true" title="Grade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></button>
@@ -287,6 +338,7 @@
           <button class="btn" id="m-prop">Editar</button>
           <button class="btn" id="m-rec" aria-pressed="false" title="Tirar ou devolver gabinetes do painel (para triângulos, escadas, vãos)">Recortar</button>
           <button class="btn" id="m-dup">Duplicar</button>
+          <button class="btn" id="m-dupv" title="Várias cópias de uma vez, em linha ou em grade, com espaço entre elas">Duplicar várias…</button>
           <button class="btn" id="m-esp" title="Eixo X, eixo Y ou no próprio eixo">Espelhar ›</button>
           <button class="btn" id="m-desp" title="Cópia espelhada: eixo X, eixo Y ou no próprio eixo">Duplicar espelhado ›</button>
           <button class="btn" id="mc-sel" title="Selecionar vários painéis para agrupar ou excluir (no computador também dá Shift + clique)">Selecionar vários</button>
@@ -322,6 +374,7 @@
         <div class="mc-tags" id="mc-gmembros"></div>
         <div class="mc-acts">
           <button class="btn" id="mc-gdup">Duplicar grupo</button>
+          <button class="btn" id="mc-gdupv" title="Várias cópias do grupo de uma vez, em linha ou em grade">Duplicar várias…</button>
           <button class="btn" id="mc-gesp" title="Eixo X, eixo Y ou no próprio eixo">Espelhar grupo ›</button>
           <button class="btn" id="mc-gdesp" title="Cópia espelhada do grupo: eixo X, eixo Y ou no próprio eixo">Duplicar espelhado ›</button>
           <button class="btn" id="mc-gdes">Desagrupar</button>
@@ -333,7 +386,7 @@
       </div>
       <div class="p-pane" id="m-pane-cam" hidden><ul class="p-camadas" id="m-camadas" aria-label="Grupos e painéis"></ul></div>
     </aside>
-    <div class="p-estado"><div class="stat" id="stat-m"></div><span class="p-cursor" id="m-cursor" aria-live="off" title="Onde o cursor está no palco (Z = recuo, positivo para trás)"></span>
+    <div class="p-estado"><div class="stat" id="stat-m"></div><b class="p-medida" id="m-medida" aria-live="polite"></b><span class="p-cursor" id="m-cursor" aria-live="off" title="Onde o cursor está no palco (Z = recuo, positivo para trás)"></span>
       <div class="hud p-ctrl"><button class="btn" id="m-lock" aria-pressed="false" hidden>Travar</button><div class="zoom" role="group" aria-label="Zoom do palco">
   <button class="btn" id="m-zout" aria-label="Diminuir zoom">−</button>
   <span id="m-zlabel">100%</span>

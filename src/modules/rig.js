@@ -151,6 +151,8 @@ export function placeM(t) {
   var g = gM[t.id], f = faceM[t.id];
   if (!g || !f) return;
   avisar3D(); // toda mudança de lugar, recuo ou giro passa por aqui
+  g.classList.toggle("oculto", !!t.oc);
+  g.classList.toggle("travado", !!t.tv);
   var e = encara(t, vistaM), deLado = Math.abs(e) < 0.08, A = afim(t, vistaM, FLOOR);
   f.setAttribute("transform", "matrix(" + A.join(" ") + ")");
   desespelharTextos(t, A, e < 0);
