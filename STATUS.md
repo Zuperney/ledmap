@@ -5,6 +5,10 @@ Objetivo: planejador de rig/canvas/cabeamento de telas LED que substitui o LED L
 
 ## Já feito
 
+- **Etapa 5 do PLANO.md (configuração).**
+  - **Aba Endereçamento**: Screen, Cabeamento e Composição viraram uma aba só, com a barra de modos no topo (Screen · Cabeamento · Composição); abre no último modo usado.
+  - **Blocos no mapa de pixels** (cartão do painel na Screen): "Dividir em blocos…" quebra o painel em blocos só no canvas do processador — no Palco, no cabeamento físico e na elétrica ele continua um painel só. O técnico diz quantas colunas e linhas de gabinetes cada bloco tem (um número ou uma lista); "Sugerir pelo limite da porta" calcula quantas colunas cabem numa porta. Arrumar empilhados ou lado a lado; cada bloco tem X e Y próprios no canvas; Juntar desfaz. Cabeamento (área da porta, desenho), elétrica, exportações e Composição usam o lugar de cada gabinete no bloco dele; na Composição cada bloco vira uma região. Contas em `blocos.js`, testadas em `testes/blocos.mjs`. Gravado no projeto e no JSON (blocos).
+  - **Grupo como um painel só no cabeamento**: a distribuição automática completa o grupo inteiro antes de passar para o próximo, e passar de um membro para outro não conta como troca de painel.
 - **Etapa 4 do PLANO.md (visualização).**
   - **2D ⇄ 3D**: o 3D (botão ou tecla 0) abre com a câmera na orientação da vista 2D de onde veio; no 3D os ícones das vistas levam a câmera até elas com transição suave e a órbita é livre; ao sair, o Palco volta para a vista 2D mais perto da câmera. Os botões de câmera saíram da barra de cima.
   - **Gizmo no 3D**: Mover (G) e Girar (R) o painel ou o grupo selecionado nos 3 eixos, em volta do pin, nos eixos do palco ou da peça (L), com o passo e o passo do giro do Palco. Soltar aplica pelas regras de transformação (relativo ao grupo, mm, centésimos). Painel travado não pega o gizmo.

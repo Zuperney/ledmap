@@ -7,6 +7,10 @@ import { renderEletrica } from "./eletrica.js";
 import { renderComp } from "./composicao.js";
 
 const TABS = ["p", "m", "c", "k", "n", "e", "r"];
+// Endereçamento: uma aba com três modos (Screen = mapa de pixels, Cabeamento, Composição); cada modo é uma das vistas
+// de antes, escolhido pela barra de modos no topo dela. A aba abre no último modo usado.
+const MODOS = ["c", "k", "n"], NOME_MODO = { c: "Screen", k: "Cabeamento", n: "Composição" };
+var modoEnd = "c";
 let HINT, curTab;
 
 export function showTab(which) {
@@ -17,9 +21,13 @@ export function showTab(which) {
       document.getElementById("view-" + w).hidden = w !== which;
       document.getElementById("tab-" + w).setAttribute("aria-selected", String(w === which));
     });
+    var noEnd = MODOS.indexOf(which) >= 0;
+    if (noEnd) { modoEnd = which; try { localStorage.setItem("ledmap-modo-end", which); } catch (e) {} }
+    document.getElementById("tab-x").setAttribute("aria-selected", String(noEnd));
+    document.querySelectorAll(".modos button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-modo") === which)); });
     document.body.setAttribute("data-aba", which);
     try { localStorage.setItem("ledmap-aba", which); } catch (e) {}
-    var tb = document.getElementById("tab-" + which);
+    var tb = document.getElementById(noEnd ? "tab-x" : "tab-" + which);
     if (tb && tb.scrollIntoView) { try { tb.scrollIntoView({ block: "nearest", inline: "center" }); } catch (e) {} }
     if (which === "p") atualizarResumoProjeto();
     if (which !== "m") viewM.setLock(false);
@@ -29,7 +37,7 @@ export function showTab(which) {
     if (which === "m") { viewM.apply(); renderCabM(); }
     if (which === "c") viewC.apply();
     if (which === "e") renderEletrica();
-    if (which === "n") renderComp();
+    if (which === "n") { renderComp(); requestAnimationFrame(function () { requestAnimationFrame(renderComp); }); } // de novo depois que a área tem a altura final
     if (which === "k") { renderCabling(); viewK.apply(); }
   }
 
@@ -43,6 +51,20 @@ export function init() {
   TABS.forEach(function (w) {
       document.getElementById("tab-" + w).addEventListener("click", function () { showTab(w); });
     });
+  try { var mm = localStorage.getItem("ledmap-modo-end"); if (MODOS.indexOf(mm) >= 0) modoEnd = mm; } catch (e) {}
+  document.getElementById("tab-x").addEventListener("click", function () { showTab(modoEnd); });
+  // a barra de modos no topo de cada modo
+  MODOS.forEach(function (w) {
+    var topo = document.querySelector("#view-" + w + " .of-topo");
+    if (!topo) return;
+    var seg = document.createElement("div"); seg.className = "seg modos"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Modo do Endereçamento");
+    MODOS.forEach(function (m) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = NOME_MODO[m]; b.setAttribute("data-modo", m);
+      b.addEventListener("click", function () { showTab(m); });
+      seg.appendChild(b);
+    });
+    topo.insertBefore(seg, topo.firstChild);
+  });
 }
 
 export { curTab };

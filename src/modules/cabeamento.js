@@ -1,4 +1,4 @@
-import { res, tiles, groups, nf, bbox, el, text, existe, quadro } from "./core.js";
+import { res, tiles, groups, nf, bbox, el, text, existe, quadro, blocosDe, gabPx } from "./core.js";
 import { cabNome, cabDe, corCab } from "./gabinetes.js";
 import { histTick } from "./historico.js";
 import { chave } from "./projetos.js";
@@ -81,7 +81,7 @@ export function distribuirAuto(escopo) {
       if (travado[k]) return;
       var c = cellEl[k], q = res(c.t), f = qd[c.t.id];
       // x, y, w, h = montagem (m, y de cima para baixo, no plano do painel): ordem e vizinhança do cabo; ax.. = canvas (px): área da porta
-      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(f.x + c.c * q.mw), y: m4(f.y + c.r * q.mh), z: f.z, w: q.mw, h: q.mh, ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch });
+      if (alvo[c.t.id]) cels.push({ key: k, t: c.t, x: m4(f.x + c.c * q.mw), y: m4(f.y + c.r * q.mh), z: f.z, w: q.mw, h: q.mh, ax: gabPx(c.t, c.c, c.r)[0], ay: gabPx(c.t, c.c, c.r)[1], aw: q.cw, ah: q.ch });
     });
     if (!cels.length) return { portas: 0, gabinetes: 0, aviso: "Não há gabinetes nesse escopo." };
     var grupos = {}, ordem = [];
@@ -103,7 +103,7 @@ export function distribuirAuto(escopo) {
           if (vistos[c.t.id]) return;
           vistos[c.t.id] = 1;
           var q = res(c.t), f = qd[c.t.id];
-          telasG.push({ id: c.t.id, x: m4(f.x), y: m4(f.y), z: f.z, w: q.mw * q.cols, h: q.mh * q.rows, k: { x: c.t.cx, y: c.t.cy, w: q.cw * q.cols, h: q.ch * q.rows } });
+          telasG.push({ id: c.t.id, x: m4(f.x), y: m4(f.y), z: f.z, w: q.mw * q.cols, h: q.mh * q.rows, k: (function () { var b = bbox([c.t]); return { x: b.x, y: b.y, w: b.w, h: b.h }; })() });
         });
         aglomerados(telasG).forEach(function (ag) {
           var ids = {}; ag.forEach(function (t) { ids[t.id] = 1; });
@@ -181,7 +181,7 @@ export function owners() {
   }
 
 // carga da porta = área do retângulo que envolve os gabinetes dela (o processador reserva o retângulo inteiro)
-function cellRet(k) { var c = cellEl[k], q = res(c.t); return { ax: c.t.cx + c.c * q.cw, ay: c.t.cy + c.r * q.ch, aw: q.cw, ah: q.ch }; }
+function cellRet(k) { var c = cellEl[k], q = res(c.t), p = gabPx(c.t, c.c, c.r); return { ax: p[0], ay: p[1], aw: q.cw, ah: q.ch }; }
 function routeLoad(route) { return areaRet(route.map(cellRet)); }
 
 // posição do gabinete na montagem (m, y de cima para baixo) e no canvas: para diagnóstico e área
@@ -229,8 +229,8 @@ export function portState(route) {
   }
 
 function center(k) {
-    var c = cellEl[k], q = res(c.t);
-    return [c.t.cx + (c.c + 0.5) * q.cw, c.t.cy + (c.r + 0.5) * q.ch];
+    var c = cellEl[k], q = res(c.t), p = gabPx(c.t, c.c, c.r);
+    return [p[0] + 0.5 * q.cw, p[1] + 0.5 * q.ch];
   }
 
 function capsText() {
@@ -437,15 +437,19 @@ export function init() {
     } catch (e) {}
   tiles.forEach(function (t) {
       var q = res(t);
-      var g = el("g", { "class": "kt", style: "--cor:" + corCab(t) }, svgK);
-      el("rect", { "class": "kbody", x: 0, y: 0, width: q.w, height: q.h }, g);
-      text(g, "klabel", q.w / 2, q.h / 2, Math.min(q.w, q.h) * 0.55, t.id);
+      var g = el("g", { "class": "kt", style: "--cor:" + corCab(t) }, svgK), bls = blocosDe(t);
+      // um retângulo por bloco do mapa de pixels (sem divisão, o painel inteiro); posições relativas ao painel
+      bls.forEach(function (b, bi) {
+        el("rect", { "class": "kbody", x: b.x - t.cx, y: b.y - t.cy, width: b.w, height: b.h }, g);
+        text(g, "klabel", b.x - t.cx + b.w / 2, b.y - t.cy + b.h / 2, Math.min(b.w, b.h) * 0.55, bls.length > 1 ? t.id + "·" + (bi + 1) : t.id);
+      });
       for (var r = 0; r < q.rows; r++) {
         for (var c = 0; c < q.cols; c++) {
           if (!existe(q, c, r)) continue; // gabinete recortado: não existe, não entra em rota
           var key = t.id + ":" + c + ":" + r;
-          var rect = el("rect", { "class": "cell", x: c * q.cw, y: r * q.ch, width: q.cw, height: q.ch, "data-key": key }, g);
-          var num = text(g, "cnum", (c + 0.5) * q.cw, (r + 0.5) * q.ch, q.u * 0.34, "");
+          var pc = gabPx(t, c, r), lx = pc[0] - t.cx, ly = pc[1] - t.cy;
+          var rect = el("rect", { "class": "cell", x: lx, y: ly, width: q.cw, height: q.ch, "data-key": key }, g);
+          var num = text(g, "cnum", lx + 0.5 * q.cw, ly + 0.5 * q.ch, q.u * 0.34, "");
           cellEl[key] = { rect: rect, num: num, t: t, c: c, r: r };
         }
       }

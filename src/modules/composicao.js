@@ -2,7 +2,7 @@
 //   Montagem (entrada): os painéis nas posições do Rig, numa escala única (px por metro) — onde o conteúdo é feito.
 //   Composição (saída): os painéis nas posições da aba Screen, em px nativos — o que vai para o processador.
 // Não tem posição própria: test card por painel, regiões das duas pontas e proporção.
-import { tiles, groups, gname, members, res, nf, fmt, painelById, pnome, existe, mxMont, myMont } from "./core.js";
+import { tiles, groups, gname, members, res, nf, fmt, painelById, pnome, existe, mxMont, myMont, blocosDe, gabPx } from "./core.js";
 import { chave, projetoAtivo } from "./projetos.js";
 import { cabDe } from "./gabinetes.js";
 import { ports, routes, cellEl, owners, pcolor, portById } from "./cabeamento.js";
@@ -73,10 +73,21 @@ function geo(t, S, minX, topo) {
 function itensDoEscopo() {
   var list = cfg.escopo ? members(cfg.escopo) : tiles.slice(), S = escalaMont(), minX = Infinity, topo = -Infinity;
   tiles.forEach(function (t) { minX = Math.min(minX, mxMont(t)); topo = Math.max(topo, myMont(t) + t.h); });
-  return list.map(function (t) {
-    var q = res(t), g = geo(t, S, minX, topo), r = cfg.modo === "mont" ? g.ent : g.sai;
-    return { t: t, q: q, ent: g.ent, sai: g.sai, x: r.x, y: r.y, w: r.w, h: r.h, sx: r.w / q.w, sy: r.h / q.h };
+  var out = [];
+  list.forEach(function (t) {
+    var q = res(t), g = geo(t, S, minX, topo), r = cfg.modo === "mont" ? g.ent : g.sai, bls = blocosDe(t);
+    if (bls.length < 2) { out.push({ t: t, q: q, ent: g.ent, sai: g.sai, x: r.x, y: r.y, w: r.w, h: r.h, sx: r.w / q.w, sy: r.h / q.h }); return; }
+    // painel em blocos: um item por bloco. Na saída o painel inteiro é desenhado deslocado e recortado no bloco;
+    // na entrada, a parte do painel na montagem que corresponde ao bloco
+    var ke = g.ent.w / q.cols, he = g.ent.h / q.rows;
+    bls.forEach(function (b, bi) {
+      var ent = { x: Math.round(g.ent.x + b.c0 * ke), y: Math.round(g.ent.y + b.r0 * he), w: Math.round((b.c1 - b.c0) * ke), h: Math.round((b.r1 - b.r0) * he) };
+      var sai = { x: b.x, y: b.y, w: b.w, h: b.h }, mont = cfg.modo === "mont";
+      var ox = mont ? g.ent.x : b.x - b.c0 * q.cw, oy = mont ? g.ent.y : b.y - b.r0 * q.ch, wq = mont ? g.ent.w : q.w, hq = mont ? g.ent.h : q.h;
+      out.push({ t: t, q: q, bloco: bi + 1, nBlocos: bls.length, blk: { x: b.c0 * q.cw, y: b.r0 * q.ch, w: (b.c1 - b.c0) * q.cw, h: (b.r1 - b.r0) * q.ch }, ent: ent, sai: sai, x: ox, y: oy, w: wq, h: hq, sx: wq / q.w, sy: hq / q.h, clip: mont ? ent : sai });
+    });
   });
+  return out;
 }
 
 function caixa(rs) {
@@ -159,6 +170,7 @@ function geometria(ctx, x, y, w, h) {
 function tela(ctx, it, ox, oy, own, semSobre) {
   var t = it.t, q = it.q, x = 0, y = 0, p = cfg.preset, r, c, n = 1;
   ctx.save();
+  if (it.clip) { ctx.beginPath(); ctx.rect(it.clip.x - ox, it.clip.y - oy, it.clip.w, it.clip.h); ctx.clip(); } // bloco do mapa de pixels
   ctx.translate(it.x - ox, it.y - oy); ctx.scale(it.sx, it.sy);
   ctx.beginPath(); ctx.rect(x, y, q.w, q.h); ctx.clip();
   for (r = 0; r < q.rows; r++) {
@@ -187,7 +199,13 @@ function tela(ctx, it, ox, oy, own, semSobre) {
       n++;
     }
   }
-  if (!semSobre) {
+  if (!semSobre && it.blk) {
+    // bloco do mapa de pixels: barras, geometria e rótulo dentro do bloco (a numeração dos gabinetes é a do painel)
+    var B = it.blk;
+    if (p === "barras") barras(ctx, B.x, B.y, B.w, B.h);
+    if (p === "alinhamento") geometria(ctx, B.x, B.y, B.w, B.h);
+    if (p === "cores" || p === "mapa") rotulo(ctx, [t.name + " · bloco " + it.bloco + "/" + it.nBlocos], B.x, B.y, B.w, B.h);
+  } else if (!semSobre) {
     if (p === "barras") barras(ctx, x, y, q.w, q.h);
     if (p === "alinhamento") geometria(ctx, x, y, q.w, q.h);
     if (p === "mapa") infoBox(ctx, it, x, y);
@@ -226,6 +244,7 @@ function rotasDeCabo(ctx, ox, oy, noEscopo) {
   ports.forEach(function (pt) {
     var pts = (routes[pt.id] || []).filter(function (k) { return cellEl[k] && noEscopo[cellEl[k].t.id]; }).map(function (k) {
       var e = cellEl[k], it = noEscopo[e.t.id], q = it.q;
+      if (cfg.modo !== "mont") { var p = gabPx(e.t, e.c, e.r); return [p[0] - ox + 0.5 * q.cw, p[1] - oy + 0.5 * q.ch, Math.min(q.cw, q.ch)]; } // saída: o gabinete no bloco dele
       return [it.x - ox + (e.c + 0.5) * q.cw * it.sx, it.y - oy + (e.r + 0.5) * q.ch * it.sy, Math.min(q.cw * it.sx, q.ch * it.sy)];
     });
     if (!pts.length) return;
@@ -241,7 +260,7 @@ function rotasDeCabo(ctx, ox, oy, noEscopo) {
 
 // desenha o escopo inteiro em px reais; k reduz para a prévia
 function desenhar(cv, k) {
-  var items = itensDoEscopo(), b = caixa(items);
+  var items = itensDoEscopo(), b = caixa(items.map(function (it) { return it.clip || it; })); // painel em blocos: a área é a dos blocos
   cv.width = Math.max(1, Math.round(b.w * k)); cv.height = Math.max(1, Math.round(b.h * k));
   var ctx = cv.getContext("2d");
   ctx.setTransform(k, 0, 0, k, 0, 0);
@@ -263,7 +282,7 @@ export function imagemMontagem(preset, maxLado) {
   try {
     var items = itensDoEscopo();
     if (!items.length) return null;
-    var b = caixa(items), k = Math.min(1, (maxLado || 4096) / Math.max(b.w, b.h)), cv = document.createElement("canvas"), rects = {};
+    var b = caixa(items.map(function (it) { return it.clip || it; })), k = Math.min(1, (maxLado || 4096) / Math.max(b.w, b.h)), cv = document.createElement("canvas"), rects = {};
     desenhar(cv, k);
     items.forEach(function (it) { rects[it.t.id] = { x: (it.x - b.x) * k, y: (it.y - b.y) * k, w: it.w * k, h: it.h * k }; });
     return { canvas: cv, rects: rects };
@@ -277,7 +296,8 @@ function linhasRegioes() {
   var items = itensDoEscopo(), be = caixa(items.map(function (i) { return i.ent; })), bs = caixa(items.map(function (i) { return i.sai; }));
   var b = cfg.modo === "mont" ? be : bs;
   return { b: b, be: be, bs: bs, items: items, telas: items.map(function (it) {
-    return { t: it.t, x: it.x - b.x, y: it.y - b.y, w: it.w, h: it.h,
+    var rr = it.clip || it; // bloco do mapa de pixels: a região é o bloco
+    return { t: it.t, bloco: it.bloco, x: rr.x - b.x, y: rr.y - b.y, w: rr.w, h: rr.h,
       ent: { x: it.ent.x - be.x, y: it.ent.y - be.y, w: it.ent.w, h: it.ent.h }, sai: { x: it.sai.x - bs.x, y: it.sai.y - bs.y, w: it.sai.w, h: it.sai.h } };
   }) };
 }
@@ -351,7 +371,7 @@ export function renderComp() {
   });
   r.telas.forEach(function (x) {
     var g = x.t.grp ? groups.filter(function (o) { return o.id === x.t.grp; })[0] : null, l = amostra(h("tr"), x.t), o = mont ? x.sai : x.ent;
-    [x.t.id + " · " + x.t.name, g ? gname(g) : "—", nf(x.x), nf(x.y), nf(x.w) + " × " + nf(x.h), proporcao(x.w, x.h), nf(o.x) + ", " + nf(o.y) + " · " + nf(o.w) + " × " + nf(o.h)].forEach(function (s, i) { l.appendChild(h("td", i > 1 ? "r" : null, s)); });
+    [x.t.id + " · " + x.t.name + (x.bloco ? " · bloco " + x.bloco : ""), g ? gname(g) : "—", nf(x.x), nf(x.y), nf(x.w) + " × " + nf(x.h), proporcao(x.w, x.h), nf(o.x) + ", " + nf(o.y) + " · " + nf(o.w) + " × " + nf(o.h)].forEach(function (s, i) { l.appendChild(h("td", i > 1 ? "r" : null, s)); });
     bd.appendChild(l);
   });
   tb.appendChild(bd); tw.appendChild(tb); c.appendChild(tw);
@@ -378,7 +398,7 @@ function textoRegioes() {
   return ["Entrada (montagem) " + r.be.w + "×" + r.be.h + " px · Saída (composição) " + r.bs.w + "×" + r.bs.h + " px"].concat(us.map(function (u) {
     return pnome(u.p) + " (imagem única na entrada): x " + (u.r.x - r.be.x) + " · y " + (u.r.y - r.be.y) + " · " + u.r.w + "×" + u.r.h + " · painéis " + u.items.map(function (it) { return it.t.id; }).join(", ");
   }), r.telas.map(function (x) {
-    return x.t.name + ": entrada x " + x.ent.x + " · y " + x.ent.y + " · " + x.ent.w + "×" + x.ent.h + "  →  saída x " + x.sai.x + " · y " + x.sai.y + " · " + x.sai.w + "×" + x.sai.h;
+    return x.t.name + (x.bloco ? " (bloco " + x.bloco + ")" : "") + ": entrada x " + x.ent.x + " · y " + x.ent.y + " · " + x.ent.w + "×" + x.ent.h + "  →  saída x " + x.sai.x + " · y " + x.sai.y + " · " + x.sai.w + "×" + x.sai.h;
   })).join("\n");
 }
 
@@ -387,7 +407,7 @@ function csvRegioes() {
   r.telas.forEach(function (x) {
     var g = x.t.grp ? groups.filter(function (o) { return o.id === x.t.grp; })[0] : null;
     var pg = x.t.pn && painelById(x.t.pn);
-    rows.push([x.t.id, x.t.name, g ? gname(g) : "", pg ? pnome(pg) : "", x.ent.x, x.ent.y, x.ent.w, x.ent.h, x.sai.x, x.sai.y, x.sai.w, x.sai.h, proporcao(x.sai.w, x.sai.h), x.t.cx, x.t.cy]);
+    rows.push([x.t.id, x.t.name + (x.bloco ? " · bloco " + x.bloco : ""), g ? gname(g) : "", pg ? pnome(pg) : "", x.ent.x, x.ent.y, x.ent.w, x.ent.h, x.sai.x, x.sai.y, x.sai.w, x.sai.h, proporcao(x.sai.w, x.sai.h), x.t.cx, x.t.cy]);
   });
   return csv(rows);
 }

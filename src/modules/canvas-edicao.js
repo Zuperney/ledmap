@@ -1,4 +1,4 @@
-import { tiles, res, gC, rowsEl, CW, CH, nf, svgC, active, groupMove, members, bbox, save, selected, BASE, freeSpot } from "./core.js";
+import { tiles, res, gC, rowsEl, CW, CH, nf, svgC, active, groupMove, members, bbox, save, selected, BASE, freeSpot, blocosDe } from "./core.js";
 import { occupied, guideV, guideH } from "./canvas.js";
 import { updateBoxes, updateDetailStat } from "./screens.js";
 import { updInsp } from "./gaveta.js";
@@ -11,17 +11,22 @@ let moving, drag, multi, multiOn, magnetOn, btnMagnet;
 
 export function placeC() {
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    var bad = {};
+    var bad = {}, rets = [], foraDe = {};
+    // os retângulos que ocupam o canvas são os blocos de cada painel (sem divisão, o painel inteiro)
     tiles.forEach(function (s, idx) {
-      var a = res(s);
       gC[s.id].setAttribute("transform", "translate(" + s.cx + " " + s.cy + ")");
       rowsEl.children[idx].querySelector(".cpos").textContent = s.cx + " , " + s.cy;
-      minX = Math.min(minX, s.cx); maxX = Math.max(maxX, s.cx + a.w);
-      minY = Math.min(minY, s.cy); maxY = Math.max(maxY, s.cy + a.h);
-      tiles.forEach(function (o, j) {
-        if (j <= idx) return;
-        var b = res(o);
-        if (s.cx < o.cx + b.w && o.cx < s.cx + a.w && s.cy < o.cy + b.h && o.cy < s.cy + a.h) { bad[s.id] = true; bad[o.id] = true; }
+      blocosDe(s).forEach(function (b) {
+        rets.push({ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h });
+        minX = Math.min(minX, b.x); maxX = Math.max(maxX, b.x + b.w);
+        minY = Math.min(minY, b.y); maxY = Math.max(maxY, b.y + b.h);
+        if (b.x < 0 || b.y < 0 || b.x + b.w > CW || b.y + b.h > CH) foraDe[s.id] = true;
+      });
+    });
+    rets.forEach(function (a, i) {
+      rets.forEach(function (b, j) {
+        if (j <= i || a.id === b.id) return;
+        if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) { bad[a.id] = true; bad[b.id] = true; }
       });
     });
     var nBad = 0;
@@ -34,7 +39,7 @@ export function placeC() {
     var vx = Math.min(-64, tiles.length ? minX - 64 : 0), vy = Math.min(-150, tiles.length ? minY - 150 : 0);
     var vx1 = Math.max(CW + 64, tiles.length ? maxX + 64 : 0), vy1 = Math.max(CH + 140, tiles.length ? maxY + 140 : 0);
     svgC.setAttribute("viewBox", [vx, vy, vx1 - vx, vy1 - vy].join(" "));
-    var nFora = tiles.filter(function (s) { var a = res(s); return s.cx < 0 || s.cy < 0 || s.cx + a.w > CW || s.cy + a.h > CH; }).length;
+    var nFora = Object.keys(foraDe).length;
     var bt = document.getElementById("btn-dentro");
     if (bt) { bt.hidden = !nFora; bt.textContent = "Trazer para dentro (" + nFora + ")"; }
     if (!tiles.length) document.getElementById("stat-c").textContent = "Sem painéis · toque em + Painel";
@@ -50,12 +55,12 @@ export function placeC() {
 export function trazerParaDentro() {
     var n = 0;
     tiles.forEach(function (s) {
-      var a = res(s);
-      if (!(s.cx < 0 || s.cy < 0 || s.cx + a.w > CW || s.cy + a.h > CH)) return;
+      var a = bbox([s]), ox = a.x - s.cx, oy = a.y - s.cy; // com os blocos
+      if (!(a.x < 0 || a.y < 0 || a.x + a.w > CW || a.y + a.h > CH)) return;
       var outros = tiles.filter(function (o) { return o !== s; });
       var livre = freeSpot(a.w, a.h, outros);
-      if (livre) { s.cx = livre.x; s.cy = livre.y; }
-      else { s.cx = Math.min(Math.max(0, s.cx), Math.max(0, CW - a.w)); s.cy = Math.min(Math.max(0, s.cy), Math.max(0, CH - a.h)); }
+      if (livre) { s.cx = livre.x - ox; s.cy = livre.y - oy; }
+      else { s.cx = Math.min(Math.max(0, a.x), Math.max(0, CW - a.w)) - ox; s.cy = Math.min(Math.max(0, a.y), Math.max(0, CH - a.h)) - oy; }
       n++;
     });
     if (n) { save(); placeC(); }

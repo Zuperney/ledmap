@@ -47,6 +47,24 @@
     </div>
   </div>
 </div>
+<div class="modal" id="bl-modal" role="dialog" aria-modal="true" aria-labelledby="bl-h" hidden>
+  <div class="box">
+    <h2 id="bl-h">Dividir em blocos no mapa</h2>
+    <p class="sub" id="bl-sub"></p>
+    <div class="two">
+      <label class="fld">Colunas por bloco (gabinetes) <input type="text" id="bl-cols" autocomplete="off" placeholder="ex.: 32 ou 32, 32, 30"></label>
+      <label class="fld">Linhas por bloco (gabinetes) <input type="text" id="bl-rows" autocomplete="off" placeholder="todas as linhas"></label>
+    </div>
+    <label class="fld">Arrumar no canvas <select id="bl-modo"><option value="pilha">Empilhados (um embaixo do outro)</option><option value="lado">Lado a lado (como no painel)</option></select></label>
+    <button class="btn" id="bl-sugerir" type="button" title="Quantas colunas cabem numa porta de cabo, pelo limite de pixels por porta">Sugerir pelo limite da porta</button>
+    <div class="prev" id="bl-prev"></div>
+    <div class="err" id="bl-err" role="alert"></div>
+    <div class="acts">
+      <button class="btn" id="bl-cancel" type="button">Cancelar</button>
+      <button class="btn" id="bl-ok" type="button" aria-pressed="true">Dividir</button>
+    </div>
+  </div>
+</div>
 <div class="modal" id="dup-modal" role="dialog" aria-modal="true" aria-labelledby="dup-h" hidden>
   <div class="box">
     <h2 id="dup-h">Duplicar várias</h2>
@@ -140,9 +158,11 @@
     <div class="tabs" role="tablist" aria-label="Áreas" id="tabs">
       <button class="tab" id="tab-p" role="tab" aria-selected="false" aria-controls="view-p">Projeto</button>
       <button class="tab" id="tab-m" role="tab" aria-selected="true" aria-controls="view-m">Palco</button>
-      <button class="tab" id="tab-c" role="tab" aria-selected="false" aria-controls="view-c">Screen</button>
-      <button class="tab" id="tab-k" role="tab" aria-selected="false" aria-controls="view-k">Cabeamento</button>
-      <button class="tab" id="tab-n" role="tab" aria-selected="false" aria-controls="view-n">Composição</button>
+      <button class="tab" id="tab-x" role="tab" aria-selected="false" title="Endereçamento: Screen (mapa de pixels), Cabeamento e Composição">Endereçamento</button>
+      <!-- os modos do Endereçamento: continuam como vistas próprias, escolhidas pela barra de modos de cada uma -->
+      <button class="tab" id="tab-c" role="tab" aria-selected="false" aria-controls="view-c" hidden>Screen</button>
+      <button class="tab" id="tab-k" role="tab" aria-selected="false" aria-controls="view-k" hidden>Cabeamento</button>
+      <button class="tab" id="tab-n" role="tab" aria-selected="false" aria-controls="view-n" hidden>Composição</button>
       <button class="tab" id="tab-e" role="tab" aria-selected="false" aria-controls="view-e">Elétrica</button>
       <button class="tab" id="tab-r" role="tab" aria-selected="false" aria-controls="view-r">Caderno</button>
     </div>
@@ -463,6 +483,16 @@
           <button class="btn" id="cc-dup">Duplicar</button>
           <button class="btn" id="cc-sel" title="Selecionar vários painéis (no computador também dá Shift + clique)">Selecionar vários</button>
           <button class="btn" id="cc-del">Excluir</button>
+        </div>
+        <div class="cc-blocos" id="cc-blocos">
+          <div class="cc-bl-cab"><b>Blocos no mapa</b> <span class="md" id="cc-bl-info"></span></div>
+          <div id="cc-bl-lista"></div>
+          <div class="mc-acts">
+            <button class="btn" id="cc-bl-dividir" title="Quebrar o painel em blocos só no mapa de pixels: cada bloco vai para um lugar do canvas (no Palco e no cabeamento ele continua um painel só)">Dividir em blocos…</button>
+            <button class="btn" id="cc-bl-pilha" title="Um bloco embaixo do outro, alinhados à esquerda">Empilhar</button>
+            <button class="btn" id="cc-bl-lado" title="Os blocos voltam para o lugar natural, lado a lado como no painel">Lado a lado</button>
+            <button class="btn" id="cc-bl-juntar" title="Desfaz a divisão">Juntar</button>
+          </div>
         </div>
         <button class="btn lnk" id="cc-ir" type="button">Ir até o painel</button>
       </div>

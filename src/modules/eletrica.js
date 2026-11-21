@@ -1,4 +1,4 @@
-import { tiles, groups, gname, res, nf, fmt } from "./core.js";
+import { tiles, groups, gname, res, nf, fmt, gabPx } from "./core.js";
 import { chave } from "./projetos.js";
 import { cabDe, cabNome } from "./gabinetes.js";
 import { cellEl, ports, routes, autoState, pname } from "./cabeamento.js";
@@ -32,7 +32,7 @@ function cabosDaScreen(grp) {
     if (ks.length) seqs.push(ks.map(celula));
   });
   var sobras = [];
-  Object.keys(cellEl).forEach(function (k) { if (!usadas[k] && (cellEl[k].t.grp || "") === grp) { var c = celula(k), q = res(c.t); c.x = c.t.cx + c.c * q.cw; c.y = c.t.cy + c.r * q.ch; sobras.push(c); } });
+  Object.keys(cellEl).forEach(function (k) { if (!usadas[k] && (cellEl[k].t.grp || "") === grp) { var c = celula(k), q = res(c.t); var pp = gabPx(c.t, c.c, c.r); c.x = pp[0]; c.y = pp[1]; sobras.push(c); } });
   if (sobras.length) {
     var por = {};
     sobras.forEach(function (c) { var id = cabDe(c.t).id; (por[id] = por[id] || []).push(c); });

@@ -1,5 +1,5 @@
 import { cabNome, corCab } from "./gabinetes.js";
-import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR, vistaM, painelById, pnome } from "./core.js";
+import { tiles, CH, CW, BASE, res, scaledPos, groups, members, gname, bbox, nf, fmt, FLOOR, vistaM, painelById, pnome, gabPx } from "./core.js";
 import { VISTAS, afim, encara, casco, caixaDe, noMundo, projetar, extensao, PIVOS, limpaPivo } from "./espaco.js";
 import { ports, routes, portState, cellEl, pname, owners, pcolor, portById, limiteRota, limiteTxt, oc } from "./cabeamento.js";
 import { boundsM } from "./rig.js";
@@ -135,7 +135,7 @@ function cablingCsv() {
         var c = cellEl[k], q = res(c.t), px = q.cw * q.ch;
         acc += px;
         rows.push([pname(pt), i + 1, c.t.id, c.t.name, c.c + 1, c.r + 1, cabNome(c.t), px, acc,
-          c.t.cx + c.c * q.cw, c.t.cy + c.r * q.ch, st]);
+          gabPx(c.t, c.c, c.r)[0], gabPx(c.t, c.c, c.r)[1], st]);
       });
     });
     return csv(rows);
