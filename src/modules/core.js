@@ -3,6 +3,7 @@ import { chave } from "./projetos.js";
 import { GAB, cabDe, garantirGabs } from "./gabinetes.js";
 import { limpaBlocos, listaBlocos, pxGabinete } from "./blocos.js";
 import { limpaGiro, limpaPivo, limpaVista, chaveGiro, deslocQuadro, deVistaAntiga, definirPai, paiDeGrupo, trocarPivo, migrarGrupoAntigo } from "./espaco.js";
+import { gravarDados } from "./gravacao.js";
 
 let paineis = [];
 // o pai de um painel é o grupo dele (com pin gx, gy, recuo gz e giro): ver espaco.js. Grupo de projeto antigo (sem
@@ -148,11 +149,10 @@ export function gravarVivo(lista) {
 
 export function save() {
     histTick();
-    try {
-      var pos = {}, tg = {}, mpos = {}, tp = {};
-      tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; tp[t.id] = t.pn || ""; });
-      localStorage.setItem(STORE, JSON.stringify({ pinV: PIN_V, pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, vista: vistaM, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
-    } catch (e) {}
+    var pos = {}, tg = {}, mpos = {}, tp = {};
+    tiles.forEach(function (t) { pos[t.id] = [t.cx, t.cy]; tg[t.id] = t.grp || ""; mpos[t.id] = [t.mx, t.my]; tp[t.id] = t.pn || ""; });
+    // falha ao gravar (armazenamento cheio) mostra o aviso em vez de passar em silêncio
+    return gravarDados(STORE, JSON.stringify({ pinV: PIN_V, pos: pos, tg: tg, mpos: mpos, tp: tp, groups: groups, nextG: nextG, paineis: paineis, vista: vistaM, extras: EXTRAS, gabs: gabsUsados(EXTRAS) }));
   }
 
 // n = gabinetes que existem (a grade menos os recortados); total = pixels desses gabinetes

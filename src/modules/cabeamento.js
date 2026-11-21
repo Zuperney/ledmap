@@ -7,6 +7,7 @@ import { snakePorTela, aglomerados, portasPorBloco, esquemaDe, ordemPortas, area
 
 function m4(v) { return Math.round(v * 10000) / 10000; }
 import { SINAL_PADRAO, MAX_PORTAS_PADRAO, limpaSinal, limitePx, limpaMax } from "./sinal.js";
+import { gravarDados } from "./gravacao.js";
 
 let sinal, sinalScreens, maxPortas, autoCfg, CSTORE, svgK, ports, routes, nextP, activePort, oc, traceOn, orderOn, cellEl, gK, paint, linesK, viewK, btnTrace, btnOrder, btnOc;
 
@@ -165,7 +166,7 @@ export function ksave() {
 export function kflush() {
     if (ksaveT === null) return;
     clearTimeout(ksaveT); ksaveT = null;
-    try { localStorage.setItem(CSTORE, JSON.stringify({ ports: ports, routes: routes, nextP: nextP, oc: oc, sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas, auto: autoCfg })); } catch (e) {}
+    gravarDados(CSTORE, JSON.stringify({ ports: ports, routes: routes, nextP: nextP, oc: oc, sinal: sinal, sinalScreens: sinalScreens, maxPortas: maxPortas, auto: autoCfg }));
   }
 
 export function portById(id) { for (var i = 0; i < ports.length; i++) if (ports[i].id === id) return ports[i]; return null; }
@@ -352,8 +353,8 @@ export function setActivePort(id) {
     document.getElementById("k-detail").hidden = !p;
     if (p) {
       document.getElementById("k-name").value = p.name;
-      var lk = document.getElementById("k-lock");
-      lk.textContent = p.fixa ? "Destravar" : "Travar"; lk.setAttribute("aria-pressed", String(!!p.fixa));
+      var lk = document.getElementById("k-plock"); // o Travar da porta (o k-lock é o da vista, na faixa de baixo)
+      lk.textContent = p.fixa ? "Destravar porta" : "Travar porta"; lk.setAttribute("aria-pressed", String(!!p.fixa));
       var js = document.getElementById("k-join");
       js.textContent = "";
       ports.filter(function (o) { return o.id !== p.id && (routes[o.id] || []).length; }).forEach(function (o) { var op = document.createElement("option"); op.value = o.id; op.textContent = pname(o); js.appendChild(op); });
@@ -526,7 +527,7 @@ export function init() {
       renderCabling();
       ksave();
     });
-  document.getElementById("k-lock").addEventListener("click", travarPorta);
+  document.getElementById("k-plock").addEventListener("click", travarPorta);
   document.getElementById("k-join-go").addEventListener("click", function () { var m = juntarPortas(document.getElementById("k-join").value); kmsg(m || "Portas juntadas."); });
   twoStep(document.getElementById("k-clear"), "Limpar rota", "Confirmar limpeza", function () {
       if (!activePort) return;

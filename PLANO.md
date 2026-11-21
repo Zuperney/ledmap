@@ -174,3 +174,23 @@ Etapas montadas pela nota, juntando o que mexe nas mesmas partes do app. **Regra
 5. **Configuração (3,5 a 2,6):** blocos na Screen, grupos inteligentes, aba Endereçamento. Os três andam juntos.
 
 Cada etapa fecha com a Fase 4 (testes, build, conferência no navegador, STATUS.md).
+
+## Melhorias da análise de 21/11/2026
+
+Levantadas lendo o código inteiro, medindo o build e a geometria e testando no navegador. Mesma pontuação: (Impacto × 2 + Urgência) ÷ Esforço.
+
+| Melhoria | I | U | E | Prioridade |
+|---|---|---|---|---|
+| ✅ **Bug:** salvar falha em silêncio quando o armazenamento do navegador enche — **feito**: faixa de aviso com Exportar projeto, até a próxima gravação dar certo | 5 | 4 | 1 | 14,0 |
+| ✅ **Bug:** dois botões com o mesmo id `k-lock` no Cabeamento — **feito**: o da porta virou "Travar porta" (`k-plock`) e cada um faz só o seu | 4 | 5 | 1 | 13,0 |
+| ✅ Rodar os testes antes de publicar e não baixar o Electron no GitHub — **feito** no `pages.yml` | 4 | 3 | 1 | 11,0 |
+| Fim de linha padronizado no repositório (`.gitattributes`): hoje há arquivos LF e CRLF misturados | 2 | 2 | 1 | 6,0 |
+| Desfazer refaz a base do "Restaurar posições" (ela deveria ser a de quando o projeto abriu) | 2 | 2 | 1 | 6,0 |
+| Rótulos dos blocos na Screen: número e medida se sobrepõem em blocos baixos | 2 | 2 | 1 | 6,0 |
+| Composição: coluna das regiões mais larga (hoje precisa rolar de lado) | 2 | 2 | 1 | 6,0 |
+| Service worker: limpar arquivos antigos do cache (hoje cresce a cada versão publicada) | 2 | 2 | 1 | 6,0 |
+| Salvar o projeto num arquivo do computador (gravação automática num JSON, ex.: numa pasta do Drive): resolve o trabalho entre dois computadores sem depender só do navegador | 5 | 4 | 3 | 4,7 |
+| Desempenho com muitos painéis: Camadas e multiview se redesenham a cada passo do arrasto (agrupar por quadro; giro de cada painel calculado uma vez por quadro). Medido: 200 painéis em grupos, 5 vistas = 31 ms | 3 | 2 | 2 | 4,0 |
+| Barra do 3D apertada em telas de 1024 px (opções num menu) | 2 | 2 | 2 | 3,0 |
+| Gizmo ao vivo: o painel acompanha durante o arrasto (hoje anda a caixa laranja e o painel vai ao soltar) | 3 | 2 | 3 | 2,7 |
+| Organizar telas.js e cabeamento.js (500+ linhas cada, várias funções diferentes) em módulos menores | 2 | 1 | 3 | 1,7 |
